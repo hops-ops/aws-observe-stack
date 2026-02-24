@@ -1,0 +1,101 @@
+# code: language=yaml
+#
+# Initialize $state with spec defaults
+#
+
+{{- $xr := getCompositeResource . }}
+{{- $spec := $xr.spec | default dict }}
+{{- $metadata := $xr.metadata | default dict }}
+
+# ==============================================================================
+# Core defaults
+# ==============================================================================
+{{- $name := $metadata.name | default "observe" }}
+{{- $clusterName := $spec.clusterName | default $name }}
+{{- $namespace := $spec.namespace | default "monitoring" }}
+{{- $managementPolicies := $spec.managementPolicies | default (list "*") }}
+
+# Labels
+{{- $defaultLabels := dict
+  "hops.ops.com.ai/managed" "true"
+  "hops.ops.com.ai/observe" $name
+}}
+{{- $labels := merge $defaultLabels ($spec.labels | default dict) }}
+
+# ==============================================================================
+# Provider config refs
+# ==============================================================================
+{{- $helmProviderConfigRef := $spec.helmProviderConfigRef | default dict }}
+{{- $helmProviderConfigRef = dict
+  "name" ($helmProviderConfigRef.name | default $clusterName)
+  "kind" ($helmProviderConfigRef.kind | default "ProviderConfig")
+}}
+
+{{- $kubernetesProviderConfigRef := $spec.kubernetesProviderConfigRef | default dict }}
+{{- $kubernetesProviderConfigRef = dict
+  "name" ($kubernetesProviderConfigRef.name | default $clusterName)
+  "kind" ($kubernetesProviderConfigRef.kind | default "ProviderConfig")
+}}
+
+{{- $awsProviderConfigRef := $spec.awsProviderConfigRef | default dict }}
+{{- $awsProviderConfigRef = dict
+  "name" ($awsProviderConfigRef.name | default "default")
+  "kind" ($awsProviderConfigRef.kind | default "ProviderConfig")
+}}
+
+# ==============================================================================
+# AWS defaults
+# ==============================================================================
+{{- $aws := $spec.aws | default dict }}
+{{- $awsRegion := $aws.region }}
+
+# Default tags
+{{- $defaultTags := dict
+  "hops.ops.com.ai/managed" "true"
+  "hops.ops.com.ai/observe" $name
+}}
+{{- $awsTags := merge $defaultTags ($aws.tags | default dict) }}
+
+# ==============================================================================
+# Observe component passthrough
+# ==============================================================================
+{{- $kubePrometheusStack := $spec.kubePrometheusStack | default dict }}
+{{- $loki := $spec.loki | default dict }}
+{{- $tempo := $spec.tempo | default dict }}
+{{- $k8sMonitoring := $spec.k8sMonitoring | default dict }}
+{{- $grafanaOperator := $spec.grafanaOperator | default dict }}
+
+# ==============================================================================
+# Initialize $state
+# ==============================================================================
+{{- $state := dict
+  "name" $name
+  "clusterName" $clusterName
+  "namespace" $namespace
+  "managementPolicies" $managementPolicies
+  "labels" $labels
+  "helm" (dict
+    "providerConfigRef" $helmProviderConfigRef
+  )
+  "kubernetes" (dict
+    "providerConfigRef" $kubernetesProviderConfigRef
+  )
+  "aws" (dict
+    "region" $awsRegion
+    "providerConfigRef" $awsProviderConfigRef
+    "permissionsBoundaryArn" ($aws.permissionsBoundaryArn | default "")
+    "rolePrefix" ($aws.rolePrefix | default "")
+    "tags" $awsTags
+  )
+  "serviceAccount" (dict
+    "name" "k8s-monitoring-opencost"
+    "namespace" $namespace
+  )
+  "observe" (dict
+    "kubePrometheusStack" $kubePrometheusStack
+    "loki" $loki
+    "tempo" $tempo
+    "k8sMonitoring" $k8sMonitoring
+    "grafanaOperator" $grafanaOperator
+  )
+}}

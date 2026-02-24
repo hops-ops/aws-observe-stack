@@ -1,0 +1,49 @@
+# code: language=yaml
+#
+# Compute status values from observed state
+#
+
+# ==============================================================================
+# Extract observed state from composed resources
+# ==============================================================================
+{{- $observed := $.observed.resources | default dict }}
+
+# Check if observe is ready
+{{- $observeObs := get $observed "observe" | default dict }}
+{{- $observeResource := $observeObs.resource | default dict }}
+{{- $observeStatus := $observeResource.status | default dict }}
+{{- $observeConditions := $observeStatus.conditions | default list }}
+{{- $observeReady := false }}
+{{- range $cond := $observeConditions }}
+  {{- if and (eq $cond.type "Ready") (eq $cond.status "True") }}
+    {{- $observeReady = true }}
+  {{- end }}
+{{- end }}
+
+# Check if pod-identity is ready
+{{- $podIdentityObs := get $observed "pod-identity" | default dict }}
+{{- $podIdentityResource := $podIdentityObs.resource | default dict }}
+{{- $podIdentityStatus := $podIdentityResource.status | default dict }}
+{{- $podIdentityConditions := $podIdentityStatus.conditions | default list }}
+{{- $podIdentityReady := false }}
+{{- range $cond := $podIdentityConditions }}
+  {{- if and (eq $cond.type "Ready") (eq $cond.status "True") }}
+    {{- $podIdentityReady = true }}
+  {{- end }}
+{{- end }}
+
+# ==============================================================================
+# Compute status output
+# ==============================================================================
+
+# Ready state determined by function-auto-ready
+{{- $ready := false }}
+
+{{- $state = set $state "observed" (dict
+  "observe" (dict "ready" $observeReady)
+  "podIdentity" (dict "ready" $podIdentityReady)
+) }}
+
+{{- $state = set $state "status" (dict
+  "ready" $ready
+) }}

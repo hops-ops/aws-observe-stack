@@ -1,0 +1,19 @@
+apiVersion: stacks.aws.hops.ops.com.ai/v1alpha1
+kind: Observe
+metadata:
+  name: observe
+  namespace: default
+spec:
+  clusterName: production-cluster
+  namespace: monitoring
+  labels:
+    team: platform
+  k8sMonitoring:
+    values:
+      opencost:
+        enabled: true
+  aws:
+    region: us-west-2
+    rolePrefix: prod-
+    tags:
+      environment: production

@@ -1,0 +1,9 @@
+apiVersion: stacks.aws.hops.ops.com.ai/v1alpha1
+kind: Observe
+metadata:
+  name: observe
+  namespace: default
+spec:
+  clusterName: my-cluster
+  aws:
+    region: us-east-1

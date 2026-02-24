@@ -1,0 +1,54 @@
+# code: language=yaml
+#
+# Compose the base stacks.hops.ops.com.ai/Observe XRD
+#
+
+---
+apiVersion: stacks.hops.ops.com.ai/v1alpha1
+kind: Observe
+metadata:
+  name: {{ $state.name }}
+  annotations:
+    {{ setResourceNameAnnotation "observe" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  managementPolicies: {{ $state.managementPolicies | toJson }}
+  clusterName: {{ $state.clusterName }}
+  labels: {{ $state.labels | toJson }}
+  helmProviderConfigRef:
+    name: {{ $state.helm.providerConfigRef.name }}
+    kind: {{ $state.helm.providerConfigRef.kind }}
+  kubernetesProviderConfigRef:
+    name: {{ $state.kubernetes.providerConfigRef.name }}
+    kind: {{ $state.kubernetes.providerConfigRef.kind }}
+  namespace: {{ $state.namespace }}
+  {{- with $state.observe.kubePrometheusStack }}
+  {{- if gt (len .) 0 }}
+  kubePrometheusStack:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- end }}
+  {{- with $state.observe.loki }}
+  {{- if gt (len .) 0 }}
+  loki:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- end }}
+  {{- with $state.observe.tempo }}
+  {{- if gt (len .) 0 }}
+  tempo:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- end }}
+  {{- with $state.observe.k8sMonitoring }}
+  {{- if gt (len .) 0 }}
+  k8sMonitoring:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- end }}
+  {{- with $state.observe.grafanaOperator }}
+  {{- if gt (len .) 0 }}
+  grafanaOperator:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- end }}

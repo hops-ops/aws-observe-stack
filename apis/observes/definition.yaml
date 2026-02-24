@@ -1,0 +1,202 @@
+apiVersion: apiextensions.crossplane.io/v2
+kind: CompositeResourceDefinition
+metadata:
+  name: observes.stacks.aws.hops.ops.com.ai
+spec:
+  group: stacks.aws.hops.ops.com.ai
+  names:
+    kind: Observe
+    plural: observes
+  scope: Namespaced
+  defaultCompositeDeletePolicy: Foreground
+  versions:
+  - name: v1alpha1
+    referenceable: true
+    served: true
+    schema:
+      openAPIV3Schema:
+        description: Observe deploys the observability stack with AWS Pod Identity for OpenCost billing access.
+        type: object
+        properties:
+          spec:
+            description: ObserveSpec defines the desired state.
+            type: object
+            properties:
+              clusterName:
+                description: Name of the target cluster. Used for provider config defaults and resource naming.
+                type: string
+              managementPolicies:
+                description: Management policies for all composed resources. Defaults to ["*"].
+                type: array
+                items:
+                  type: string
+                default:
+                - "*"
+              labels:
+                description: Custom labels applied to all managed resources.
+                type: object
+                additionalProperties:
+                  type: string
+                x-kubernetes-preserve-unknown-fields: true
+              helmProviderConfigRef:
+                description: Reference to the Helm ProviderConfig. Defaults to clusterName.
+                type: object
+                properties:
+                  name:
+                    description: Name of the Helm ProviderConfig.
+                    type: string
+                  kind:
+                    description: Kind of the ProviderConfig. Defaults to ProviderConfig.
+                    type: string
+                    enum:
+                    - ProviderConfig
+                    - ClusterProviderConfig
+              kubernetesProviderConfigRef:
+                description: Reference to the Kubernetes ProviderConfig. Defaults to clusterName.
+                type: object
+                properties:
+                  name:
+                    description: Name of the Kubernetes ProviderConfig.
+                    type: string
+                  kind:
+                    description: Kind of the ProviderConfig. Defaults to ProviderConfig.
+                    type: string
+                    enum:
+                    - ProviderConfig
+                    - ClusterProviderConfig
+              awsProviderConfigRef:
+                description: Reference to the AWS ProviderConfig. Defaults to "default".
+                type: object
+                properties:
+                  name:
+                    description: Name of the AWS ProviderConfig.
+                    type: string
+                  kind:
+                    description: Kind of the ProviderConfig. Defaults to ProviderConfig.
+                    type: string
+              namespace:
+                description: Shared namespace for all components. Defaults to monitoring.
+                type: string
+              aws:
+                description: AWS configuration for Pod Identity.
+                type: object
+                properties:
+                  region:
+                    description: AWS region for the EKS cluster.
+                    type: string
+                  permissionsBoundaryArn:
+                    description: ARN of the IAM permissions boundary to apply to the role.
+                    type: string
+                  rolePrefix:
+                    description: Prefix for the IAM role name.
+                    type: string
+                  tags:
+                    description: Custom tags applied to AWS resources.
+                    type: object
+                    additionalProperties:
+                      type: string
+                    x-kubernetes-preserve-unknown-fields: true
+                required:
+                - region
+              kubePrometheusStack:
+                description: Configuration for the kube-prometheus-stack component.
+                type: object
+                properties:
+                  name:
+                    description: Release name. Defaults to kube-prometheus-stack.
+                    type: string
+                  namespace:
+                    description: Namespace override for this component.
+                    type: string
+                  values:
+                    description: Helm values merged with chart and cross-component defaults.
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+                  overrideAllValues:
+                    description: Helm values that replace all defaults for this component.
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+              loki:
+                description: Configuration for the Loki component.
+                type: object
+                properties:
+                  name:
+                    description: Release name. Defaults to loki.
+                    type: string
+                  namespace:
+                    description: Namespace override for this component.
+                    type: string
+                  values:
+                    description: Helm values merged with chart defaults.
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+                  overrideAllValues:
+                    description: Helm values that replace all defaults for this component.
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+              tempo:
+                description: Configuration for the Tempo component.
+                type: object
+                properties:
+                  name:
+                    description: Release name. Defaults to tempo.
+                    type: string
+                  namespace:
+                    description: Namespace override for this component.
+                    type: string
+                  values:
+                    description: Helm values merged with chart and cross-component defaults.
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+                  overrideAllValues:
+                    description: Helm values that replace all defaults for this component.
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+              k8sMonitoring:
+                description: Configuration for the k8s-monitoring component.
+                type: object
+                properties:
+                  name:
+                    description: Release name. Defaults to k8s-monitoring.
+                    type: string
+                  namespace:
+                    description: Namespace override for this component.
+                    type: string
+                  values:
+                    description: Helm values merged with chart and cross-component defaults.
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+                  overrideAllValues:
+                    description: Helm values that replace all defaults for this component.
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+              grafanaOperator:
+                description: Configuration for the Grafana Operator component.
+                type: object
+                properties:
+                  name:
+                    description: Release name. Defaults to grafana-operator.
+                    type: string
+                  namespace:
+                    description: Namespace override for this component.
+                    type: string
+                  values:
+                    description: Helm values passed to the Grafana Operator chart.
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+                  overrideAllValues:
+                    description: Helm values that replace all defaults for this component.
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+            required:
+            - clusterName
+            - aws
+          status:
+            description: ObserveStatus defines the observed state.
+            type: object
+            properties:
+              ready:
+                description: Overall readiness.
+                type: boolean
+        required:
+        - spec

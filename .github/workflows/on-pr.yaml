@@ -1,0 +1,64 @@
+name: on-pr
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - labeled
+      - opened
+      - reopened
+      - synchronize
+    paths:
+      - '.github/workflows/on-pr.yaml'
+      - '.gitops/**'
+      - 'apis/**'
+      - 'examples/**'
+      - 'tests/**'
+      - 'functions/**'
+      - 'upbound.yaml'
+
+permissions:
+  packages: write
+  contents: write
+  issues: write
+  pull-requests: write
+  id-token: write  # Required for OIDC auth
+
+jobs:
+  validate:
+    uses: unbounded-tech/workflows-crossplane/.github/workflows/validate.yaml@v2.14.2
+    with:
+      examples: |
+        [
+          { "example": "examples/observes/minimal.yaml" },
+          { "example": "examples/observes/standard.yaml" }
+        ]
+      api_path: apis/observes
+      error_on_missing_schemas: true
+
+  test:
+    uses: unbounded-tech/workflows-crossplane/.github/workflows/test.yaml@v2.14.2
+
+  e2e:
+    uses: unbounded-tech/workflows-crossplane/.github/workflows/e2e.yaml@v2.14.2
+    with:
+      aws: true
+      aws-use-oidc: true
+      aws-account-id: "034489662075"
+      aws-region: us-east-2
+      debug-resource-types: |
+        [
+          "observes.stacks.aws.hops.ops.com.ai"
+        ]
+      timeout-minutes: 60
+      cleanup-timeout-minutes: 45
+
+  publish:
+    needs:
+      - validate
+      - test
+    uses: unbounded-tech/workflows-crossplane/.github/workflows/publish.yaml@v2.14.2
+    secrets: inherit
+    with:
+      tag: pr-${{ github.event.pull_request.number }}-${{ github.sha }}
