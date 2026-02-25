@@ -5,21 +5,21 @@ on:
     branches:
       - main
     paths:
-      - '.github/workflows/on-push-main.yaml'
-      - '.github/workflows/on-version-tagged.yaml'
-      - '.gitops/**'
-      - 'apis/**'
-      - 'examples/**'
-      - 'functions/**'
-      - 'tests/**'
-      - 'upbound.yaml'
+      - ".github/workflows/on-push-main.yaml"
+      - ".github/workflows/on-version-tagged.yaml"
+      - ".gitops/**"
+      - "apis/**"
+      - "examples/**"
+      - "functions/**"
+      - "tests/**"
+      - "upbound.yaml"
 
 permissions:
   packages: write
   contents: write
   issues: write
   pull-requests: write
-  id-token: write  # Required for OIDC auth
+  id-token: write # Required for OIDC auth
 
 jobs:
   validate:
@@ -37,7 +37,7 @@ jobs:
     uses: unbounded-tech/workflows-crossplane/.github/workflows/test.yaml@v2.15.0
 
   e2e:
-    uses: unbounded-tech/workflows-crossplane/.github/workflows/e2e.yaml@v2.15.0
+    uses: unbounded-tech/workflows-crossplane/.github/workflows/e2e.yaml@feat/more-usage-debugging
     with:
       aws: true
       aws-use-oidc: true
@@ -46,7 +46,7 @@ jobs:
       aws-role-duration-seconds: 7200
       debug-resource-types: |
         [
-          "observes.stacks.aws.hops.ops.com.ai"
+          "observes.stacks.hops.ops.com.ai"
         ]
       timeout-minutes: 90
       cleanup-timeout-minutes: 45
