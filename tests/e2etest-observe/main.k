@@ -215,7 +215,17 @@ _items = [
             # manifests: All XRs that need cleanup (AutoEKSCluster, Observe)
             # Note: Uses persistent hops-test network - no Network manifest needed
             manifests = [
-                # 1. AutoEKSCluster - uses subnet IDs from persistent hops-test network
+                stacksv1alpha1.Observe {
+                    metadata.name = "observe"
+                    metadata.namespace = _namespace
+                    spec = {
+                        clusterName = _test_name
+                        # helmProviderConfigRef defaults to clusterName (uses ProviderConfig created by AutoEKSCluster)
+                        # kubernetesProviderConfigRef defaults to clusterName
+                        # awsProviderConfigRef defaults to "default"
+                        aws.region = _region
+                    }
+                }
                 {
                     apiVersion = "aws.hops.ops.com.ai/v1alpha1"
                     kind = "AutoEKSCluster"
@@ -249,18 +259,6 @@ _items = [
                         oidc = {
                             enabled = False
                         }
-                    }
-                }
-                # 2. stacks.aws Observe - deploys observability stack with OpenCost Pod Identity
-                stacksv1alpha1.Observe {
-                    metadata.name = "observe"
-                    metadata.namespace = _namespace
-                    spec = {
-                        clusterName = _test_name
-                        # helmProviderConfigRef defaults to clusterName (uses ProviderConfig created by AutoEKSCluster)
-                        # kubernetesProviderConfigRef defaults to clusterName
-                        # awsProviderConfigRef defaults to "default"
-                        aws.region = _region
                     }
                 }
             ]
