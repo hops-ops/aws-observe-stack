@@ -7,19 +7,22 @@
 # Merge S3 storage config into Loki/Tempo values when enabled
 # ==============================================================================
 {{- $lokiPassthrough := $state.observe.loki | default dict }}
+{{- $_ := unset $lokiPassthrough "storage" }}
 {{- if $state.aws.loki.s3.enabled }}
   {{- $lokiRetentionHours := printf "%dh" (mul $state.aws.loki.s3.retentionDays 24) }}
+  {{- $lokiBucketNames := dict
+    "chunks" $state.aws.loki.s3.bucketName
+    "ruler" $state.aws.loki.s3.bucketName
+    "admin" $state.aws.loki.s3.bucketName
+  }}
   {{- $lokiS3Values := dict
     "loki" (dict
       "storage" (dict
         "type" "s3"
+        "bucketNames" $lokiBucketNames
         "s3" (dict
           "region" $state.aws.region
-          "bucketNames" (dict
-            "chunks" $state.aws.loki.s3.bucketName
-            "ruler" $state.aws.loki.s3.bucketName
-            "admin" $state.aws.loki.s3.bucketName
-          )
+          "bucketNames" $lokiBucketNames
         )
       )
       "schemaConfig" (dict
@@ -42,9 +45,23 @@
   {{- $existingValues := $lokiPassthrough.values | default dict }}
   {{- $mergedValues := mergeOverwrite $lokiS3Values $existingValues }}
   {{- $lokiPassthrough = set $lokiPassthrough "values" $mergedValues }}
+{{- else }}
+  {{- $lokiFilesystemValues := dict
+    "singleBinary" (dict
+      "persistence" (dict
+        "enabled" true
+        "storageClass" $state.aws.loki.pvc.storageClass.name
+        "size" $state.aws.loki.pvc.size
+      )
+    )
+  }}
+  {{- $existingValues := $lokiPassthrough.values | default dict }}
+  {{- $mergedValues := mergeOverwrite $lokiFilesystemValues $existingValues }}
+  {{- $lokiPassthrough = set $lokiPassthrough "values" $mergedValues }}
 {{- end }}
 
 {{- $tempoPassthrough := $state.observe.tempo | default dict }}
+{{- $_ := unset $tempoPassthrough "storage" }}
 {{- if $state.aws.tempo.s3.enabled }}
   {{- $tempoRetentionHours := printf "%dh" (mul $state.aws.tempo.s3.retentionDays 24) }}
   {{- $tempoS3Values := dict
@@ -68,6 +85,31 @@
   }}
   {{- $existingValues := $tempoPassthrough.values | default dict }}
   {{- $mergedValues := mergeOverwrite $tempoS3Values $existingValues }}
+  {{- $tempoPassthrough = set $tempoPassthrough "values" $mergedValues }}
+{{- else }}
+  {{- $tempoFilesystemValues := dict
+    "tempo" (dict
+      "storage" (dict
+        "trace" (dict
+          "backend" "local"
+          "local" (dict
+            "path" "/var/tempo/traces"
+          )
+          "wal" (dict
+            "path" "/var/tempo/wal"
+          )
+        )
+      )
+    )
+    "persistence" (dict
+      "enabled" true
+      "storageClass" $state.aws.tempo.pvc.storageClass.name
+      "storageClassName" $state.aws.tempo.pvc.storageClass.name
+      "size" $state.aws.tempo.pvc.size
+    )
+  }}
+  {{- $existingValues := $tempoPassthrough.values | default dict }}
+  {{- $mergedValues := mergeOverwrite $tempoFilesystemValues $existingValues }}
   {{- $tempoPassthrough = set $tempoPassthrough "values" $mergedValues }}
 {{- end }}
 

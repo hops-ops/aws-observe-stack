@@ -66,19 +66,80 @@
 {{- $grafanaOperator := $spec.grafanaOperator | default dict }}
 
 # ==============================================================================
-# AWS S3 storage config
+# Storage config
 # ==============================================================================
-{{- $awsLoki := $aws.loki | default dict }}
-{{- $awsLokiS3 := $awsLoki.s3 | default dict }}
-{{- $lokiS3Enabled := $awsLokiS3.enabled | default false }}
-{{- $lokiS3BucketName := $awsLokiS3.bucketName | default (printf "%s-loki-storage" $name) }}
-{{- $lokiS3RetentionDays := $awsLokiS3.retentionDays | default 30 }}
+{{- $storageClassDefaultsInput := $spec.storageClassDefaults | default dict }}
+{{- $storageClassDefaultsCreate := true }}
+{{- if hasKey $storageClassDefaultsInput "create" }}
+  {{- $storageClassDefaultsCreate = $storageClassDefaultsInput.create }}
+{{- end }}
+{{- $storageClassDefaultsAllowVolumeExpansion := true }}
+{{- if hasKey $storageClassDefaultsInput "allowVolumeExpansion" }}
+  {{- $storageClassDefaultsAllowVolumeExpansion = $storageClassDefaultsInput.allowVolumeExpansion }}
+{{- end }}
+{{- $storageClassDefaults := dict
+  "create" $storageClassDefaultsCreate
+  "provisioner" ($storageClassDefaultsInput.provisioner | default "ebs.csi.eks.amazonaws.com")
+  "parameters" ($storageClassDefaultsInput.parameters | default (dict
+    "type" "gp3"
+    "fsType" "ext4"
+  ))
+  "allowVolumeExpansion" $storageClassDefaultsAllowVolumeExpansion
+  "reclaimPolicy" ($storageClassDefaultsInput.reclaimPolicy | default "Delete")
+  "volumeBindingMode" ($storageClassDefaultsInput.volumeBindingMode | default "WaitForFirstConsumer")
+}}
 
-{{- $awsTempo := $aws.tempo | default dict }}
-{{- $awsTempoS3 := $awsTempo.s3 | default dict }}
-{{- $tempoS3Enabled := $awsTempoS3.enabled | default false }}
-{{- $tempoS3BucketName := $awsTempoS3.bucketName | default (printf "%s-tempo-storage" $name) }}
-{{- $tempoS3RetentionDays := $awsTempoS3.retentionDays | default 30 }}
+{{- $lokiStorage := $loki.storage | default dict }}
+{{- $lokiStorageType := $lokiStorage.type | default "pvc" }}
+{{- $lokiStorageS3 := $lokiStorage.s3 | default dict }}
+{{- $lokiStorageClassInput := $lokiStorage.storageClass | default dict }}
+{{- $lokiS3Enabled := eq $lokiStorageType "s3" }}
+{{- $lokiS3BucketName := $lokiStorageS3.bucketName | default (printf "%s-loki-storage" $name) }}
+{{- $lokiS3RetentionDays := $lokiStorageS3.retentionDays | default 30 }}
+{{- $lokiPVCSize := $lokiStorage.size | default "10Gi" }}
+{{- $lokiStorageClassCreate := $storageClassDefaults.create }}
+{{- if hasKey $lokiStorageClassInput "create" }}
+  {{- $lokiStorageClassCreate = $lokiStorageClassInput.create }}
+{{- end }}
+{{- $lokiStorageClassAllowVolumeExpansion := $storageClassDefaults.allowVolumeExpansion }}
+{{- if hasKey $lokiStorageClassInput "allowVolumeExpansion" }}
+  {{- $lokiStorageClassAllowVolumeExpansion = $lokiStorageClassInput.allowVolumeExpansion }}
+{{- end }}
+{{- $lokiStorageClass := dict
+  "create" $lokiStorageClassCreate
+  "name" ($lokiStorageClassInput.name | default "loki")
+  "provisioner" ($lokiStorageClassInput.provisioner | default $storageClassDefaults.provisioner)
+  "parameters" ($lokiStorageClassInput.parameters | default $storageClassDefaults.parameters)
+  "allowVolumeExpansion" $lokiStorageClassAllowVolumeExpansion
+  "reclaimPolicy" ($lokiStorageClassInput.reclaimPolicy | default $storageClassDefaults.reclaimPolicy)
+  "volumeBindingMode" ($lokiStorageClassInput.volumeBindingMode | default $storageClassDefaults.volumeBindingMode)
+}}
+
+{{- $tempoStorage := $tempo.storage | default dict }}
+{{- $tempoStorageType := $tempoStorage.type | default "pvc" }}
+{{- $tempoStorageS3 := $tempoStorage.s3 | default dict }}
+{{- $tempoStorageClassInput := $tempoStorage.storageClass | default dict }}
+{{- $tempoS3Enabled := eq $tempoStorageType "s3" }}
+{{- $tempoS3BucketName := $tempoStorageS3.bucketName | default (printf "%s-tempo-storage" $name) }}
+{{- $tempoS3RetentionDays := $tempoStorageS3.retentionDays | default 30 }}
+{{- $tempoPVCSize := $tempoStorage.size | default "10Gi" }}
+{{- $tempoStorageClassCreate := $storageClassDefaults.create }}
+{{- if hasKey $tempoStorageClassInput "create" }}
+  {{- $tempoStorageClassCreate = $tempoStorageClassInput.create }}
+{{- end }}
+{{- $tempoStorageClassAllowVolumeExpansion := $storageClassDefaults.allowVolumeExpansion }}
+{{- if hasKey $tempoStorageClassInput "allowVolumeExpansion" }}
+  {{- $tempoStorageClassAllowVolumeExpansion = $tempoStorageClassInput.allowVolumeExpansion }}
+{{- end }}
+{{- $tempoStorageClass := dict
+  "create" $tempoStorageClassCreate
+  "name" ($tempoStorageClassInput.name | default "tempo")
+  "provisioner" ($tempoStorageClassInput.provisioner | default $storageClassDefaults.provisioner)
+  "parameters" ($tempoStorageClassInput.parameters | default $storageClassDefaults.parameters)
+  "allowVolumeExpansion" $tempoStorageClassAllowVolumeExpansion
+  "reclaimPolicy" ($tempoStorageClassInput.reclaimPolicy | default $storageClassDefaults.reclaimPolicy)
+  "volumeBindingMode" ($tempoStorageClassInput.volumeBindingMode | default $storageClassDefaults.volumeBindingMode)
+}}
 
 # ==============================================================================
 # Initialize $state
@@ -107,6 +168,10 @@
         "bucketName" $lokiS3BucketName
         "retentionDays" $lokiS3RetentionDays
       )
+      "pvc" (dict
+        "size" $lokiPVCSize
+        "storageClass" $lokiStorageClass
+      )
       "serviceAccount" (dict
         "name" "loki"
         "namespace" $namespace
@@ -117,6 +182,10 @@
         "enabled" $tempoS3Enabled
         "bucketName" $tempoS3BucketName
         "retentionDays" $tempoS3RetentionDays
+      )
+      "pvc" (dict
+        "size" $tempoPVCSize
+        "storageClass" $tempoStorageClass
       )
       "serviceAccount" (dict
         "name" "tempo"

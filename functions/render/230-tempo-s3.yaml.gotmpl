@@ -1,24 +1,24 @@
 # code: language=yaml
 #
-# AWS S3 storage for Loki (only when aws.loki.s3.enabled)
+# AWS S3 storage for Tempo (only when tempo.storage.type=s3)
 #
 
-{{- if $state.aws.loki.s3.enabled }}
+{{- if $state.aws.tempo.s3.enabled }}
 
-{{- $bucketName := $state.aws.loki.s3.bucketName }}
-{{- $retentionDays := $state.aws.loki.s3.retentionDays }}
+{{- $bucketName := $state.aws.tempo.s3.bucketName }}
+{{- $retentionDays := $state.aws.tempo.s3.retentionDays }}
 {{- $lifecycleDays := add $retentionDays 7 }}
 
 # ==============================================================================
-# S3 Bucket for Loki storage
+# S3 Bucket for Tempo storage
 # ==============================================================================
 ---
 apiVersion: s3.aws.m.upbound.io/v1beta1
 kind: Bucket
 metadata:
-  name: {{ $state.name }}-loki-bucket
+  name: {{ $state.name }}-tempo-bucket
   annotations:
-    {{ setResourceNameAnnotation "loki-bucket" }}
+    {{ setResourceNameAnnotation "tempo-bucket" }}
     crossplane.io/external-name: {{ $bucketName }}
   labels: {{ $state.labels | toJson }}
 spec:
@@ -38,16 +38,16 @@ spec:
 apiVersion: s3.aws.m.upbound.io/v1beta1
 kind: BucketPublicAccessBlock
 metadata:
-  name: {{ $state.name }}-loki-bucket-pab
+  name: {{ $state.name }}-tempo-bucket-pab
   annotations:
-    {{ setResourceNameAnnotation "loki-bucket-pab" }}
+    {{ setResourceNameAnnotation "tempo-bucket-pab" }}
   labels: {{ $state.labels | toJson }}
 spec:
   managementPolicies: {{ $state.managementPolicies | toJson }}
   forProvider:
     region: {{ $state.aws.region }}
     bucketRef:
-      name: {{ $state.name }}-loki-bucket
+      name: {{ $state.name }}-tempo-bucket
     blockPublicAcls: true
     blockPublicPolicy: true
     ignorePublicAcls: true
@@ -63,16 +63,16 @@ spec:
 apiVersion: s3.aws.m.upbound.io/v1beta1
 kind: BucketLifecycleConfiguration
 metadata:
-  name: {{ $state.name }}-loki-bucket-lifecycle
+  name: {{ $state.name }}-tempo-bucket-lifecycle
   annotations:
-    {{ setResourceNameAnnotation "loki-bucket-lifecycle" }}
+    {{ setResourceNameAnnotation "tempo-bucket-lifecycle" }}
   labels: {{ $state.labels | toJson }}
 spec:
   managementPolicies: {{ $state.managementPolicies | toJson }}
   forProvider:
     region: {{ $state.aws.region }}
     bucketRef:
-      name: {{ $state.name }}-loki-bucket
+      name: {{ $state.name }}-tempo-bucket
     rule:
     - id: expire-old-data
       status: Enabled
@@ -83,15 +83,15 @@ spec:
     kind: {{ $state.aws.providerConfigRef.kind }}
 
 # ==============================================================================
-# PodIdentity for Loki service account with S3 permissions
+# PodIdentity for Tempo service account with S3 permissions
 # ==============================================================================
 ---
 apiVersion: aws.hops.ops.com.ai/v1alpha1
 kind: PodIdentity
 metadata:
-  name: {{ $state.name }}-loki-pod-identity
+  name: {{ $state.name }}-tempo-pod-identity
   annotations:
-    {{ setResourceNameAnnotation "loki-pod-identity" }}
+    {{ setResourceNameAnnotation "tempo-pod-identity" }}
   labels: {{ $state.labels | toJson }}
 spec:
   managementPolicies: {{ $state.managementPolicies | toJson }}
@@ -107,10 +107,10 @@ spec:
   permissionsBoundaryArn: {{ $state.aws.permissionsBoundaryArn }}
   {{- end }}
   serviceAccount:
-    name: {{ $state.aws.loki.serviceAccount.name }}
-    namespace: {{ $state.aws.loki.serviceAccount.namespace }}
+    name: {{ $state.aws.tempo.serviceAccount.name }}
+    namespace: {{ $state.aws.tempo.serviceAccount.namespace }}
   inlinePolicy:
-    - name: loki-s3-storage
+    - name: tempo-s3-storage
       policy: |
         {
           "Version": "2012-10-17",
@@ -130,21 +130,21 @@ spec:
   tags: {{ $state.aws.tags | toJson }}
 
 # ==============================================================================
-# Usage: Protect Loki PodIdentity from deletion until Loki Release is deleted
+# Usage: Protect Tempo PodIdentity from deletion until Tempo Release is deleted
 # ==============================================================================
-# Loki pods depend on the PodIdentity for S3 access. XR→XR Usages don't work
+# Tempo pods depend on the PodIdentity for S3 access. XR→XR Usages don't work
 # because the Observe sub-XR gets its deletion timestamp before its Releases
 # finish cleaning up.
-{{- $lokiName := (($state.observe.loki).name | default "loki") }}
-{{- $lokiPodIdentityAssociationName := printf "%s-%s-loki-pod-identity" $state.clusterName $state.name }}
-{{- if and $state.observed.observe.ready $state.observed.lokiPodIdentity.ready }}
+{{- $tempoName := (($state.observe.tempo).name | default "tempo") }}
+{{- $tempoPodIdentityAssociationName := printf "%s-%s-tempo-pod-identity" $state.clusterName $state.name }}
+{{- if and $state.observed.observe.ready $state.observed.tempoPodIdentity.ready }}
 ---
 apiVersion: protection.crossplane.io/v1beta1
 kind: Usage
 metadata:
-  name: {{ $state.name }}-delete-loki-before-loki-pod-identity
+  name: {{ $state.name }}-delete-tempo-before-tempo-pod-identity
   annotations:
-    {{ setResourceNameAnnotation "usage-loki-pod-identity" }}
+    {{ setResourceNameAnnotation "usage-tempo-pod-identity" }}
   labels: {{ $state.labels | toJson }}
 spec:
   replayDeletion: true
@@ -152,12 +152,12 @@ spec:
     apiVersion: eks.aws.m.upbound.io/v1beta1
     kind: PodIdentityAssociation
     resourceRef:
-      name: {{ $lokiPodIdentityAssociationName }}
+      name: {{ $tempoPodIdentityAssociationName }}
   by:
     apiVersion: helm.m.crossplane.io/v1beta1
     kind: Release
     resourceRef:
-      name: {{ $lokiName }}
+      name: {{ $tempoName }}
 {{- end }}
 
 {{- end }}

@@ -1,0 +1,31 @@
+# code: language=yaml
+#
+# Tempo filesystem StorageClass (only when tempo.storage.type=pvc)
+#
+
+{{- if and (not $state.aws.tempo.s3.enabled) $state.aws.tempo.pvc.storageClass.create }}
+---
+apiVersion: kubernetes.m.crossplane.io/v1alpha1
+kind: Object
+metadata:
+  name: {{ $state.name }}-tempo-storageclass
+  annotations:
+    {{ setResourceNameAnnotation "tempo-storageclass" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  managementPolicies: {{ $state.managementPolicies | toJson }}
+  forProvider:
+    manifest:
+      apiVersion: storage.k8s.io/v1
+      kind: StorageClass
+      metadata:
+        name: {{ $state.aws.tempo.pvc.storageClass.name }}
+      provisioner: {{ $state.aws.tempo.pvc.storageClass.provisioner }}
+      parameters: {{ $state.aws.tempo.pvc.storageClass.parameters | toJson }}
+      allowVolumeExpansion: {{ $state.aws.tempo.pvc.storageClass.allowVolumeExpansion }}
+      reclaimPolicy: {{ $state.aws.tempo.pvc.storageClass.reclaimPolicy }}
+      volumeBindingMode: {{ $state.aws.tempo.pvc.storageClass.volumeBindingMode }}
+  providerConfigRef:
+    name: {{ $state.kubernetes.providerConfigRef.name }}
+    kind: {{ $state.kubernetes.providerConfigRef.kind }}
+{{- end }}

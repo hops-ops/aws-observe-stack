@@ -22,6 +22,27 @@ spec:
     region: us-east-1
 ```
 
+Default storage is pvc-backed (`storage.type: pvc`) for both Loki and Tempo with auto-created `gp3` StorageClasses (`loki`, `tempo`).
+
+You can set global StorageClass behavior and override per component:
+
+```yaml
+spec:
+  storageClassDefaults:
+    reclaimPolicy: Retain
+  loki:
+    storage:
+      type: pvc
+      size: 20Gi
+      storageClass:
+        name: logs
+  tempo:
+    storage:
+      type: pvc
+      storageClass:
+        name: traces
+```
+
 With custom values:
 
 ```yaml
@@ -33,6 +54,16 @@ metadata:
 spec:
   clusterName: production-cluster
   namespace: monitoring
+  loki:
+    storage:
+      type: s3
+      s3:
+        retentionDays: 30
+  tempo:
+    storage:
+      type: s3
+      s3:
+        retentionDays: 14
   k8sMonitoring:
     values:
       opencost:

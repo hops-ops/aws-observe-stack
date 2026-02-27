@@ -65,7 +65,7 @@ _items = [
             cleanupTimeoutSeconds = 1800
             skipDelete = False
             # initResources: Install infrastructure Configuration packages
-            # Note: stack-observe and aws-pod-identity are auto-installed as dependencies
+            # Note: stack-observe and opencost-pod-identity are auto-installed as dependencies
             initResources = [
                 # aws-auto-eks-cluster Configuration package (provides AutoEKSCluster XRD)
                 {
@@ -181,6 +181,33 @@ _items = [
                         package: "xpkg.crossplane.io/crossplane-contrib/provider-kubernetes:v1.2.0"
                         runtimeConfigRef: {
                             name: "crossplane-contrib-provider-kubernetes"
+                        }
+                    }
+                }
+                # Protect cleanup order:
+                # AutoEKSCluster must not be deleted before stacks.aws Observe.
+                {
+                    apiVersion = "protection.crossplane.io/v1beta1"
+                    kind = "Usage"
+                    metadata = {
+                        name = _test_name + "-delete-observe-before-autoekscluster"
+                        namespace = _namespace
+                    }
+                    spec = {
+                        replayDeletion = True
+                        of = {
+                            apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                            kind = "AutoEKSCluster"
+                            resourceRef = {
+                                name = _test_name
+                            }
+                        }
+                        by = {
+                            apiVersion = "stacks.aws.hops.ops.com.ai/v1alpha1"
+                            kind = "Observe"
+                            resourceRef = {
+                                name = "observe"
+                            }
                         }
                     }
                 }

@@ -1,0 +1,31 @@
+# code: language=yaml
+#
+# Loki filesystem StorageClass (only when loki.storage.type=pvc)
+#
+
+{{- if and (not $state.aws.loki.s3.enabled) $state.aws.loki.pvc.storageClass.create }}
+---
+apiVersion: kubernetes.m.crossplane.io/v1alpha1
+kind: Object
+metadata:
+  name: {{ $state.name }}-loki-storageclass
+  annotations:
+    {{ setResourceNameAnnotation "loki-storageclass" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  managementPolicies: {{ $state.managementPolicies | toJson }}
+  forProvider:
+    manifest:
+      apiVersion: storage.k8s.io/v1
+      kind: StorageClass
+      metadata:
+        name: {{ $state.aws.loki.pvc.storageClass.name }}
+      provisioner: {{ $state.aws.loki.pvc.storageClass.provisioner }}
+      parameters: {{ $state.aws.loki.pvc.storageClass.parameters | toJson }}
+      allowVolumeExpansion: {{ $state.aws.loki.pvc.storageClass.allowVolumeExpansion }}
+      reclaimPolicy: {{ $state.aws.loki.pvc.storageClass.reclaimPolicy }}
+      volumeBindingMode: {{ $state.aws.loki.pvc.storageClass.volumeBindingMode }}
+  providerConfigRef:
+    name: {{ $state.kubernetes.providerConfigRef.name }}
+    kind: {{ $state.kubernetes.providerConfigRef.kind }}
+{{- end }}

@@ -5,7 +5,7 @@ XRD_DIR := apis/observes
 COMPOSITION := $(XRD_DIR)/composition.yaml
 DEFINITION := $(XRD_DIR)/definition.yaml
 CONFIGURATION := $(XRD_DIR)/configuration.yaml
-EXAMPLE_DEFAULT := examples/observes/standard.yaml
+EXAMPLE_DEFAULT := examples/observes/s3.yaml
 RENDER_TESTS := $(wildcard tests/test-*)
 E2E_TESTS := $(wildcard tests/e2etest-*)
 
@@ -32,7 +32,8 @@ generate-configuration:
 # Format: example_path::observed_resources_path (observed_resources_path is optional)
 EXAMPLES := \
     examples/observes/minimal.yaml:: \
-    examples/observes/standard.yaml::
+    examples/observes/pvc.yaml:: \
+    examples/observes/s3.yaml::
 
 # Render all examples (parallel execution, output shown per-job when complete)
 render\:all:

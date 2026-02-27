@@ -77,8 +77,44 @@ spec:
               namespace:
                 description: Shared namespace for all components. Defaults to monitoring.
                 type: string
+              storageClassDefaults:
+                description: Default StorageClass settings used when components use storage.type=pvc.
+                type: object
+                properties:
+                  create:
+                    description: Whether to create StorageClass resources by default.
+                    type: boolean
+                    default: true
+                  provisioner:
+                    description: StorageClass provisioner.
+                    type: string
+                    default: ebs.csi.eks.amazonaws.com
+                  parameters:
+                    description: StorageClass parameters map.
+                    type: object
+                    additionalProperties:
+                      type: string
+                    x-kubernetes-preserve-unknown-fields: true
+                  allowVolumeExpansion:
+                    description: Whether PVC expansion is allowed.
+                    type: boolean
+                    default: true
+                  reclaimPolicy:
+                    description: StorageClass reclaim policy.
+                    type: string
+                    enum:
+                    - Delete
+                    - Retain
+                    default: Delete
+                  volumeBindingMode:
+                    description: StorageClass volume binding mode.
+                    type: string
+                    enum:
+                    - Immediate
+                    - WaitForFirstConsumer
+                    default: WaitForFirstConsumer
               aws:
-                description: AWS configuration for Pod Identity and S3 storage.
+                description: AWS account and IAM configuration.
                 type: object
                 properties:
                   region:
@@ -96,44 +132,6 @@ spec:
                     additionalProperties:
                       type: string
                     x-kubernetes-preserve-unknown-fields: true
-                  loki:
-                    description: S3 storage configuration for Loki.
-                    type: object
-                    properties:
-                      s3:
-                        description: S3 backend for Loki log storage.
-                        type: object
-                        properties:
-                          enabled:
-                            description: Enable S3 storage for Loki. Default is false (filesystem).
-                            type: boolean
-                            default: false
-                          bucketName:
-                            description: S3 bucket name. Defaults to {name}-loki-storage.
-                            type: string
-                          retentionDays:
-                            description: Retention period in days for log data. Applied to both compactor and S3 lifecycle.
-                            type: integer
-                            default: 30
-                  tempo:
-                    description: S3 storage configuration for Tempo.
-                    type: object
-                    properties:
-                      s3:
-                        description: S3 backend for Tempo trace storage.
-                        type: object
-                        properties:
-                          enabled:
-                            description: Enable S3 storage for Tempo. Default is false (filesystem).
-                            type: boolean
-                            default: false
-                          bucketName:
-                            description: S3 bucket name. Defaults to {name}-tempo-storage.
-                            type: string
-                          retentionDays:
-                            description: Retention period in days for trace data. Applied to both compactor and S3 lifecycle.
-                            type: integer
-                            default: 30
                 required:
                 - region
               kubePrometheusStack:
@@ -172,6 +170,67 @@ spec:
                     description: Helm values that replace all defaults for this component.
                     type: object
                     x-kubernetes-preserve-unknown-fields: true
+                  storage:
+                    description: Storage configuration for Loki.
+                    type: object
+                    properties:
+                      type:
+                        description: Storage backend type. Use "pvc" for PVC-backed filesystem storage, or "s3" for S3 object storage.
+                        type: string
+                        enum:
+                        - pvc
+                        - s3
+                        default: pvc
+                      size:
+                        description: Requested PVC size for Loki when type=pvc.
+                        type: string
+                        default: 10Gi
+                      storageClass:
+                        description: StorageClass settings for Loki when type=pvc.
+                        type: object
+                        properties:
+                          name:
+                            description: StorageClass name for Loki PVCs.
+                            type: string
+                            default: loki
+                          create:
+                            description: Whether to create this StorageClass. Defaults to storageClassDefaults.create.
+                            type: boolean
+                          provisioner:
+                            description: Provisioner override for this component.
+                            type: string
+                          parameters:
+                            description: Parameters override for this component.
+                            type: object
+                            additionalProperties:
+                              type: string
+                            x-kubernetes-preserve-unknown-fields: true
+                          allowVolumeExpansion:
+                            description: allowVolumeExpansion override for this component.
+                            type: boolean
+                          reclaimPolicy:
+                            description: Reclaim policy override for this component.
+                            type: string
+                            enum:
+                            - Delete
+                            - Retain
+                          volumeBindingMode:
+                            description: Volume binding mode override for this component.
+                            type: string
+                            enum:
+                            - Immediate
+                            - WaitForFirstConsumer
+                      s3:
+                        description: S3 settings used when type=s3.
+                        type: object
+                        properties:
+                          bucketName:
+                            description: S3 bucket name. Defaults to {name}-loki-storage.
+                            type: string
+                          retentionDays:
+                            description: Retention period in days for log data. Applied to both compactor and S3 lifecycle.
+                            type: integer
+                            default: 30
               tempo:
                 description: Configuration for the Tempo component.
                 type: object
@@ -190,6 +249,67 @@ spec:
                     description: Helm values that replace all defaults for this component.
                     type: object
                     x-kubernetes-preserve-unknown-fields: true
+                  storage:
+                    description: Storage configuration for Tempo.
+                    type: object
+                    properties:
+                      type:
+                        description: Storage backend type. Use "pvc" for PVC-backed local storage, or "s3" for S3 object storage.
+                        type: string
+                        enum:
+                        - pvc
+                        - s3
+                        default: pvc
+                      size:
+                        description: Requested PVC size for Tempo when type=pvc.
+                        type: string
+                        default: 10Gi
+                      storageClass:
+                        description: StorageClass settings for Tempo when type=pvc.
+                        type: object
+                        properties:
+                          name:
+                            description: StorageClass name for Tempo PVCs.
+                            type: string
+                            default: tempo
+                          create:
+                            description: Whether to create this StorageClass. Defaults to storageClassDefaults.create.
+                            type: boolean
+                          provisioner:
+                            description: Provisioner override for this component.
+                            type: string
+                          parameters:
+                            description: Parameters override for this component.
+                            type: object
+                            additionalProperties:
+                              type: string
+                            x-kubernetes-preserve-unknown-fields: true
+                          allowVolumeExpansion:
+                            description: allowVolumeExpansion override for this component.
+                            type: boolean
+                          reclaimPolicy:
+                            description: Reclaim policy override for this component.
+                            type: string
+                            enum:
+                            - Delete
+                            - Retain
+                          volumeBindingMode:
+                            description: Volume binding mode override for this component.
+                            type: string
+                            enum:
+                            - Immediate
+                            - WaitForFirstConsumer
+                      s3:
+                        description: S3 settings used when type=s3.
+                        type: object
+                        properties:
+                          bucketName:
+                            description: S3 bucket name. Defaults to {name}-tempo-storage.
+                            type: string
+                          retentionDays:
+                            description: Retention period in days for trace data. Applied to both compactor and S3 lifecycle.
+                            type: integer
+                            default: 30
               k8sMonitoring:
                 description: Configuration for the k8s-monitoring component.
                 type: object

@@ -7,9 +7,9 @@
 apiVersion: aws.hops.ops.com.ai/v1alpha1
 kind: PodIdentity
 metadata:
-  name: {{ $state.name }}-pod-identity
+  name: {{ $state.name }}-opencost-pod-identity
   annotations:
-    {{ setResourceNameAnnotation "pod-identity" }}
+    {{ setResourceNameAnnotation "opencost-pod-identity" }}
   labels: {{ $state.labels | toJson }}
 spec:
   managementPolicies: {{ $state.managementPolicies | toJson }}
@@ -74,15 +74,15 @@ spec:
 # its deletion timestamp (Background policy) before its composed Releases
 # finish cleaning up, which would release PodIdentity too early.
 {{- $k8sMonName := (($state.observe.k8sMonitoring).name | default "k8s-monitoring") }}
-{{- $podIdentityAssociationName := printf "%s-%s-pod-identity" $state.clusterName $state.name }}
+{{- $podIdentityAssociationName := printf "%s-%s-opencost-pod-identity" $state.clusterName $state.name }}
 {{- if and $state.observed.observe.ready $state.observed.podIdentity.ready }}
 ---
 apiVersion: protection.crossplane.io/v1beta1
 kind: Usage
 metadata:
-  name: {{ $state.name }}-delete-k8s-monitoring-before-pod-identity
+  name: {{ $state.name }}-delete-k8s-monitoring-before-opencost-pod-identity
   annotations:
-    {{ setResourceNameAnnotation "usage-pod-identity" }}
+    {{ setResourceNameAnnotation "usage-opencost-pod-identity" }}
   labels: {{ $state.labels | toJson }}
 spec:
   replayDeletion: true
