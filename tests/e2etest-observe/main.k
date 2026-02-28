@@ -184,10 +184,6 @@ _items = [
                         }
                     }
                 }
-            ]
-            # manifests: All XRs that need cleanup (AutoEKSCluster, Observe)
-            # Note: Uses persistent hops-test network - no Network manifest needed
-            manifests = [
                 # EKS Cluster
                 {
                     apiVersion = "aws.hops.ops.com.ai/v1alpha1"
@@ -225,6 +221,10 @@ _items = [
                         }
                     }
                 }
+            ]
+            # manifests: All XRs that need cleanup (AutoEKSCluster, Observe)
+            # Note: Uses persistent hops-test network - no Network manifest needed
+            manifests = [
                 # Observe AWS Stack
                 stacksv1alpha1.Observe {
                     metadata.name = "observe"

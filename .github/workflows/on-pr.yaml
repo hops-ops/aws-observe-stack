@@ -42,7 +42,7 @@ jobs:
     uses: unbounded-tech/workflows-crossplane/.github/workflows/test.yaml@v2.16.0
 
   e2e:
-    uses: unbounded-tech/workflows-crossplane/.github/workflows/e2e.yaml@v2.16.0
+    uses: unbounded-tech/workflows-crossplane/.github/workflows/e2e.yaml@feat/delete-extra-resources
     with:
       aws: true
       aws-use-oidc: true
@@ -53,12 +53,10 @@ jobs:
         [
           "observes.stacks.hops.ops.com.ai"
         ]
-      delete-root-resource: true
       delete-extra-resources: |
         [
           "autoeksclusters.aws.hops.ops.com.ai"
         ]
-      manual-cleanup: true
       timeout-minutes: 33
       cleanup-timeout-minutes: 20
       delete-extra-resources-timeout-minutes: 20
