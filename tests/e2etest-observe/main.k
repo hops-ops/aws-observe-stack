@@ -231,7 +231,21 @@ _items = [
                     metadata.namespace = _namespace
                     spec = {
                         clusterName = _test_name
-                        aws.region = _region
+                        aws = {
+                            region = "us-east-2"
+                        }
+                        loki = {
+                            storage = {
+                                type = "pvc"
+                                size = "10Gi"
+                            }
+                        }
+                        tempo = {
+                            storage = {
+                                type = "pvc"
+                                size = "10Gi"
+                            }
+                        }
                     }
                 }
             ]
