@@ -63,7 +63,7 @@ _items = [
             timeoutSeconds = 5400
             # 30 minutes for cleanup
             cleanupTimeoutSeconds = 1800
-            skipDelete = True
+            skipDelete = False
             # initResources: Install infrastructure Configuration packages
             # Note: stack-observe and opencost-pod-identity are auto-installed as dependencies
             initResources = [
