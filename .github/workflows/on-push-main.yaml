@@ -49,13 +49,11 @@ jobs:
         [
           "observes.stacks.hops.ops.com.ai"
         ]
-      delete-root-resource: true
       delete-extra-resources: |
         [
           "autoeksclusters.aws.hops.ops.com.ai"
         ]
-      manual-cleanup: true
-      timeout-minutes: 33
+      timeout-minutes: 44
       cleanup-timeout-minutes: 20
       delete-extra-resources-timeout-minutes: 20
 

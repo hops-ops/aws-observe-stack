@@ -57,7 +57,7 @@ jobs:
         [
           "autoeksclusters.aws.hops.ops.com.ai"
         ]
-      timeout-minutes: 33
+      timeout-minutes: 44
       cleanup-timeout-minutes: 20
       delete-extra-resources-timeout-minutes: 20
 
