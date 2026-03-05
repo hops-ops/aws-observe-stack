@@ -23,7 +23,7 @@ permissions:
 
 jobs:
   validate:
-    uses: unbounded-tech/workflows-crossplane/.github/workflows/validate.yaml@v2.15.0
+    uses: unbounded-tech/workflows-crossplane/.github/workflows/validate.yaml@v2.17.0
     with:
       examples: |
         [
@@ -35,10 +35,10 @@ jobs:
       error_on_missing_schemas: true
 
   test:
-    uses: unbounded-tech/workflows-crossplane/.github/workflows/test.yaml@v2.15.0
+    uses: unbounded-tech/workflows-crossplane/.github/workflows/test.yaml@v2.17.0
 
   e2e:
-    uses: unbounded-tech/workflows-crossplane/.github/workflows/e2e.yaml@feat/more-usage-debugging
+    uses: unbounded-tech/workflows-crossplane/.github/workflows/e2e.yaml@v2.17.0
     with:
       aws: true
       aws-use-oidc: true
@@ -49,8 +49,13 @@ jobs:
         [
           "observes.stacks.hops.ops.com.ai"
         ]
-      timeout-minutes: 45
-      cleanup-timeout-minutes: 45
+      delete-extra-resources: |
+        [
+          "autoeksclusters.aws.hops.ops.com.ai"
+        ]
+      timeout-minutes: 44
+      cleanup-timeout-minutes: 20
+      delete-extra-resources-timeout-minutes: 20
 
   version-and-tag:
     name: Version and Tag
