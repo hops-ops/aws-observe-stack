@@ -31,11 +31,11 @@ jobs:
     with:
       examples: |
         [
-          { "example": "examples/observes/minimal.yaml" },
-          { "example": "examples/observes/pvc.yaml" },
-          { "example": "examples/observes/s3.yaml" }
+          { "example": "examples/observestacks/minimal.yaml" },
+          { "example": "examples/observestacks/pvc.yaml" },
+          { "example": "examples/observestacks/s3.yaml" }
         ]
-      api_path: apis/observes
+      api_path: apis/observestacks
       error_on_missing_schemas: true
 
   test:
@@ -51,7 +51,7 @@ jobs:
       aws-role-duration-seconds: 7200
       debug-resource-types: |
         [
-          "observes.stacks.hops.ops.com.ai"
+          "observestacks.aws.hops.ops.com.ai"
         ]
       delete-extra-resources: |
         [

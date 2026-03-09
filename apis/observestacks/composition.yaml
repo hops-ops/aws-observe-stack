@@ -1,15 +1,15 @@
 apiVersion: apiextensions.crossplane.io/v1
 kind: Composition
 metadata:
-  name: observes.stacks.aws.hops.ops.com.ai
+  name: observestacks.aws.hops.ops.com.ai
 spec:
   compositeTypeRef:
-    apiVersion: stacks.aws.hops.ops.com.ai/v1alpha1
-    kind: Observe
+    apiVersion: aws.hops.ops.com.ai/v1alpha1
+    kind: ObserveStack
   mode: Pipeline
   pipeline:
   - functionRef:
-      name: hops-ops-stack-aws-observerender
+      name: hops-ops-aws-observe-stackrender
     step: render
   - functionRef:
       name: crossplane-contrib-function-auto-ready

@@ -1,18 +1,18 @@
-# stack-aws-observe
+# aws-observe-stack
 
-Deploys the Observe stack with AWS Pod Identity for OpenCost billing access.
+Deploys the ObserveStack with AWS Pod Identity for OpenCost billing access.
 
 ## Overview
 
-Composes the base `stacks.hops.ops.com.ai/Observe` XRD with `aws.hops.ops.com.ai/PodIdentity`.
+Composes the base `hops.ops.com.ai/ObserveStack` XRD with `aws.hops.ops.com.ai/PodIdentity`.
 Automatically provisions IAM role and Pod Identity association for OpenCost's service account
 with Cost Explorer, Pricing, CUR, and EC2 describe permissions.
 
 ## Usage
 
 ```yaml
-apiVersion: stacks.aws.hops.ops.com.ai/v1alpha1
-kind: Observe
+apiVersion: aws.hops.ops.com.ai/v1alpha1
+kind: ObserveStack
 metadata:
   name: observe
   namespace: default
@@ -46,8 +46,8 @@ spec:
 With custom values:
 
 ```yaml
-apiVersion: stacks.aws.hops.ops.com.ai/v1alpha1
-kind: Observe
+apiVersion: aws.hops.ops.com.ai/v1alpha1
+kind: ObserveStack
 metadata:
   name: observe
   namespace: default
@@ -75,7 +75,7 @@ spec:
 
 ## What Gets Created
 
-1. `stacks.hops.ops.com.ai/Observe` - the base observability stack (Prometheus, Loki, Tempo, k8s-monitoring/OpenCost, Grafana)
+1. `hops.ops.com.ai/ObserveStack` - the base observability stack (Prometheus, Loki, Tempo, k8s-monitoring/OpenCost, Grafana)
 2. `aws.hops.ops.com.ai/PodIdentity` - IAM role + Pod Identity association with billing permissions
 3. `protection.crossplane.io/Usage` - deletion ordering: Observe deleted before PodIdentity
 

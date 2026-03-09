@@ -1,5 +1,5 @@
-apiVersion: stacks.aws.hops.ops.com.ai/v1alpha1
-kind: Observe
+apiVersion: aws.hops.ops.com.ai/v1alpha1
+kind: ObserveStack
 metadata:
   name: observe
   namespace: default

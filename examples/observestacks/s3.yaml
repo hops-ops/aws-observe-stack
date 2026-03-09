@@ -1,5 +1,5 @@
-apiVersion: stacks.aws.hops.ops.com.ai/v1alpha1
-kind: Observe
+apiVersion: aws.hops.ops.com.ai/v1alpha1
+kind: ObserveStack
 metadata:
   name: observe
   namespace: default
@@ -10,12 +10,14 @@ spec:
     team: platform
   loki:
     storage:
-      type: pvc
-      size: 10Gi
+      type: s3
+      s3:
+        retentionDays: 30
   tempo:
     storage:
-      type: pvc
-      size: 10Gi
+      type: s3
+      s3:
+        retentionDays: 14
   k8sMonitoring:
     values:
       opencost:

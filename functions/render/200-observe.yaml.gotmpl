@@ -1,6 +1,6 @@
 # code: language=yaml
 #
-# Compose the base stacks.hops.ops.com.ai/Observe XRD
+# Compose the base hops.ops.com.ai/ObserveStack XRD
 #
 
 # ==============================================================================
@@ -114,8 +114,8 @@
 {{- end }}
 
 ---
-apiVersion: stacks.hops.ops.com.ai/v1alpha1
-kind: Observe
+apiVersion: hops.ops.com.ai/v1alpha1
+kind: ObserveStack
 metadata:
   name: {{ $state.name }}
   annotations:

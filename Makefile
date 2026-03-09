@@ -1,11 +1,11 @@
 SHELL := /bin/bash
 
-PACKAGE ?= stack-aws-observe
-XRD_DIR := apis/observes
+PACKAGE ?= aws-observe-stack
+XRD_DIR := apis/observestacks
 COMPOSITION := $(XRD_DIR)/composition.yaml
 DEFINITION := $(XRD_DIR)/definition.yaml
 CONFIGURATION := $(XRD_DIR)/configuration.yaml
-EXAMPLE_DEFAULT := examples/observes/s3.yaml
+EXAMPLE_DEFAULT := examples/observestacks/s3.yaml
 RENDER_TESTS := $(wildcard tests/test-*)
 E2E_TESTS := $(wildcard tests/e2etest-*)
 
@@ -24,9 +24,9 @@ generate-configuration:
 # Examples list - mirrors GitHub Actions workflow
 # Format: example_path::observed_resources_path (observed_resources_path is optional)
 EXAMPLES := \
-    examples/observes/minimal.yaml:: \
-    examples/observes/pvc.yaml:: \
-    examples/observes/s3.yaml::
+    examples/observestacks/minimal.yaml:: \
+    examples/observestacks/pvc.yaml:: \
+    examples/observestacks/s3.yaml::
 
 # Render all examples (parallel execution, output shown per-job when complete)
 render\:all:
@@ -99,11 +99,11 @@ validate: ; @$(MAKE) generate-configuration 'validate:all'
 
 # Single example targets
 render\:%:
-	@example="examples/observes/$*.yaml"; \
+	@example="examples/observestacks/$*.yaml"; \
 	up composition render --xrd=$(DEFINITION) $(COMPOSITION) $$example
 
 validate\:%: generate-configuration
-	@example="examples/observes/$*.yaml"; \
+	@example="examples/observestacks/$*.yaml"; \
 	up composition render --xrd=$(DEFINITION) $(COMPOSITION) $$example \
 		--include-full-xr --quiet | \
 		crossplane beta validate $(XRD_DIR) --error-on-missing-schemas -

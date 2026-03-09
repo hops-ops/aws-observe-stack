@@ -1,12 +1,12 @@
 apiVersion: apiextensions.crossplane.io/v2
 kind: CompositeResourceDefinition
 metadata:
-  name: observes.stacks.aws.hops.ops.com.ai
+  name: observestacks.aws.hops.ops.com.ai
 spec:
-  group: stacks.aws.hops.ops.com.ai
+  group: aws.hops.ops.com.ai
   names:
-    kind: Observe
-    plural: observes
+    kind: ObserveStack
+    plural: observestacks
   scope: Namespaced
   defaultCompositeDeletePolicy: Foreground
   versions:
@@ -15,11 +15,11 @@ spec:
     served: true
     schema:
       openAPIV3Schema:
-        description: Observe deploys the observability stack with AWS Pod Identity for OpenCost billing access.
+        description: ObserveStack deploys the observability stack with AWS Pod Identity for OpenCost billing access.
         type: object
         properties:
           spec:
-            description: ObserveSpec defines the desired state.
+            description: ObserveStackSpec defines the desired state.
             type: object
             properties:
               clusterName:
@@ -350,7 +350,7 @@ spec:
             - clusterName
             - aws
           status:
-            description: ObserveStatus defines the observed state.
+            description: ObserveStackStatus defines the observed state.
             type: object
             properties:
               ready:

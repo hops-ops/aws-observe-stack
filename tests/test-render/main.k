@@ -2,7 +2,7 @@ import models.io.upbound.dev.meta.v1alpha1 as metav1alpha1
 import models.k8s.apimachinery.pkg.apis.meta.v1 as metav1
 
 # ==============================================================================
-# Unit tests for stacks.aws Observe XRD
+# Unit tests for aws ObserveStack XRD
 # ==============================================================================
 
 _items = [
@@ -12,13 +12,13 @@ _items = [
     metav1alpha1.CompositionTest {
         metadata.name = "minimal-renders-observe-and-opencost-pod-identity"
         spec = {
-            compositionPath = "apis/observes/composition.yaml"
-            xrdPath = "apis/observes/definition.yaml"
+            compositionPath = "apis/observestacks/composition.yaml"
+            xrdPath = "apis/observestacks/definition.yaml"
             timeoutSeconds = 60
             validate = False
             xr = {
-                apiVersion = "stacks.aws.hops.ops.com.ai/v1alpha1"
-                kind = "Observe"
+                apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                kind = "ObserveStack"
                 metadata.name = "observe"
                 spec = {
                     clusterName = "my-cluster"
@@ -29,8 +29,8 @@ _items = [
             }
             assertResources = [
                 {
-                    apiVersion = "stacks.hops.ops.com.ai/v1alpha1"
-                    kind = "Observe"
+                    apiVersion = "hops.ops.com.ai/v1alpha1"
+                    kind = "ObserveStack"
                     metadata.name = "observe"
                     spec.clusterName = "my-cluster"
                 }
@@ -57,13 +57,13 @@ _items = [
     metav1alpha1.CompositionTest {
         metadata.name = "custom-namespace-propagates"
         spec = {
-            compositionPath = "apis/observes/composition.yaml"
-            xrdPath = "apis/observes/definition.yaml"
+            compositionPath = "apis/observestacks/composition.yaml"
+            xrdPath = "apis/observestacks/definition.yaml"
             timeoutSeconds = 60
             validate = False
             xr = {
-                apiVersion = "stacks.aws.hops.ops.com.ai/v1alpha1"
-                kind = "Observe"
+                apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                kind = "ObserveStack"
                 metadata.name = "observe"
                 spec = {
                     clusterName = "prod-cluster"
@@ -76,8 +76,8 @@ _items = [
             }
             assertResources = [
                 {
-                    apiVersion = "stacks.hops.ops.com.ai/v1alpha1"
-                    kind = "Observe"
+                    apiVersion = "hops.ops.com.ai/v1alpha1"
+                    kind = "ObserveStack"
                     metadata.name = "observe"
                     spec.namespace = "observability"
                 }
@@ -102,13 +102,13 @@ _items = [
     metav1alpha1.CompositionTest {
         metadata.name = "observe-passthrough-fields"
         spec = {
-            compositionPath = "apis/observes/composition.yaml"
-            xrdPath = "apis/observes/definition.yaml"
+            compositionPath = "apis/observestacks/composition.yaml"
+            xrdPath = "apis/observestacks/definition.yaml"
             timeoutSeconds = 60
             validate = False
             xr = {
-                apiVersion = "stacks.aws.hops.ops.com.ai/v1alpha1"
-                kind = "Observe"
+                apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                kind = "ObserveStack"
                 metadata.name = "observe"
                 spec = {
                     clusterName = "my-cluster"
@@ -126,8 +126,8 @@ _items = [
             }
             assertResources = [
                 {
-                    apiVersion = "stacks.hops.ops.com.ai/v1alpha1"
-                    kind = "Observe"
+                    apiVersion = "hops.ops.com.ai/v1alpha1"
+                    kind = "ObserveStack"
                     metadata.name = "observe"
                     spec.k8sMonitoring = {
                         values = {
@@ -147,13 +147,13 @@ _items = [
     metav1alpha1.CompositionTest {
         metadata.name = "provider-config-refs-propagate"
         spec = {
-            compositionPath = "apis/observes/composition.yaml"
-            xrdPath = "apis/observes/definition.yaml"
+            compositionPath = "apis/observestacks/composition.yaml"
+            xrdPath = "apis/observestacks/definition.yaml"
             timeoutSeconds = 60
             validate = False
             xr = {
-                apiVersion = "stacks.aws.hops.ops.com.ai/v1alpha1"
-                kind = "Observe"
+                apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                kind = "ObserveStack"
                 metadata.name = "observe"
                 spec = {
                     clusterName = "my-cluster"
@@ -174,8 +174,8 @@ _items = [
             }
             assertResources = [
                 {
-                    apiVersion = "stacks.hops.ops.com.ai/v1alpha1"
-                    kind = "Observe"
+                    apiVersion = "hops.ops.com.ai/v1alpha1"
+                    kind = "ObserveStack"
                     metadata.name = "observe"
                     spec = {
                         helmProviderConfigRef = {
@@ -209,13 +209,13 @@ _items = [
     metav1alpha1.CompositionTest {
         metadata.name = "usage-renders-when-both-ready"
         spec = {
-            compositionPath = "apis/observes/composition.yaml"
-            xrdPath = "apis/observes/definition.yaml"
+            compositionPath = "apis/observestacks/composition.yaml"
+            xrdPath = "apis/observestacks/definition.yaml"
             timeoutSeconds = 60
             validate = False
             xr = {
-                apiVersion = "stacks.aws.hops.ops.com.ai/v1alpha1"
-                kind = "Observe"
+                apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                kind = "ObserveStack"
                 metadata.name = "observe"
                 spec = {
                     clusterName = "my-cluster"
@@ -226,8 +226,8 @@ _items = [
             }
             observedResources = [
                 {
-                    apiVersion = "stacks.hops.ops.com.ai/v1alpha1"
-                    kind = "Observe"
+                    apiVersion = "hops.ops.com.ai/v1alpha1"
+                    kind = "ObserveStack"
                     metadata = {
                         name = "observe"
                         annotations = {"crossplane.io/composition-resource-name" = "observe"}
@@ -276,13 +276,13 @@ _items = [
     metav1alpha1.CompositionTest {
         metadata.name = "s3-disabled-no-s3-resources"
         spec = {
-            compositionPath = "apis/observes/composition.yaml"
-            xrdPath = "apis/observes/definition.yaml"
+            compositionPath = "apis/observestacks/composition.yaml"
+            xrdPath = "apis/observestacks/definition.yaml"
             timeoutSeconds = 60
             validate = False
             xr = {
-                apiVersion = "stacks.aws.hops.ops.com.ai/v1alpha1"
-                kind = "Observe"
+                apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                kind = "ObserveStack"
                 metadata.name = "observe"
                 spec = {
                     clusterName = "my-cluster"
@@ -293,8 +293,8 @@ _items = [
             }
             assertResources = [
                 {
-                    apiVersion = "stacks.hops.ops.com.ai/v1alpha1"
-                    kind = "Observe"
+                    apiVersion = "hops.ops.com.ai/v1alpha1"
+                    kind = "ObserveStack"
                     metadata.name = "observe"
                     spec.loki.values.singleBinary.persistence = {
                         enabled = True
@@ -373,13 +373,13 @@ _items = [
     metav1alpha1.CompositionTest {
         metadata.name = "storageclass-defaults-and-overrides"
         spec = {
-            compositionPath = "apis/observes/composition.yaml"
-            xrdPath = "apis/observes/definition.yaml"
+            compositionPath = "apis/observestacks/composition.yaml"
+            xrdPath = "apis/observestacks/definition.yaml"
             timeoutSeconds = 60
             validate = False
             xr = {
-                apiVersion = "stacks.aws.hops.ops.com.ai/v1alpha1"
-                kind = "Observe"
+                apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                kind = "ObserveStack"
                 metadata.name = "observe"
                 spec = {
                     clusterName = "my-cluster"
@@ -420,8 +420,8 @@ _items = [
             }
             assertResources = [
                 {
-                    apiVersion = "stacks.hops.ops.com.ai/v1alpha1"
-                    kind = "Observe"
+                    apiVersion = "hops.ops.com.ai/v1alpha1"
+                    kind = "ObserveStack"
                     metadata.name = "observe"
                     spec = {
                         loki = {
@@ -493,13 +493,13 @@ _items = [
     metav1alpha1.CompositionTest {
         metadata.name = "loki-s3-enabled-renders-resources"
         spec = {
-            compositionPath = "apis/observes/composition.yaml"
-            xrdPath = "apis/observes/definition.yaml"
+            compositionPath = "apis/observestacks/composition.yaml"
+            xrdPath = "apis/observestacks/definition.yaml"
             timeoutSeconds = 60
             validate = False
             xr = {
-                apiVersion = "stacks.aws.hops.ops.com.ai/v1alpha1"
-                kind = "Observe"
+                apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                kind = "ObserveStack"
                 metadata.name = "observe"
                 spec = {
                     clusterName = "my-cluster"
@@ -561,8 +561,8 @@ _items = [
                     }
                 }
                 {
-                    apiVersion = "stacks.hops.ops.com.ai/v1alpha1"
-                    kind = "Observe"
+                    apiVersion = "hops.ops.com.ai/v1alpha1"
+                    kind = "ObserveStack"
                     metadata.name = "observe"
                     spec.loki.values.loki.storage = {
                         type = "s3"
@@ -591,13 +591,13 @@ _items = [
     metav1alpha1.CompositionTest {
         metadata.name = "tempo-s3-enabled-renders-resources"
         spec = {
-            compositionPath = "apis/observes/composition.yaml"
-            xrdPath = "apis/observes/definition.yaml"
+            compositionPath = "apis/observestacks/composition.yaml"
+            xrdPath = "apis/observestacks/definition.yaml"
             timeoutSeconds = 60
             validate = False
             xr = {
-                apiVersion = "stacks.aws.hops.ops.com.ai/v1alpha1"
-                kind = "Observe"
+                apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                kind = "ObserveStack"
                 metadata.name = "observe"
                 spec = {
                     clusterName = "my-cluster"
@@ -653,8 +653,8 @@ _items = [
                     }
                 }
                 {
-                    apiVersion = "stacks.hops.ops.com.ai/v1alpha1"
-                    kind = "Observe"
+                    apiVersion = "hops.ops.com.ai/v1alpha1"
+                    kind = "ObserveStack"
                     metadata.name = "observe"
                     spec.tempo.values.tempo.storage.trace = {
                         backend = "s3"
@@ -675,13 +675,13 @@ _items = [
     metav1alpha1.CompositionTest {
         metadata.name = "custom-bucket-names"
         spec = {
-            compositionPath = "apis/observes/composition.yaml"
-            xrdPath = "apis/observes/definition.yaml"
+            compositionPath = "apis/observestacks/composition.yaml"
+            xrdPath = "apis/observestacks/definition.yaml"
             timeoutSeconds = 60
             validate = False
             xr = {
-                apiVersion = "stacks.aws.hops.ops.com.ai/v1alpha1"
-                kind = "Observe"
+                apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                kind = "ObserveStack"
                 metadata.name = "observe"
                 spec = {
                     clusterName = "my-cluster"
@@ -724,8 +724,8 @@ _items = [
                     }
                 }
                 {
-                    apiVersion = "stacks.hops.ops.com.ai/v1alpha1"
-                    kind = "Observe"
+                    apiVersion = "hops.ops.com.ai/v1alpha1"
+                    kind = "ObserveStack"
                     metadata.name = "observe"
                     spec.loki.values.loki.storage.bucketNames = {
                         chunks = "my-custom-loki-bucket"
@@ -734,8 +734,8 @@ _items = [
                     }
                 }
                 {
-                    apiVersion = "stacks.hops.ops.com.ai/v1alpha1"
-                    kind = "Observe"
+                    apiVersion = "hops.ops.com.ai/v1alpha1"
+                    kind = "ObserveStack"
                     metadata.name = "observe"
                     spec.tempo.values.tempo.storage.trace.s3.bucket = "my-custom-tempo-bucket"
                 }
@@ -749,13 +749,13 @@ _items = [
     metav1alpha1.CompositionTest {
         metadata.name = "loki-s3-usage-renders-when-ready"
         spec = {
-            compositionPath = "apis/observes/composition.yaml"
-            xrdPath = "apis/observes/definition.yaml"
+            compositionPath = "apis/observestacks/composition.yaml"
+            xrdPath = "apis/observestacks/definition.yaml"
             timeoutSeconds = 60
             validate = False
             xr = {
-                apiVersion = "stacks.aws.hops.ops.com.ai/v1alpha1"
-                kind = "Observe"
+                apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                kind = "ObserveStack"
                 metadata.name = "observe"
                 spec = {
                     clusterName = "my-cluster"
@@ -771,8 +771,8 @@ _items = [
             }
             observedResources = [
                 {
-                    apiVersion = "stacks.hops.ops.com.ai/v1alpha1"
-                    kind = "Observe"
+                    apiVersion = "hops.ops.com.ai/v1alpha1"
+                    kind = "ObserveStack"
                     metadata = {
                         name = "observe"
                         annotations = {"crossplane.io/composition-resource-name" = "observe"}

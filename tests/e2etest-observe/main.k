@@ -1,11 +1,11 @@
-# e2etest-observe - stacks.aws Observe E2E Test
+# e2etest-observe - aws ObserveStack E2E Test
 # ================================================
-# Tests deployment of the Observe stack with AWS Pod Identity for OpenCost billing access.
+# Tests deployment of the ObserveStack with AWS Pod Identity for OpenCost billing access.
 #
 # This test creates:
 # 1. An AutoEKSCluster using subnet IDs from the persistent hops-test network
-# 2. A stacks.aws Observe that composes:
-#    - stacks.hops.ops.com.ai/Observe (base observability stack)
+# 2. An aws ObserveStack that composes:
+#    - hops.ops.com.ai/ObserveStack (base observability stack)
 #    - aws.hops.ops.com.ai/PodIdentity (IAM role + Pod Identity for OpenCost)
 #
 # Uses persistent network infrastructure from aws-network e2e test (hops-test)
@@ -25,7 +25,7 @@ import file
 import datetime
 import math
 import models.io.upbound.dev.meta.v1alpha1 as metav1alpha1
-import models.ai.com.ops.hops.aws.stacks.v1alpha1 as stacksv1alpha1
+import models.ai.com.ops.hops.aws.v1alpha1 as awsv1alpha1
 
 # Read AWS credentials from local file (gitignored)
 _creds = file.read("secrets/aws-creds")
@@ -65,7 +65,7 @@ _items = [
             cleanupTimeoutSeconds = 1800
             skipDelete = False
             # initResources: Install infrastructure Configuration packages
-            # Note: stack-observe and opencost-pod-identity are auto-installed as dependencies
+            # Note: observe-stack and opencost-pod-identity are auto-installed as dependencies
             initResources = [
                 # aws-auto-eks-cluster Configuration package (provides AutoEKSCluster XRD)
                 {
@@ -210,7 +210,7 @@ _items = [
                         tags = {
                             "e2etest" = "true"
                             "test-run" = _now
-                            "repo": "https://github.com/hops-ops/stack-aws-observe"
+                            "repo": "https://github.com/hops-ops/aws-observe-stack"
                         }
                         publicAccess = True
                         nodeConfig = {
@@ -225,8 +225,8 @@ _items = [
             # manifests: All XRs that need cleanup (AutoEKSCluster, Observe)
             # Note: Uses persistent hops-test network - no Network manifest needed
             manifests = [
-                # Observe AWS Stack
-                stacksv1alpha1.Observe {
+                # ObserveStack
+                awsv1alpha1.ObserveStack {
                     metadata.name = "observe"
                     metadata.namespace = _namespace
                     spec = {
