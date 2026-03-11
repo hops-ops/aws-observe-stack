@@ -45,6 +45,7 @@ jobs:
       aws-account-id: "034489662075"
       aws-region: us-east-2
       aws-role-duration-seconds: 7200
+      write-env-files: true
       env-vars: |
         {
           "ADMIN_ROLE_ARN": "${{ vars.ADMIN_ROLE_ARN }}",
