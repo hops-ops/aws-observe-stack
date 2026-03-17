@@ -36,19 +36,19 @@ _base64_creds = base64.encode(_creds)
 _now = str(int(math.floor(datetime.ticks())))
 _test_name = "e2e-obs-" + _now
 _namespace = "default"
-_region = "us-east-2"
+_region = file.read("env/AWS_REGION").strip()
 # CI test account
-_account_id = "034489662075"
-_admin_role_arn = "arn:aws:iam::034489662075:role/aws-reserved/sso.amazonaws.com/us-east-2/AWSReservedSSO_AdminAccess_e8d960044a7864f6"
+_account_id = file.read("env/AWS_ACCOUNT_ID").strip()
+_admin_role_arn = file.read("env/ADMIN_ROLE_ARN").strip()
 # =============================================================================
 # Persistent Network Infrastructure (from aws-network e2e test - hops-test)
 # =============================================================================
 # Private subnet IDs for the EKS cluster - these are already created and orphaned
 _private_subnet_ids = [
     # private-a
-    "subnet-0ba2f584c25e9435d"
+    file.read("env/PRIVATE_SUBNET_ID_A").strip()
     # private-b
-    "subnet-02e4d512f8859e684"
+    file.read("env/PRIVATE_SUBNET_ID_B").strip()
 ]
 
 _items = [
