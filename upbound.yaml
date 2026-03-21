@@ -24,8 +24,8 @@ spec:
     kind: Provider
     package: xpkg.crossplane.io/crossplane-contrib/provider-aws-s3
     version: '>=v2'
-  description: Deploys a complete observability stack (Prometheus, Loki, Tempo,
-    k8s-monitoring, Grafana) with AWS Pod Identity and S3 storage support.
+  description: Deploys a complete observability stack (Prometheus, Loki, Tempo, k8s-monitoring,
+    Grafana) with AWS Pod Identity and S3 storage support.
   license: Apache-2.0
   maintainer: Patrick Lee Scott <pat@patscott.io>
   readme: |
