@@ -132,12 +132,8 @@ spec:
 # ==============================================================================
 # Usage: Protect Loki PodIdentity from deletion until Loki Release is deleted
 # ==============================================================================
-# Loki pods depend on the PodIdentity for S3 access. XR→XR Usages don't work
-# because the Observe sub-XR gets its deletion timestamp before its Releases
-# finish cleaning up.
-{{- $lokiName := (($state.observe.loki).name | default "loki") }}
 {{- $lokiPodIdentityAssociationName := printf "%s-%s-loki-pod-identity" $state.clusterName $state.name }}
-{{- if and $state.observed.observe.ready $state.observed.lokiPodIdentity.ready }}
+{{- if and $state.observed.loki.ready $state.observed.lokiPodIdentity.ready }}
 ---
 apiVersion: protection.crossplane.io/v1beta1
 kind: Usage
@@ -157,7 +153,7 @@ spec:
     apiVersion: helm.m.crossplane.io/v1beta1
     kind: Release
     resourceRef:
-      name: {{ $lokiName }}
+      name: {{ $state.loki.name }}
 {{- end }}
 
 {{- end }}

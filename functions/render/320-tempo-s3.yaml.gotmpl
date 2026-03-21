@@ -132,12 +132,8 @@ spec:
 # ==============================================================================
 # Usage: Protect Tempo PodIdentity from deletion until Tempo Release is deleted
 # ==============================================================================
-# Tempo pods depend on the PodIdentity for S3 access. XR→XR Usages don't work
-# because the Observe sub-XR gets its deletion timestamp before its Releases
-# finish cleaning up.
-{{- $tempoName := (($state.observe.tempo).name | default "tempo") }}
 {{- $tempoPodIdentityAssociationName := printf "%s-%s-tempo-pod-identity" $state.clusterName $state.name }}
-{{- if and $state.observed.observe.ready $state.observed.tempoPodIdentity.ready }}
+{{- if and $state.observed.tempo.ready $state.observed.tempoPodIdentity.ready }}
 ---
 apiVersion: protection.crossplane.io/v1beta1
 kind: Usage
@@ -157,7 +153,7 @@ spec:
     apiVersion: helm.m.crossplane.io/v1beta1
     kind: Release
     resourceRef:
-      name: {{ $tempoName }}
+      name: {{ $state.tempo.name }}
 {{- end }}
 
 {{- end }}

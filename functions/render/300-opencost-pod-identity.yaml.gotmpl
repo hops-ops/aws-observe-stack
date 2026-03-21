@@ -70,12 +70,9 @@ spec:
 # Usage: Protect PodIdentity from deletion until k8s-monitoring Release is deleted
 # ==============================================================================
 # OpenCost (deployed by k8s-monitoring) depends on the PodIdentity for AWS
-# credentials. XR→XR Usages don't work here because the Observe sub-XR gets
-# its deletion timestamp (Background policy) before its composed Releases
-# finish cleaning up, which would release PodIdentity too early.
-{{- $k8sMonName := (($state.observe.k8sMonitoring).name | default "k8s-monitoring") }}
+# credentials.
 {{- $podIdentityAssociationName := printf "%s-%s-opencost-pod-identity" $state.clusterName $state.name }}
-{{- if and $state.observed.observe.ready $state.observed.podIdentity.ready }}
+{{- if and $state.observed.k8sMonitoring.ready $state.observed.opencostPodIdentity.ready }}
 ---
 apiVersion: protection.crossplane.io/v1beta1
 kind: Usage
@@ -95,5 +92,5 @@ spec:
     apiVersion: helm.m.crossplane.io/v1beta1
     kind: Release
     resourceRef:
-      name: {{ $k8sMonName }}
+      name: {{ $state.k8sMonitoring.name }}
 {{- end }}
