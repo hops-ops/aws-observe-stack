@@ -7,10 +7,10 @@ import models.k8s.apimachinery.pkg.apis.meta.v1 as metav1
 
 _items = [
     # ==========================================================================
-    # Test 1: Minimal input renders Observe and PodIdentity
+    # Test 1: Minimal input renders Helm Releases and PodIdentity
     # ==========================================================================
     metav1alpha1.CompositionTest {
-        metadata.name = "minimal-renders-observe-and-opencost-pod-identity"
+        metadata.name = "minimal-renders-helm-releases-and-pod-identity"
         spec = {
             compositionPath = "apis/observestacks/composition.yaml"
             xrdPath = "apis/observestacks/definition.yaml"
@@ -29,10 +29,37 @@ _items = [
             }
             assertResources = [
                 {
-                    apiVersion = "hops.ops.com.ai/v1alpha1"
-                    kind = "ObserveStack"
-                    metadata.name = "observe"
-                    spec.clusterName = "my-cluster"
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "kube-prometheus-stack"
+                    spec.providerConfigRef = {
+                        name = "my-cluster"
+                        kind = "ProviderConfig"
+                    }
+                }
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "loki"
+                    spec.forProvider.namespace = "monitoring"
+                }
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "tempo"
+                    spec.forProvider.namespace = "monitoring"
+                }
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "k8s-monitoring"
+                    spec.forProvider.namespace = "monitoring"
+                }
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "grafana-operator"
+                    spec.forProvider.namespace = "monitoring"
                 }
                 {
                     apiVersion = "aws.hops.ops.com.ai/v1alpha1"
@@ -52,7 +79,7 @@ _items = [
     }
 
     # ==========================================================================
-    # Test 2: Custom namespace propagates to both resources
+    # Test 2: Custom namespace propagates to all resources
     # ==========================================================================
     metav1alpha1.CompositionTest {
         metadata.name = "custom-namespace-propagates"
@@ -76,10 +103,22 @@ _items = [
             }
             assertResources = [
                 {
-                    apiVersion = "hops.ops.com.ai/v1alpha1"
-                    kind = "ObserveStack"
-                    metadata.name = "observe"
-                    spec.namespace = "observability"
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "kube-prometheus-stack"
+                    spec.forProvider.namespace = "observability"
+                }
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "loki"
+                    spec.forProvider.namespace = "observability"
+                }
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "tempo"
+                    spec.forProvider.namespace = "observability"
                 }
                 {
                     apiVersion = "aws.hops.ops.com.ai/v1alpha1"
@@ -97,10 +136,10 @@ _items = [
     }
 
     # ==========================================================================
-    # Test 3: Observe passthrough fields forwarded correctly
+    # Test 3: User values merge into Helm Release
     # ==========================================================================
     metav1alpha1.CompositionTest {
-        metadata.name = "observe-passthrough-fields"
+        metadata.name = "user-values-merge-into-release"
         spec = {
             compositionPath = "apis/observestacks/composition.yaml"
             xrdPath = "apis/observestacks/definition.yaml"
@@ -114,7 +153,7 @@ _items = [
                     clusterName = "my-cluster"
                     k8sMonitoring = {
                         values = {
-                            opencost = {
+                            nodeExporter = {
                                 enabled = True
                             }
                         }
@@ -126,16 +165,10 @@ _items = [
             }
             assertResources = [
                 {
-                    apiVersion = "hops.ops.com.ai/v1alpha1"
-                    kind = "ObserveStack"
-                    metadata.name = "observe"
-                    spec.k8sMonitoring = {
-                        values = {
-                            opencost = {
-                                enabled = True
-                            }
-                        }
-                    }
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "k8s-monitoring"
+                    spec.forProvider.values.nodeExporter.enabled = True
                 }
             ]
         }
@@ -174,18 +207,21 @@ _items = [
             }
             assertResources = [
                 {
-                    apiVersion = "hops.ops.com.ai/v1alpha1"
-                    kind = "ObserveStack"
-                    metadata.name = "observe"
-                    spec = {
-                        helmProviderConfigRef = {
-                            name = "custom-helm"
-                            kind = "ClusterProviderConfig"
-                        }
-                        kubernetesProviderConfigRef = {
-                            name = "custom-k8s"
-                            kind = "ProviderConfig"
-                        }
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "kube-prometheus-stack"
+                    spec.providerConfigRef = {
+                        name = "custom-helm"
+                        kind = "ClusterProviderConfig"
+                    }
+                }
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "loki"
+                    spec.providerConfigRef = {
+                        name = "custom-helm"
+                        kind = "ClusterProviderConfig"
                     }
                 }
                 {
@@ -204,10 +240,10 @@ _items = [
     }
 
     # ==========================================================================
-    # Test 5: Usage renders when both resources are ready
+    # Test 5: OpenCost Usage renders when both resources are ready
     # ==========================================================================
     metav1alpha1.CompositionTest {
-        metadata.name = "usage-renders-when-both-ready"
+        metadata.name = "opencost-usage-renders-when-both-ready"
         spec = {
             compositionPath = "apis/observestacks/composition.yaml"
             xrdPath = "apis/observestacks/definition.yaml"
@@ -226,11 +262,11 @@ _items = [
             }
             observedResources = [
                 {
-                    apiVersion = "hops.ops.com.ai/v1alpha1"
-                    kind = "ObserveStack"
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
                     metadata = {
-                        name = "observe"
-                        annotations = {"crossplane.io/composition-resource-name" = "observe"}
+                        name = "k8s-monitoring"
+                        annotations = {"crossplane.io/composition-resource-name" = "k8s-monitoring"}
                     }
                     status = {
                         conditions = [{type = "Ready", status = "True"}, {type = "Synced", status = "True"}]
@@ -270,11 +306,12 @@ _items = [
             ]
         }
     }
+
     # ==========================================================================
-    # Test 6: S3 disabled by default — no S3 resources rendered
+    # Test 6: S3 disabled by default — PVC storage values and StorageClasses
     # ==========================================================================
     metav1alpha1.CompositionTest {
-        metadata.name = "s3-disabled-no-s3-resources"
+        metadata.name = "s3-disabled-pvc-storage-defaults"
         spec = {
             compositionPath = "apis/observestacks/composition.yaml"
             xrdPath = "apis/observestacks/definition.yaml"
@@ -293,25 +330,24 @@ _items = [
             }
             assertResources = [
                 {
-                    apiVersion = "hops.ops.com.ai/v1alpha1"
-                    kind = "ObserveStack"
-                    metadata.name = "observe"
-                    spec.loki.values.singleBinary.persistence = {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "loki"
+                    spec.forProvider.values.singleBinary.persistence = {
                         enabled = True
                         storageClass = "loki"
                     }
-                    spec.tempo.values.tempo.storage.trace.backend = "local"
-                    spec.tempo.values.persistence = {
+                }
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "tempo"
+                    spec.forProvider.values.persistence = {
                         enabled = True
                         storageClass = "tempo"
                         storageClassName = "tempo"
                         size = "10Gi"
                     }
-                }
-                {
-                    apiVersion = "aws.hops.ops.com.ai/v1alpha1"
-                    kind = "PodIdentity"
-                    metadata.name = "observe-opencost-pod-identity"
                 }
                 {
                     apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
@@ -420,29 +456,24 @@ _items = [
             }
             assertResources = [
                 {
-                    apiVersion = "hops.ops.com.ai/v1alpha1"
-                    kind = "ObserveStack"
-                    metadata.name = "observe"
-                    spec = {
-                        loki = {
-                            values = {
-                                singleBinary = {
-                                    persistence = {
-                                        storageClass = "logs-fast"
-                                        size = "20Gi"
-                                    }
-                                }
-                            }
-                        }
-                        tempo = {
-                            values = {
-                                persistence = {
-                                    storageClass = "traces-fast"
-                                    storageClassName = "traces-fast"
-                                    size = "10Gi"
-                                }
-                            }
-                        }
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "loki"
+                    spec.forProvider.values.singleBinary.persistence = {
+                        enabled = True
+                        storageClass = "logs-fast"
+                        size = "20Gi"
+                    }
+                }
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "tempo"
+                    spec.forProvider.values.persistence = {
+                        enabled = True
+                        storageClass = "traces-fast"
+                        storageClassName = "traces-fast"
+                        size = "10Gi"
                     }
                 }
                 {
@@ -488,7 +519,7 @@ _items = [
     }
 
     # ==========================================================================
-    # Test 8: Loki S3 enabled renders bucket, PodIdentity, and S3 resources
+    # Test 8: Loki S3 enabled renders bucket, PodIdentity, and S3 values
     # ==========================================================================
     metav1alpha1.CompositionTest {
         metadata.name = "loki-s3-enabled-renders-resources"
@@ -561,10 +592,10 @@ _items = [
                     }
                 }
                 {
-                    apiVersion = "hops.ops.com.ai/v1alpha1"
-                    kind = "ObserveStack"
-                    metadata.name = "observe"
-                    spec.loki.values.loki.storage = {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "loki"
+                    spec.forProvider.values.loki.storage = {
                         type = "s3"
                         bucketNames = {
                             chunks = "observe-loki-storage"
@@ -586,7 +617,7 @@ _items = [
     }
 
     # ==========================================================================
-    # Test 9: Tempo S3 enabled renders bucket, PodIdentity, and S3 resources
+    # Test 9: Tempo S3 enabled renders bucket, PodIdentity, and S3 values
     # ==========================================================================
     metav1alpha1.CompositionTest {
         metadata.name = "tempo-s3-enabled-renders-resources"
@@ -653,10 +684,10 @@ _items = [
                     }
                 }
                 {
-                    apiVersion = "hops.ops.com.ai/v1alpha1"
-                    kind = "ObserveStack"
-                    metadata.name = "observe"
-                    spec.tempo.values.tempo.storage.trace = {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "tempo"
+                    spec.forProvider.values.tempo.storage.trace = {
                         backend = "s3"
                         s3 = {
                             bucket = "observe-tempo-storage"
@@ -724,27 +755,27 @@ _items = [
                     }
                 }
                 {
-                    apiVersion = "hops.ops.com.ai/v1alpha1"
-                    kind = "ObserveStack"
-                    metadata.name = "observe"
-                    spec.loki.values.loki.storage.bucketNames = {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "loki"
+                    spec.forProvider.values.loki.storage.bucketNames = {
                         chunks = "my-custom-loki-bucket"
                         ruler = "my-custom-loki-bucket"
                         admin = "my-custom-loki-bucket"
                     }
                 }
                 {
-                    apiVersion = "hops.ops.com.ai/v1alpha1"
-                    kind = "ObserveStack"
-                    metadata.name = "observe"
-                    spec.tempo.values.tempo.storage.trace.s3.bucket = "my-custom-tempo-bucket"
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "tempo"
+                    spec.forProvider.values.tempo.storage.trace.s3.bucket = "my-custom-tempo-bucket"
                 }
             ]
         }
     }
 
     # ==========================================================================
-    # Test 11: S3 Usage renders when loki-pod-identity is ready
+    # Test 11: Loki S3 Usage renders when loki and loki-pod-identity are ready
     # ==========================================================================
     metav1alpha1.CompositionTest {
         metadata.name = "loki-s3-usage-renders-when-ready"
@@ -771,22 +802,11 @@ _items = [
             }
             observedResources = [
                 {
-                    apiVersion = "hops.ops.com.ai/v1alpha1"
-                    kind = "ObserveStack"
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
                     metadata = {
-                        name = "observe"
-                        annotations = {"crossplane.io/composition-resource-name" = "observe"}
-                    }
-                    status = {
-                        conditions = [{type = "Ready", status = "True"}, {type = "Synced", status = "True"}]
-                    }
-                }
-                {
-                    apiVersion = "aws.hops.ops.com.ai/v1alpha1"
-                    kind = "PodIdentity"
-                    metadata = {
-                        name = "observe-opencost-pod-identity"
-                        annotations = {"crossplane.io/composition-resource-name" = "opencost-pod-identity"}
+                        name = "loki"
+                        annotations = {"crossplane.io/composition-resource-name" = "loki"}
                     }
                     status = {
                         conditions = [{type = "Ready", status = "True"}, {type = "Synced", status = "True"}]
@@ -822,6 +842,133 @@ _items = [
                         }
                         replayDeletion = True
                     }
+                }
+            ]
+        }
+    }
+
+    # ==========================================================================
+    # Test 12: Grafana datasources render when dependencies are ready
+    # ==========================================================================
+    metav1alpha1.CompositionTest {
+        metadata.name = "grafana-datasources-render-when-ready"
+        spec = {
+            compositionPath = "apis/observestacks/composition.yaml"
+            xrdPath = "apis/observestacks/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = {
+                apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                kind = "ObserveStack"
+                metadata.name = "observe"
+                spec = {
+                    clusterName = "my-cluster"
+                    aws = {
+                        region = "us-east-1"
+                    }
+                }
+            }
+            observedResources = [
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata = {
+                        name = "grafana-operator"
+                        annotations = {"crossplane.io/composition-resource-name" = "grafana-operator"}
+                    }
+                    status = {
+                        conditions = [{type = "Ready", status = "True"}, {type = "Synced", status = "True"}]
+                    }
+                }
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata = {
+                        name = "kube-prometheus-stack"
+                        annotations = {"crossplane.io/composition-resource-name" = "kube-prometheus-stack"}
+                    }
+                    status = {
+                        conditions = [{type = "Ready", status = "True"}, {type = "Synced", status = "True"}]
+                    }
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata = {
+                        name = "observe-grafana-instance"
+                        annotations = {"crossplane.io/composition-resource-name" = "grafana-instance"}
+                    }
+                    status = {
+                        conditions = [{type = "Ready", status = "True"}, {type = "Synced", status = "True"}]
+                    }
+                }
+            ]
+            assertResources = [
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-grafana-instance"
+                    spec.forProvider.manifest = {
+                        apiVersion = "grafana.integreatly.org/v1beta1"
+                        kind = "Grafana"
+                        metadata.name = "observe-grafana"
+                    }
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-datasource-prometheus"
+                    spec.forProvider.manifest = {
+                        apiVersion = "grafana.integreatly.org/v1beta1"
+                        kind = "GrafanaDatasource"
+                        metadata.name = "observe-prometheus"
+                    }
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-datasource-loki"
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-datasource-tempo"
+                }
+            ]
+        }
+    }
+
+    # ==========================================================================
+    # Test 13: Cross-component wiring — Loki/Tempo URLs in kube-prometheus-stack
+    # ==========================================================================
+    metav1alpha1.CompositionTest {
+        metadata.name = "cross-component-wiring"
+        spec = {
+            compositionPath = "apis/observestacks/composition.yaml"
+            xrdPath = "apis/observestacks/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = {
+                apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                kind = "ObserveStack"
+                metadata.name = "observe"
+                spec = {
+                    clusterName = "my-cluster"
+                    aws = {
+                        region = "us-east-1"
+                    }
+                }
+            }
+            assertResources = [
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "k8s-monitoring"
+                    spec.forProvider.values.destinations = [
+                        {name = "prometheus", type = "prometheus", url = "http://kube-prometheus-stack-prometheus.monitoring:9090/api/v1/write"}
+                        {name = "loki", type = "loki", url = "http://loki-gateway.monitoring:80/loki/api/v1/push"}
+                        {name = "tempo", type = "otlp", protocol = "grpc", url = "http://tempo.monitoring:4317"}
+                    ]
                 }
             ]
         }

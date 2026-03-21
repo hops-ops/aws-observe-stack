@@ -1,0 +1,93 @@
+# code: language=yaml
+#
+# Helm Release: tempo
+#
+# Chart defaults with metrics generator wired to Prometheus,
+# and AWS S3 or PVC storage config.
+#
+
+{{- $tempo := $state.tempo }}
+{{- $kps := $state.kubePrometheusStack }}
+
+---
+apiVersion: helm.m.crossplane.io/v1beta1
+kind: Release
+metadata:
+  name: {{ $tempo.name }}
+  annotations:
+    {{ setResourceNameAnnotation "tempo" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  managementPolicies: {{ $state.managementPolicies | toJson }}
+  forProvider:
+    chart:
+      name: tempo
+      repository: https://grafana.github.io/helm-charts
+      version: 1.24.4
+    namespace: {{ $tempo.namespace }}
+    {{- if $tempo.overrideAllValues }}
+    values:
+      {{- toYaml $tempo.overrideAllValues | nindent 6 }}
+    {{- else }}
+    values:
+      tempo:
+        receivers:
+          otlp:
+            protocols:
+              grpc:
+                endpoint: "0.0.0.0:4317"
+              http:
+                endpoint: "0.0.0.0:4318"
+          jaeger:
+            protocols:
+              grpc:
+                endpoint: "0.0.0.0:14250"
+              thrift_binary:
+                endpoint: "0.0.0.0:6832"
+              thrift_compact:
+                endpoint: "0.0.0.0:6831"
+              thrift_http:
+                endpoint: "0.0.0.0:14268"
+          zipkin:
+            endpoint: "0.0.0.0:9411"
+        searchEnabled: true
+        metricsGenerator:
+          enabled: true
+          remoteWriteUrl: http://{{ $kps.name }}-prometheus.{{ $kps.namespace }}:9090/api/v1/write
+        storage:
+          trace:
+            {{- if $state.aws.tempo.s3.enabled }}
+            backend: s3
+            s3:
+              bucket: {{ $state.aws.tempo.s3.bucketName }}
+              endpoint: s3.{{ $state.aws.region }}.amazonaws.com
+              region: {{ $state.aws.region }}
+            {{- else }}
+            backend: local
+            local:
+              path: /var/tempo/traces
+            wal:
+              path: /var/tempo/wal
+            {{- end }}
+        {{- if $state.aws.tempo.s3.enabled }}
+        compactor:
+          compaction:
+            block_retention: {{ mul $state.aws.tempo.s3.retentionDays 24 }}h
+        {{- end }}
+      service:
+        type: ClusterIP
+      {{- if not $state.aws.tempo.s3.enabled }}
+      persistence:
+        enabled: true
+        storageClass: {{ $state.aws.tempo.pvc.storageClass.name }}
+        storageClassName: {{ $state.aws.tempo.pvc.storageClass.name }}
+        size: {{ $state.aws.tempo.pvc.size }}
+      {{- end }}
+      {{- if $tempo.values }}
+      {{- toYaml $tempo.values | nindent 6 }}
+      {{- end }}
+    {{- end }}
+  rollbackLimit: 3
+  providerConfigRef:
+    name: {{ $state.helm.providerConfigRef.name }}
+    kind: {{ $state.helm.providerConfigRef.kind }}

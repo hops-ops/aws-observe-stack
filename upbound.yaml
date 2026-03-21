@@ -9,9 +9,13 @@ spec:
     package: xpkg.crossplane.io/crossplane-contrib/function-auto-ready
     version: '>=v0.6.2'
   - apiVersion: pkg.crossplane.io/v1
-    kind: Configuration
-    package: ghcr.io/hops-ops/observe-stack
-    version: '>=v0.8.0'
+    kind: Provider
+    package: xpkg.crossplane.io/crossplane-contrib/provider-helm
+    version: '>=v1'
+  - apiVersion: pkg.crossplane.io/v1
+    kind: Provider
+    package: xpkg.crossplane.io/crossplane-contrib/provider-kubernetes
+    version: '>=v1'
   - apiVersion: pkg.crossplane.io/v1
     kind: Configuration
     package: ghcr.io/hops-ops/aws-pod-identity
@@ -19,15 +23,17 @@ spec:
   - apiVersion: pkg.crossplane.io/v1
     kind: Provider
     package: xpkg.crossplane.io/crossplane-contrib/provider-aws-s3
-    version: '>=v2.5.0'
-  description: Deploys the ObserveStack with AWS Pod Identity for OpenCost billing
-    access.
+    version: '>=v2'
+  description: Deploys a complete observability stack (Prometheus, Loki, Tempo,
+    k8s-monitoring, Grafana) with AWS Pod Identity and S3 storage support.
   license: Apache-2.0
   maintainer: Patrick Lee Scott <pat@patscott.io>
   readme: |
     # aws-observe-stack
 
-    Deploys the Observe stack (Prometheus, Loki, Tempo, k8s-monitoring/OpenCost,
-    Grafana) with AWS Pod Identity for OpenCost billing access.
+    Deploys a complete observability stack with correct deletion ordering.
+    Composes kube-prometheus-stack, Loki, Tempo, k8s-monitoring, Grafana Operator,
+    and Grafana datasources/dashboards as direct Helm releases, with AWS Pod Identity
+    for OpenCost billing access and optional S3 storage for Loki and Tempo.
   repository: ghcr.io/hops-ops/aws-observe-stack
   source: github.com/hops-ops/aws-observe-stack
