@@ -62,6 +62,18 @@ _items = [
                     spec.forProvider.namespace = "monitoring"
                 }
                 {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "vpa"
+                    spec.forProvider.namespace = "monitoring"
+                }
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "goldilocks"
+                    spec.forProvider.namespace = "monitoring"
+                }
+                {
                     apiVersion = "aws.hops.ops.com.ai/v1alpha1"
                     kind = "PodIdentity"
                     metadata.name = "observe-opencost-pod-identity"

@@ -1,0 +1,45 @@
+# code: language=yaml
+#
+# Helm Release: vpa (Vertical Pod Autoscaler)
+#
+# Installs VPA with the recommender pointed at the in-cluster Prometheus
+# to use historical metrics instead of the metrics-server alone.
+#
+
+{{- $vpa := $state.vpa }}
+{{- $kps := $state.kubePrometheusStack }}
+{{- $prometheusUrl := printf "http://%s-prometheus.%s.svc:9090" $kps.name $kps.namespace }}
+
+---
+apiVersion: helm.m.crossplane.io/v1beta1
+kind: Release
+metadata:
+  name: {{ $vpa.name }}
+  annotations:
+    {{ setResourceNameAnnotation "vpa" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  managementPolicies: {{ $state.managementPolicies | toJson }}
+  forProvider:
+    chart:
+      name: vpa
+      repository: https://charts.fairwinds.com/stable
+      version: 4.10.1
+    namespace: {{ $vpa.namespace }}
+    {{- if $vpa.overrideAllValues }}
+    values:
+      {{- toYaml $vpa.overrideAllValues | nindent 6 }}
+    {{- else }}
+    values:
+      recommender:
+        extraArgs:
+          prometheus-address: {{ $prometheusUrl }}
+          storage: prometheus
+    {{- if $vpa.values }}
+      {{- toYaml $vpa.values | nindent 6 }}
+    {{- end }}
+    {{- end }}
+  rollbackLimit: 3
+  providerConfigRef:
+    name: {{ $state.helm.providerConfigRef.name }}
+    kind: {{ $state.helm.providerConfigRef.kind }}

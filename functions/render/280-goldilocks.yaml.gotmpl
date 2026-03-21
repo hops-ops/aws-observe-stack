@@ -1,0 +1,47 @@
+# code: language=yaml
+#
+# Helm Release: goldilocks
+#
+# Goldilocks monitors all namespaces by default (on-by-default flag).
+# Requires VPA to be installed for recommendations.
+# Dashboard is enabled by default.
+#
+
+{{- $goldilocks := $state.goldilocks }}
+
+---
+apiVersion: helm.m.crossplane.io/v1beta1
+kind: Release
+metadata:
+  name: {{ $goldilocks.name }}
+  annotations:
+    {{ setResourceNameAnnotation "goldilocks" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  managementPolicies: {{ $state.managementPolicies | toJson }}
+  forProvider:
+    chart:
+      name: goldilocks
+      repository: https://charts.fairwinds.com/stable
+      version: 10.3.0
+    namespace: {{ $goldilocks.namespace }}
+    {{- if $goldilocks.overrideAllValues }}
+    values:
+      {{- toYaml $goldilocks.overrideAllValues | nindent 6 }}
+    {{- else }}
+    values:
+      controller:
+        flags:
+          on-by-default: "true"
+      dashboard:
+        enabled: true
+        flags:
+          on-by-default: "true"
+    {{- if $goldilocks.values }}
+      {{- toYaml $goldilocks.values | nindent 6 }}
+    {{- end }}
+    {{- end }}
+  rollbackLimit: 3
+  providerConfigRef:
+    name: {{ $state.helm.providerConfigRef.name }}
+    kind: {{ $state.helm.providerConfigRef.kind }}

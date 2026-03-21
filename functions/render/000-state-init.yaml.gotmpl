@@ -64,6 +64,8 @@
 {{- $tempo := $spec.tempo | default dict }}
 {{- $k8sMonitoring := $spec.k8sMonitoring | default dict }}
 {{- $grafanaOperator := $spec.grafanaOperator | default dict }}
+{{- $vpa := $spec.vpa | default dict }}
+{{- $goldilocks := $spec.goldilocks | default dict }}
 
 # ==============================================================================
 # Storage config
@@ -226,6 +228,18 @@
     "namespace" ($grafanaOperator.namespace | default $namespace)
     "values" ($grafanaOperator.values | default dict)
     "overrideAllValues" ($grafanaOperator.overrideAllValues | default dict)
+  )
+  "vpa" (dict
+    "name" ($vpa.name | default "vpa")
+    "namespace" ($vpa.namespace | default $namespace)
+    "values" ($vpa.values | default dict)
+    "overrideAllValues" ($vpa.overrideAllValues | default dict)
+  )
+  "goldilocks" (dict
+    "name" ($goldilocks.name | default "goldilocks")
+    "namespace" ($goldilocks.namespace | default $namespace)
+    "values" ($goldilocks.values | default dict)
+    "overrideAllValues" ($goldilocks.overrideAllValues | default dict)
   )
   "observed" (dict)
   "status" (dict)
