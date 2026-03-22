@@ -86,6 +86,125 @@ spec:
               enabled: true
             lokiSearch:
               datasourceUid: loki
+      kube-state-metrics:
+        rbac:
+          extraRules:
+          - apiGroups: ["autoscaling.k8s.io"]
+            resources: ["verticalpodautoscalers"]
+            verbs: ["list", "watch"]
+        customResourceState:
+          enabled: true
+          config:
+            spec:
+              resources:
+              - groupVersionKind:
+                  group: autoscaling.k8s.io
+                  version: v1
+                  kind: VerticalPodAutoscaler
+                labelsFromPath:
+                  namespace: [metadata, namespace]
+                  verticalpodautoscaler: [metadata, name]
+                  target_kind: [spec, targetRef, kind]
+                  target_name: [spec, targetRef, name]
+                  target_api_version: [spec, targetRef, apiVersion]
+                metrics:
+                - name: vpa_containerrecommendations_target
+                  help: "VPA target recommendation for a container resource."
+                  each:
+                    type: Gauge
+                    gauge:
+                      path: [status, recommendation, containerRecommendations]
+                      valueFrom: [target, cpu]
+                      labelsFromPath:
+                        container: [containerName]
+                      labelFromKey: ""
+                  commonLabels:
+                    resource: cpu
+                    unit: core
+                - name: vpa_containerrecommendations_target
+                  help: "VPA target recommendation for a container resource."
+                  each:
+                    type: Gauge
+                    gauge:
+                      path: [status, recommendation, containerRecommendations]
+                      valueFrom: [target, memory]
+                      labelsFromPath:
+                        container: [containerName]
+                  commonLabels:
+                    resource: memory
+                    unit: byte
+                - name: vpa_containerrecommendations_lowerbound
+                  help: "VPA lower bound recommendation for a container resource."
+                  each:
+                    type: Gauge
+                    gauge:
+                      path: [status, recommendation, containerRecommendations]
+                      valueFrom: [lowerBound, cpu]
+                      labelsFromPath:
+                        container: [containerName]
+                  commonLabels:
+                    resource: cpu
+                    unit: core
+                - name: vpa_containerrecommendations_lowerbound
+                  help: "VPA lower bound recommendation for a container resource."
+                  each:
+                    type: Gauge
+                    gauge:
+                      path: [status, recommendation, containerRecommendations]
+                      valueFrom: [lowerBound, memory]
+                      labelsFromPath:
+                        container: [containerName]
+                  commonLabels:
+                    resource: memory
+                    unit: byte
+                - name: vpa_containerrecommendations_upperbound
+                  help: "VPA upper bound recommendation for a container resource."
+                  each:
+                    type: Gauge
+                    gauge:
+                      path: [status, recommendation, containerRecommendations]
+                      valueFrom: [upperBound, cpu]
+                      labelsFromPath:
+                        container: [containerName]
+                  commonLabels:
+                    resource: cpu
+                    unit: core
+                - name: vpa_containerrecommendations_upperbound
+                  help: "VPA upper bound recommendation for a container resource."
+                  each:
+                    type: Gauge
+                    gauge:
+                      path: [status, recommendation, containerRecommendations]
+                      valueFrom: [upperBound, memory]
+                      labelsFromPath:
+                        container: [containerName]
+                  commonLabels:
+                    resource: memory
+                    unit: byte
+                - name: vpa_containerrecommendations_uncappedtarget
+                  help: "VPA uncapped target recommendation for a container resource."
+                  each:
+                    type: Gauge
+                    gauge:
+                      path: [status, recommendation, containerRecommendations]
+                      valueFrom: [uncappedTarget, cpu]
+                      labelsFromPath:
+                        container: [containerName]
+                  commonLabels:
+                    resource: cpu
+                    unit: core
+                - name: vpa_containerrecommendations_uncappedtarget
+                  help: "VPA uncapped target recommendation for a container resource."
+                  each:
+                    type: Gauge
+                    gauge:
+                      path: [status, recommendation, containerRecommendations]
+                      valueFrom: [uncappedTarget, memory]
+                      labelsFromPath:
+                        container: [containerName]
+                  commonLabels:
+                    resource: memory
+                    unit: byte
       nodeExporter:
         enabled: false
       {{- if $kps.values }}

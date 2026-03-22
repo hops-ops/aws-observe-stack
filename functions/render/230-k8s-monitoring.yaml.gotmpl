@@ -46,6 +46,8 @@ spec:
         url: http://{{ $tempo.name }}.{{ $tempo.namespace }}:4317
       clusterMetrics:
         enabled: true
+        kube-state-metrics:
+          deploy: false
         opencost:
           enabled: true
           metricsSource: prometheus
