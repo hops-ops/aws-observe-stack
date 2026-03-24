@@ -41,10 +41,6 @@ spec:
             admin: {{ $state.aws.loki.s3.bucketName }}
           s3:
             region: {{ $state.aws.region }}
-            bucketNames:
-              chunks: {{ $state.aws.loki.s3.bucketName }}
-              ruler: {{ $state.aws.loki.s3.bucketName }}
-              admin: {{ $state.aws.loki.s3.bucketName }}
         schemaConfig:
           configs:
           - from: "2024-04-01"
