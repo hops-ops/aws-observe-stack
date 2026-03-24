@@ -346,6 +346,42 @@ spec:
                     description: Helm values that replace all defaults for this component.
                     type: object
                     x-kubernetes-preserve-unknown-fields: true
+              vpa:
+                description: Configuration for the Vertical Pod Autoscaler component.
+                type: object
+                properties:
+                  name:
+                    description: Release name. Defaults to vpa.
+                    type: string
+                  namespace:
+                    description: Namespace override for this component.
+                    type: string
+                  values:
+                    description: Helm values passed to the VPA chart.
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+                  overrideAllValues:
+                    description: Helm values that replace all defaults for this component.
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+              goldilocks:
+                description: Configuration for the Goldilocks component. Monitors all namespaces by default.
+                type: object
+                properties:
+                  name:
+                    description: Release name. Defaults to goldilocks.
+                    type: string
+                  namespace:
+                    description: Namespace override for this component.
+                    type: string
+                  values:
+                    description: Helm values merged with chart defaults.
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+                  overrideAllValues:
+                    description: Helm values that replace all defaults for this component.
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
             required:
             - clusterName
             - aws

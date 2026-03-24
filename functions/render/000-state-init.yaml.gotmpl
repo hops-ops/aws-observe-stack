@@ -57,13 +57,15 @@
 {{- $awsTags := merge $defaultTags ($aws.tags | default dict) }}
 
 # ==============================================================================
-# Observe component passthrough
+# Per-component configuration (resolved from spec)
 # ==============================================================================
 {{- $kubePrometheusStack := $spec.kubePrometheusStack | default dict }}
 {{- $loki := $spec.loki | default dict }}
 {{- $tempo := $spec.tempo | default dict }}
 {{- $k8sMonitoring := $spec.k8sMonitoring | default dict }}
 {{- $grafanaOperator := $spec.grafanaOperator | default dict }}
+{{- $vpa := $spec.vpa | default dict }}
+{{- $goldilocks := $spec.goldilocks | default dict }}
 
 # ==============================================================================
 # Storage config
@@ -197,11 +199,48 @@
     "name" "k8s-monitoring-opencost"
     "namespace" $namespace
   )
-  "observe" (dict
-    "kubePrometheusStack" $kubePrometheusStack
-    "loki" $loki
-    "tempo" $tempo
-    "k8sMonitoring" $k8sMonitoring
-    "grafanaOperator" $grafanaOperator
+  "kubePrometheusStack" (dict
+    "name" ($kubePrometheusStack.name | default "kube-prometheus-stack")
+    "namespace" ($kubePrometheusStack.namespace | default $namespace)
+    "values" ($kubePrometheusStack.values | default dict)
+    "overrideAllValues" ($kubePrometheusStack.overrideAllValues | default dict)
   )
+  "loki" (dict
+    "name" ($loki.name | default "loki")
+    "namespace" ($loki.namespace | default $namespace)
+    "values" ($loki.values | default dict)
+    "overrideAllValues" ($loki.overrideAllValues | default dict)
+  )
+  "tempo" (dict
+    "name" ($tempo.name | default "tempo")
+    "namespace" ($tempo.namespace | default $namespace)
+    "values" ($tempo.values | default dict)
+    "overrideAllValues" ($tempo.overrideAllValues | default dict)
+  )
+  "k8sMonitoring" (dict
+    "name" ($k8sMonitoring.name | default "k8s-monitoring")
+    "namespace" ($k8sMonitoring.namespace | default $namespace)
+    "values" ($k8sMonitoring.values | default dict)
+    "overrideAllValues" ($k8sMonitoring.overrideAllValues | default dict)
+  )
+  "grafanaOperator" (dict
+    "name" ($grafanaOperator.name | default "grafana-operator")
+    "namespace" ($grafanaOperator.namespace | default $namespace)
+    "values" ($grafanaOperator.values | default dict)
+    "overrideAllValues" ($grafanaOperator.overrideAllValues | default dict)
+  )
+  "vpa" (dict
+    "name" ($vpa.name | default "vpa")
+    "namespace" ($vpa.namespace | default $namespace)
+    "values" ($vpa.values | default dict)
+    "overrideAllValues" ($vpa.overrideAllValues | default dict)
+  )
+  "goldilocks" (dict
+    "name" ($goldilocks.name | default "goldilocks")
+    "namespace" ($goldilocks.namespace | default $namespace)
+    "values" ($goldilocks.values | default dict)
+    "overrideAllValues" ($goldilocks.overrideAllValues | default dict)
+  )
+  "observed" (dict)
+  "status" (dict)
 }}

@@ -1,75 +1,51 @@
 # code: language=yaml
 #
-# Compute status values from observed state
+# Extract observed state from all composed resources and compute status
 #
 
-# ==============================================================================
-# Extract observed state from composed resources
-# ==============================================================================
 {{- $observed := $.observed.resources | default dict }}
 
-# Check if observe is ready
-{{- $observeObs := get $observed "observe" | default dict }}
-{{- $observeResource := $observeObs.resource | default dict }}
-{{- $observeStatus := $observeResource.status | default dict }}
-{{- $observeConditions := $observeStatus.conditions | default list }}
-{{- $observeReady := false }}
-{{- range $cond := $observeConditions }}
-  {{- if and (eq $cond.type "Ready") (eq $cond.status "True") }}
-    {{- $observeReady = true }}
-  {{- end }}
-{{- end }}
+# ==============================================================================
+# Helper: check readiness of composed resources by annotation name
+# ==============================================================================
 
-# Check if opencost-pod-identity is ready
-{{- $podIdentityObs := get $observed "opencost-pod-identity" | default dict }}
-{{- $podIdentityResource := $podIdentityObs.resource | default dict }}
-{{- $podIdentityStatus := $podIdentityResource.status | default dict }}
-{{- $podIdentityConditions := $podIdentityStatus.conditions | default list }}
-{{- $podIdentityReady := false }}
-{{- range $cond := $podIdentityConditions }}
-  {{- if and (eq $cond.type "Ready") (eq $cond.status "True") }}
-    {{- $podIdentityReady = true }}
+{{- $checkReady := dict }}
+{{- range $key := list "kube-prometheus-stack" "loki" "tempo" "k8s-monitoring" "grafana-operator" "grafana-instance" "datasource-prometheus" "datasource-loki" "datasource-tempo" "opencost-pod-identity" "loki-pod-identity" "tempo-pod-identity" "vpa" "goldilocks" }}
+  {{- $entry := get $observed $key | default dict }}
+  {{- $resource := $entry.resource | default dict }}
+  {{- $status := $resource.status | default dict }}
+  {{- $ready := false }}
+  {{- range ($status.conditions | default list) }}
+    {{- if and (eq .type "Ready") (eq .status "True") }}
+      {{- $ready = true }}
+    {{- end }}
   {{- end }}
-{{- end }}
-
-# Check if loki-pod-identity is ready
-{{- $lokiPodIdentityObs := get $observed "loki-pod-identity" | default dict }}
-{{- $lokiPodIdentityResource := $lokiPodIdentityObs.resource | default dict }}
-{{- $lokiPodIdentityStatus := $lokiPodIdentityResource.status | default dict }}
-{{- $lokiPodIdentityConditions := $lokiPodIdentityStatus.conditions | default list }}
-{{- $lokiPodIdentityReady := false }}
-{{- range $cond := $lokiPodIdentityConditions }}
-  {{- if and (eq $cond.type "Ready") (eq $cond.status "True") }}
-    {{- $lokiPodIdentityReady = true }}
-  {{- end }}
-{{- end }}
-
-# Check if tempo-pod-identity is ready
-{{- $tempoPodIdentityObs := get $observed "tempo-pod-identity" | default dict }}
-{{- $tempoPodIdentityResource := $tempoPodIdentityObs.resource | default dict }}
-{{- $tempoPodIdentityStatus := $tempoPodIdentityResource.status | default dict }}
-{{- $tempoPodIdentityConditions := $tempoPodIdentityStatus.conditions | default list }}
-{{- $tempoPodIdentityReady := false }}
-{{- range $cond := $tempoPodIdentityConditions }}
-  {{- if and (eq $cond.type "Ready") (eq $cond.status "True") }}
-    {{- $tempoPodIdentityReady = true }}
-  {{- end }}
+  {{- $checkReady = set $checkReady $key $ready }}
 {{- end }}
 
 # ==============================================================================
-# Compute status output
+# Set observed state
 # ==============================================================================
-
-# Ready state determined by function-auto-ready
-{{- $ready := false }}
-
 {{- $state = set $state "observed" (dict
-  "observe" (dict "ready" $observeReady)
-  "podIdentity" (dict "ready" $podIdentityReady)
-  "lokiPodIdentity" (dict "ready" $lokiPodIdentityReady)
-  "tempoPodIdentity" (dict "ready" $tempoPodIdentityReady)
+  "kubePrometheusStack" (dict "ready" (get $checkReady "kube-prometheus-stack"))
+  "loki" (dict "ready" (get $checkReady "loki"))
+  "tempo" (dict "ready" (get $checkReady "tempo"))
+  "k8sMonitoring" (dict "ready" (get $checkReady "k8s-monitoring"))
+  "grafanaOperator" (dict "ready" (get $checkReady "grafana-operator"))
+  "grafanaInstance" (dict "ready" (get $checkReady "grafana-instance"))
+  "datasourcePrometheus" (dict "ready" (get $checkReady "datasource-prometheus"))
+  "datasourceLoki" (dict "ready" (get $checkReady "datasource-loki"))
+  "datasourceTempo" (dict "ready" (get $checkReady "datasource-tempo"))
+  "opencostPodIdentity" (dict "ready" (get $checkReady "opencost-pod-identity"))
+  "lokiPodIdentity" (dict "ready" (get $checkReady "loki-pod-identity"))
+  "tempoPodIdentity" (dict "ready" (get $checkReady "tempo-pod-identity"))
+  "vpa" (dict "ready" (get $checkReady "vpa"))
+  "goldilocks" (dict "ready" (get $checkReady "goldilocks"))
 ) }}
 
+# ==============================================================================
+# Compute status (readiness determined by function-auto-ready)
+# ==============================================================================
 {{- $state = set $state "status" (dict
-  "ready" $ready
+  "ready" false
 ) }}
