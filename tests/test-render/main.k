@@ -616,11 +616,6 @@ _items = [
                         }
                         s3 = {
                             region = "us-east-1"
-                            bucketNames = {
-                                chunks = "observe-loki-storage"
-                                ruler = "observe-loki-storage"
-                                admin = "observe-loki-storage"
-                            }
                         }
                     }
                 }
