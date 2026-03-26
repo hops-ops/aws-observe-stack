@@ -234,6 +234,11 @@ _items = [
                         aws = {
                             region = "us-east-2"
                         }
+                        kubePrometheusStack = {
+                            storage = {
+                                size = "10Gi"
+                            }
+                        }
                         loki = {
                             storage = {
                                 type = "pvc"

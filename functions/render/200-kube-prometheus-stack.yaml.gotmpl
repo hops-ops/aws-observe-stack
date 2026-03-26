@@ -40,6 +40,13 @@ spec:
           serviceMonitorSelectorNilUsesHelmValues: false
           podMonitorSelectorNilUsesHelmValues: false
           ruleSelectorNilUsesHelmValues: false
+          storageSpec:
+            volumeClaimTemplate:
+              spec:
+                storageClassName: {{ $state.aws.prometheus.pvc.storageClass.name }}
+                resources:
+                  requests:
+                    storage: {{ $state.aws.prometheus.pvc.size }}
       alertmanager:
         enabled: true
       grafana:
