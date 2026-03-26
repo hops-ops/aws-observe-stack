@@ -143,6 +143,27 @@
   "volumeBindingMode" ($tempoStorageClassInput.volumeBindingMode | default $storageClassDefaults.volumeBindingMode)
 }}
 
+{{- $prometheusStorage := $kubePrometheusStack.storage | default dict }}
+{{- $prometheusPVCSize := $prometheusStorage.size | default "10Gi" }}
+{{- $prometheusStorageClassInput := $prometheusStorage.storageClass | default dict }}
+{{- $prometheusStorageClassCreate := $storageClassDefaults.create }}
+{{- if hasKey $prometheusStorageClassInput "create" }}
+  {{- $prometheusStorageClassCreate = $prometheusStorageClassInput.create }}
+{{- end }}
+{{- $prometheusStorageClassAllowVolumeExpansion := $storageClassDefaults.allowVolumeExpansion }}
+{{- if hasKey $prometheusStorageClassInput "allowVolumeExpansion" }}
+  {{- $prometheusStorageClassAllowVolumeExpansion = $prometheusStorageClassInput.allowVolumeExpansion }}
+{{- end }}
+{{- $prometheusStorageClass := dict
+  "create" $prometheusStorageClassCreate
+  "name" ($prometheusStorageClassInput.name | default "prometheus")
+  "provisioner" ($prometheusStorageClassInput.provisioner | default $storageClassDefaults.provisioner)
+  "parameters" ($prometheusStorageClassInput.parameters | default $storageClassDefaults.parameters)
+  "allowVolumeExpansion" $prometheusStorageClassAllowVolumeExpansion
+  "reclaimPolicy" ($prometheusStorageClassInput.reclaimPolicy | default $storageClassDefaults.reclaimPolicy)
+  "volumeBindingMode" ($prometheusStorageClassInput.volumeBindingMode | default $storageClassDefaults.volumeBindingMode)
+}}
+
 # ==============================================================================
 # Initialize $state
 # ==============================================================================
@@ -192,6 +213,12 @@
       "serviceAccount" (dict
         "name" "tempo"
         "namespace" $namespace
+      )
+    )
+    "prometheus" (dict
+      "pvc" (dict
+        "size" $prometheusPVCSize
+        "storageClass" $prometheusStorageClass
       )
     )
   )

@@ -152,6 +152,49 @@ spec:
                     description: Helm values that replace all defaults for this component.
                     type: object
                     x-kubernetes-preserve-unknown-fields: true
+                  storage:
+                    description: Storage configuration for Prometheus.
+                    type: object
+                    properties:
+                      size:
+                        description: Requested PVC size for Prometheus.
+                        type: string
+                        default: 10Gi
+                      storageClass:
+                        description: StorageClass settings for Prometheus PVCs.
+                        type: object
+                        properties:
+                          name:
+                            description: StorageClass name for Prometheus PVCs.
+                            type: string
+                            default: prometheus
+                          create:
+                            description: Whether to create this StorageClass. Defaults to storageClassDefaults.create.
+                            type: boolean
+                          provisioner:
+                            description: Provisioner override for this component.
+                            type: string
+                          parameters:
+                            description: Parameters override for this component.
+                            type: object
+                            additionalProperties:
+                              type: string
+                            x-kubernetes-preserve-unknown-fields: true
+                          allowVolumeExpansion:
+                            description: allowVolumeExpansion override for this component.
+                            type: boolean
+                          reclaimPolicy:
+                            description: Reclaim policy override for this component.
+                            type: string
+                            enum:
+                            - Delete
+                            - Retain
+                          volumeBindingMode:
+                            description: Volume binding mode override for this component.
+                            type: string
+                            enum:
+                            - Immediate
+                            - WaitForFirstConsumer
               loki:
                 description: Configuration for the Loki component.
                 type: object

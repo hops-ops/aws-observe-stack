@@ -1,0 +1,31 @@
+# code: language=yaml
+#
+# Prometheus StorageClass (only when storage is enabled)
+#
+
+{{- if $state.aws.prometheus.pvc.storageClass.create }}
+---
+apiVersion: kubernetes.m.crossplane.io/v1alpha1
+kind: Object
+metadata:
+  name: {{ $state.name }}-prometheus-storageclass
+  annotations:
+    {{ setResourceNameAnnotation "prometheus-storageclass" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  managementPolicies: {{ $state.managementPolicies | toJson }}
+  forProvider:
+    manifest:
+      apiVersion: storage.k8s.io/v1
+      kind: StorageClass
+      metadata:
+        name: {{ $state.aws.prometheus.pvc.storageClass.name }}
+      provisioner: {{ $state.aws.prometheus.pvc.storageClass.provisioner }}
+      parameters: {{ $state.aws.prometheus.pvc.storageClass.parameters | toJson }}
+      allowVolumeExpansion: {{ $state.aws.prometheus.pvc.storageClass.allowVolumeExpansion }}
+      reclaimPolicy: {{ $state.aws.prometheus.pvc.storageClass.reclaimPolicy }}
+      volumeBindingMode: {{ $state.aws.prometheus.pvc.storageClass.volumeBindingMode }}
+  providerConfigRef:
+    name: {{ $state.kubernetes.providerConfigRef.name }}
+    kind: {{ $state.kubernetes.providerConfigRef.kind }}
+{{- end }}

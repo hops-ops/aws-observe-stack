@@ -8,6 +8,9 @@ spec:
   namespace: monitoring
   labels:
     team: platform
+  kubePrometheusStack:
+    storage:
+      size: 10Gi
   loki:
     storage:
       type: pvc
