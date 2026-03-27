@@ -156,6 +156,10 @@ spec:
                     description: Storage configuration for Prometheus.
                     type: object
                     properties:
+                      retentionDays:
+                        description: Retention period in days for metric data.
+                        type: integer
+                        default: 30
                       size:
                         description: Requested PVC size for Prometheus.
                         type: string
@@ -224,6 +228,10 @@ spec:
                         - pvc
                         - s3
                         default: pvc
+                      retentionDays:
+                        description: Retention period in days for log data. Applied to Loki limits_config and S3 lifecycle when using S3.
+                        type: integer
+                        default: 30
                       size:
                         description: Requested PVC size for Loki when type=pvc.
                         type: string
@@ -271,7 +279,7 @@ spec:
                             description: S3 bucket name. Defaults to {name}-loki-storage.
                             type: string
                           retentionDays:
-                            description: Retention period in days for log data. Applied to both compactor and S3 lifecycle.
+                            description: Deprecated. Use storage.retentionDays instead. Falls back to this if storage.retentionDays is not set.
                             type: integer
                             default: 30
               tempo:
@@ -303,6 +311,10 @@ spec:
                         - pvc
                         - s3
                         default: pvc
+                      retentionDays:
+                        description: Retention period in days for trace data. Applied to Tempo compactor and S3 lifecycle when using S3.
+                        type: integer
+                        default: 30
                       size:
                         description: Requested PVC size for Tempo when type=pvc.
                         type: string
@@ -350,7 +362,7 @@ spec:
                             description: S3 bucket name. Defaults to {name}-tempo-storage.
                             type: string
                           retentionDays:
-                            description: Retention period in days for trace data. Applied to both compactor and S3 lifecycle.
+                            description: Deprecated. Use storage.retentionDays instead. Falls back to this if storage.retentionDays is not set.
                             type: integer
                             default: 30
               k8sMonitoring:

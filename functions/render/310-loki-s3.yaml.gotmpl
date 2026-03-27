@@ -6,7 +6,7 @@
 {{- if $state.aws.loki.s3.enabled }}
 
 {{- $bucketName := $state.aws.loki.s3.bucketName }}
-{{- $retentionDays := $state.aws.loki.s3.retentionDays }}
+{{- $retentionDays := $state.aws.loki.retentionDays }}
 {{- $lifecycleDays := add $retentionDays 7 }}
 
 # ==============================================================================

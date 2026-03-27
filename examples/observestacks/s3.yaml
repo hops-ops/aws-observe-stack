@@ -8,16 +8,18 @@ spec:
   namespace: monitoring
   labels:
     team: platform
+  kubePrometheusStack:
+    storage:
+      retentionDays: 30
+      size: 10Gi
   loki:
     storage:
       type: s3
-      s3:
-        retentionDays: 30
+      retentionDays: 30
   tempo:
     storage:
       type: s3
-      s3:
-        retentionDays: 14
+      retentionDays: 14
   k8sMonitoring:
     values:
       opencost:
