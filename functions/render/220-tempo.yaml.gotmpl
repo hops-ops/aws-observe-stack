@@ -69,11 +69,9 @@ spec:
             wal:
               path: /var/tempo/wal
             {{- end }}
-        {{- if $state.aws.tempo.s3.enabled }}
         compactor:
           compaction:
-            block_retention: {{ mul $state.aws.tempo.s3.retentionDays 24 }}h
-        {{- end }}
+            block_retention: {{ mul $state.aws.tempo.retentionDays 24 }}h
       service:
         type: ClusterIP
       {{- if not $state.aws.tempo.s3.enabled }}

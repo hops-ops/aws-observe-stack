@@ -97,7 +97,7 @@
 {{- $lokiStorageClassInput := $lokiStorage.storageClass | default dict }}
 {{- $lokiS3Enabled := eq $lokiStorageType "s3" }}
 {{- $lokiS3BucketName := $lokiStorageS3.bucketName | default (printf "%s-loki-storage" $name) }}
-{{- $lokiS3RetentionDays := $lokiStorageS3.retentionDays | default 30 }}
+{{- $lokiRetentionDays := $lokiStorage.retentionDays | default ($lokiStorageS3.retentionDays | default 30) }}
 {{- $lokiPVCSize := $lokiStorage.size | default "10Gi" }}
 {{- $lokiStorageClassCreate := $storageClassDefaults.create }}
 {{- if hasKey $lokiStorageClassInput "create" }}
@@ -123,7 +123,7 @@
 {{- $tempoStorageClassInput := $tempoStorage.storageClass | default dict }}
 {{- $tempoS3Enabled := eq $tempoStorageType "s3" }}
 {{- $tempoS3BucketName := $tempoStorageS3.bucketName | default (printf "%s-tempo-storage" $name) }}
-{{- $tempoS3RetentionDays := $tempoStorageS3.retentionDays | default 30 }}
+{{- $tempoRetentionDays := $tempoStorage.retentionDays | default ($tempoStorageS3.retentionDays | default 30) }}
 {{- $tempoPVCSize := $tempoStorage.size | default "10Gi" }}
 {{- $tempoStorageClassCreate := $storageClassDefaults.create }}
 {{- if hasKey $tempoStorageClassInput "create" }}
@@ -145,6 +145,7 @@
 
 {{- $prometheusStorage := $kubePrometheusStack.storage | default dict }}
 {{- $prometheusPVCSize := $prometheusStorage.size | default "10Gi" }}
+{{- $prometheusRetentionDays := $prometheusStorage.retentionDays | default 30 }}
 {{- $prometheusStorageClassInput := $prometheusStorage.storageClass | default dict }}
 {{- $prometheusStorageClassCreate := $storageClassDefaults.create }}
 {{- if hasKey $prometheusStorageClassInput "create" }}
@@ -186,10 +187,10 @@
     "rolePrefix" ($aws.rolePrefix | default "")
     "tags" $awsTags
     "loki" (dict
+      "retentionDays" $lokiRetentionDays
       "s3" (dict
         "enabled" $lokiS3Enabled
         "bucketName" $lokiS3BucketName
-        "retentionDays" $lokiS3RetentionDays
       )
       "pvc" (dict
         "size" $lokiPVCSize
@@ -201,10 +202,10 @@
       )
     )
     "tempo" (dict
+      "retentionDays" $tempoRetentionDays
       "s3" (dict
         "enabled" $tempoS3Enabled
         "bucketName" $tempoS3BucketName
-        "retentionDays" $tempoS3RetentionDays
       )
       "pvc" (dict
         "size" $tempoPVCSize
@@ -216,6 +217,7 @@
       )
     )
     "prometheus" (dict
+      "retentionDays" $prometheusRetentionDays
       "pvc" (dict
         "size" $prometheusPVCSize
         "storageClass" $prometheusStorageClass

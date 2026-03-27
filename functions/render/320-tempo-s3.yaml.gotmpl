@@ -6,7 +6,7 @@
 {{- if $state.aws.tempo.s3.enabled }}
 
 {{- $bucketName := $state.aws.tempo.s3.bucketName }}
-{{- $retentionDays := $state.aws.tempo.s3.retentionDays }}
+{{- $retentionDays := $state.aws.tempo.retentionDays }}
 {{- $lifecycleDays := add $retentionDays 7 }}
 
 # ==============================================================================

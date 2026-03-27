@@ -236,18 +236,21 @@ _items = [
                         }
                         kubePrometheusStack = {
                             storage = {
+                                retentionDays = 30
                                 size = "10Gi"
                             }
                         }
                         loki = {
                             storage = {
                                 type = "pvc"
+                                retentionDays = 30
                                 size = "10Gi"
                             }
                         }
                         tempo = {
                             storage = {
                                 type = "pvc"
+                                retentionDays = 14
                                 size = "10Gi"
                             }
                         }
