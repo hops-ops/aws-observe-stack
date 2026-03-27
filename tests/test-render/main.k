@@ -645,9 +645,7 @@ _items = [
                     tempo = {
                         storage = {
                             type = "s3"
-                            s3 = {
-                                retentionDays = 14
-                            }
+                            retentionDays = 14
                         }
                     }
                 }

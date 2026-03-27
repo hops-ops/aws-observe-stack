@@ -91,13 +91,15 @@
   "volumeBindingMode" ($storageClassDefaultsInput.volumeBindingMode | default "WaitForFirstConsumer")
 }}
 
+{{- $defaultRetentionDays := 30 }}
+
 {{- $lokiStorage := $loki.storage | default dict }}
 {{- $lokiStorageType := $lokiStorage.type | default "pvc" }}
 {{- $lokiStorageS3 := $lokiStorage.s3 | default dict }}
 {{- $lokiStorageClassInput := $lokiStorage.storageClass | default dict }}
 {{- $lokiS3Enabled := eq $lokiStorageType "s3" }}
 {{- $lokiS3BucketName := $lokiStorageS3.bucketName | default (printf "%s-loki-storage" $name) }}
-{{- $lokiRetentionDays := $lokiStorage.retentionDays | default ($lokiStorageS3.retentionDays | default 30) }}
+{{- $lokiRetentionDays := $lokiStorage.retentionDays | default ($lokiStorageS3.retentionDays | default $defaultRetentionDays) }}
 {{- $lokiPVCSize := $lokiStorage.size | default "10Gi" }}
 {{- $lokiStorageClassCreate := $storageClassDefaults.create }}
 {{- if hasKey $lokiStorageClassInput "create" }}
@@ -123,7 +125,7 @@
 {{- $tempoStorageClassInput := $tempoStorage.storageClass | default dict }}
 {{- $tempoS3Enabled := eq $tempoStorageType "s3" }}
 {{- $tempoS3BucketName := $tempoStorageS3.bucketName | default (printf "%s-tempo-storage" $name) }}
-{{- $tempoRetentionDays := $tempoStorage.retentionDays | default ($tempoStorageS3.retentionDays | default 30) }}
+{{- $tempoRetentionDays := $tempoStorage.retentionDays | default ($tempoStorageS3.retentionDays | default $defaultRetentionDays) }}
 {{- $tempoPVCSize := $tempoStorage.size | default "10Gi" }}
 {{- $tempoStorageClassCreate := $storageClassDefaults.create }}
 {{- if hasKey $tempoStorageClassInput "create" }}
@@ -145,7 +147,7 @@
 
 {{- $prometheusStorage := $kubePrometheusStack.storage | default dict }}
 {{- $prometheusPVCSize := $prometheusStorage.size | default "10Gi" }}
-{{- $prometheusRetentionDays := $prometheusStorage.retentionDays | default 30 }}
+{{- $prometheusRetentionDays := $prometheusStorage.retentionDays | default $defaultRetentionDays }}
 {{- $prometheusStorageClassInput := $prometheusStorage.storageClass | default dict }}
 {{- $prometheusStorageClassCreate := $storageClassDefaults.create }}
 {{- if hasKey $prometheusStorageClassInput "create" }}
