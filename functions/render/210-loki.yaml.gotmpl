@@ -65,6 +65,11 @@ spec:
         {{- end }}
         compactor:
           retention_enabled: true
+          {{- if $state.aws.loki.s3.enabled }}
+          delete_request_store: s3
+          {{- else }}
+          delete_request_store: filesystem
+          {{- end }}
         limits_config:
           retention_period: {{ mul $state.aws.loki.retentionDays 24 }}h
           volume_enabled: true
