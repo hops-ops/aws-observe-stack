@@ -1000,6 +1000,345 @@ _items = [
             ]
         }
     }
+
+    # ==========================================================================
+    # Test 14: Goldilocks user values merge with defaults (on-by-default preserved)
+    # ==========================================================================
+    metav1alpha1.CompositionTest {
+        metadata.name = "goldilocks-values-merge-preserves-defaults"
+        spec = {
+            compositionPath = "apis/observestacks/composition.yaml"
+            xrdPath = "apis/observestacks/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = {
+                apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                kind = "ObserveStack"
+                metadata.name = "observe"
+                spec = {
+                    clusterName = "my-cluster"
+                    aws = {
+                        region = "us-east-1"
+                    }
+                    goldilocks = {
+                        values = {
+                            controller = {
+                                resources = {
+                                    requests = {cpu = "48m", memory = "105M"}
+                                    limits = {cpu = "3964m", memory = "665M"}
+                                }
+                            }
+                            dashboard = {
+                                replicas = 2
+                                resources = {
+                                    requests = {cpu = "15m", memory = "105M"}
+                                    limits = {cpu = "115m", memory = "380M"}
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            assertResources = [
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "goldilocks"
+                    spec.forProvider.values = {
+                        controller = {
+                            flags = {"on-by-default" = "true"}
+                            resources = {
+                                requests = {cpu = "48m", memory = "105M"}
+                                limits = {cpu = "3964m", memory = "665M"}
+                            }
+                        }
+                        dashboard = {
+                            enabled = True
+                            flags = {"on-by-default" = "true"}
+                            replicas = 2
+                            resources = {
+                                requests = {cpu = "15m", memory = "105M"}
+                                limits = {cpu = "115m", memory = "380M"}
+                            }
+                        }
+                    }
+                }
+            ]
+        }
+    }
+
+    # ==========================================================================
+    # Test 15: VPA user values merge with defaults (prometheus-address preserved)
+    # ==========================================================================
+    metav1alpha1.CompositionTest {
+        metadata.name = "vpa-values-merge-preserves-defaults"
+        spec = {
+            compositionPath = "apis/observestacks/composition.yaml"
+            xrdPath = "apis/observestacks/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = {
+                apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                kind = "ObserveStack"
+                metadata.name = "observe"
+                spec = {
+                    clusterName = "my-cluster"
+                    aws = {
+                        region = "us-east-1"
+                    }
+                    vpa = {
+                        values = {
+                            admissionController = {
+                                replicas = 2
+                            }
+                            recommender = {
+                                resources = {
+                                    requests = {cpu = "15m", memory = "105M"}
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            assertResources = [
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "vpa"
+                    spec.forProvider.values = {
+                        admissionController = {
+                            replicas = 2
+                        }
+                        recommender = {
+                            extraArgs = {
+                                "prometheus-address" = "http://kube-prometheus-stack-prometheus.monitoring.svc:9090"
+                                storage = "prometheus"
+                            }
+                            resources = {
+                                requests = {cpu = "15m", memory = "105M"}
+                            }
+                        }
+                    }
+                }
+            ]
+        }
+    }
+
+    # ==========================================================================
+    # Test 16: KPS user values merge with defaults (prometheus config preserved)
+    # ==========================================================================
+    metav1alpha1.CompositionTest {
+        metadata.name = "kps-values-merge-preserves-defaults"
+        spec = {
+            compositionPath = "apis/observestacks/composition.yaml"
+            xrdPath = "apis/observestacks/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = {
+                apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                kind = "ObserveStack"
+                metadata.name = "observe"
+                spec = {
+                    clusterName = "my-cluster"
+                    aws = {
+                        region = "us-east-1"
+                    }
+                    kubePrometheusStack = {
+                        values = {
+                            prometheus = {
+                                prometheusSpec = {
+                                    replicas = 2
+                                    resources = {
+                                        requests = {cpu = "500m", memory = "2Gi"}
+                                    }
+                                }
+                            }
+                            grafana = {
+                                replicas = 2
+                            }
+                        }
+                    }
+                }
+            }
+            assertResources = [
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "kube-prometheus-stack"
+                    spec.forProvider.values.prometheus.enabled = True
+                    spec.forProvider.values.prometheus.prometheusSpec.enableRemoteWriteReceiver = True
+                    spec.forProvider.values.prometheus.prometheusSpec.replicas = 2
+                    spec.forProvider.values.prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues = False
+                    spec.forProvider.values.grafana.enabled = True
+                    spec.forProvider.values.grafana.replicas = 2
+                    spec.forProvider.values.alertmanager.enabled = True
+                    spec.forProvider.values.nodeExporter.enabled = False
+                }
+            ]
+        }
+    }
+
+    # ==========================================================================
+    # Test 17: k8s-monitoring user values merge with defaults
+    # ==========================================================================
+    metav1alpha1.CompositionTest {
+        metadata.name = "k8s-monitoring-values-merge-preserves-defaults"
+        spec = {
+            compositionPath = "apis/observestacks/composition.yaml"
+            xrdPath = "apis/observestacks/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = {
+                apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                kind = "ObserveStack"
+                metadata.name = "observe"
+                spec = {
+                    clusterName = "my-cluster"
+                    aws = {
+                        region = "us-east-1"
+                    }
+                    k8sMonitoring = {
+                        values = {
+                            clusterMetrics = {
+                                "node-exporter" = {
+                                    resources = {
+                                        requests = {cpu = "15m", memory = "105M"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            assertResources = [
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "k8s-monitoring"
+                    spec.forProvider.values = {
+                        clusterMetrics = {
+                            enabled = True
+                            "kube-state-metrics" = {deploy = False}
+                            opencost = {
+                                enabled = True
+                                metricsSource = "prometheus"
+                            }
+                            "node-exporter" = {
+                                resources = {
+                                    requests = {cpu = "15m", memory = "105M"}
+                                }
+                            }
+                        }
+                        podLogs = {enabled = True}
+                        nodeLogs = {enabled = True}
+                        clusterEvents = {enabled = True}
+                        "alloy-logs" = {enabled = True}
+                        "alloy-metrics" = {enabled = True}
+                        "alloy-receiver" = {enabled = True}
+                        "alloy-singleton" = {enabled = True}
+                        nodeExporter = {enabled = False}
+                    }
+                }
+            ]
+        }
+    }
+
+    # ==========================================================================
+    # Test 18: Loki user values merge with defaults (gateway.enabled preserved)
+    # ==========================================================================
+    metav1alpha1.CompositionTest {
+        metadata.name = "loki-values-merge-preserves-defaults"
+        spec = {
+            compositionPath = "apis/observestacks/composition.yaml"
+            xrdPath = "apis/observestacks/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = {
+                apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                kind = "ObserveStack"
+                metadata.name = "observe"
+                spec = {
+                    clusterName = "my-cluster"
+                    aws = {
+                        region = "us-east-1"
+                    }
+                    loki = {
+                        values = {
+                            singleBinary = {
+                                replicas = 2
+                                resources = {
+                                    requests = {cpu = "10m", memory = "750M"}
+                                }
+                            }
+                            gateway = {
+                                replicas = 2
+                            }
+                        }
+                    }
+                }
+            }
+            assertResources = [
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "loki"
+                    spec.forProvider.values.singleBinary.replicas = 2
+                    spec.forProvider.values.singleBinary.persistence.enabled = True
+                    spec.forProvider.values.gateway.enabled = True
+                    spec.forProvider.values.gateway.replicas = 2
+                    spec.forProvider.values.loki.auth_enabled = False
+                    spec.forProvider.values.deploymentMode = "SingleBinary"
+                }
+            ]
+        }
+    }
+
+    # ==========================================================================
+    # Test 19: Tempo user values merge with defaults (receivers preserved)
+    # ==========================================================================
+    metav1alpha1.CompositionTest {
+        metadata.name = "tempo-values-merge-preserves-defaults"
+        spec = {
+            compositionPath = "apis/observestacks/composition.yaml"
+            xrdPath = "apis/observestacks/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = {
+                apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                kind = "ObserveStack"
+                metadata.name = "observe"
+                spec = {
+                    clusterName = "my-cluster"
+                    aws = {
+                        region = "us-east-1"
+                    }
+                    tempo = {
+                        values = {
+                            tempo = {
+                                memBallastSizeMbs = 256
+                                resources = {
+                                    requests = {cpu = "15m", memory = "105M"}
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            assertResources = [
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "tempo"
+                    spec.forProvider.values.tempo.memBallastSizeMbs = 256
+                    spec.forProvider.values.tempo.searchEnabled = True
+                    spec.forProvider.values.tempo.metricsGenerator.enabled = True
+                    spec.forProvider.values.tempo.receivers.otlp.protocols.grpc.endpoint = "0.0.0.0:4317"
+                    spec.forProvider.values.service.type = "ClusterIP"
+                    spec.forProvider.values.persistence.enabled = True
+                }
+            ]
+        }
+    }
 ]
 
 items = _items

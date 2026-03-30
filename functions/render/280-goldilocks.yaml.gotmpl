@@ -29,17 +29,13 @@ spec:
     values:
       {{- toYaml $goldilocks.overrideAllValues | nindent 6 }}
     {{- else }}
+    {{- $defaults := dict
+      "controller" (dict "flags" (dict "on-by-default" "true"))
+      "dashboard" (dict "enabled" true "flags" (dict "on-by-default" "true"))
+    }}
+    {{- $merged := mustMergeOverwrite $defaults ($goldilocks.values | default dict) }}
     values:
-      controller:
-        flags:
-          on-by-default: "true"
-      dashboard:
-        enabled: true
-        flags:
-          on-by-default: "true"
-    {{- if $goldilocks.values }}
-      {{- toYaml $goldilocks.values | nindent 6 }}
-    {{- end }}
+      {{- toYaml $merged | nindent 6 }}
     {{- end }}
   rollbackLimit: 3
   providerConfigRef:

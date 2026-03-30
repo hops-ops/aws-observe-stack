@@ -30,64 +30,47 @@ spec:
     values:
       {{- toYaml $k8sMon.overrideAllValues | nindent 6 }}
     {{- else }}
+    {{- $defaults := dict
+      "cluster" (dict "name" $state.clusterName)
+      "destinations" (list
+        (dict "name" "prometheus" "type" "prometheus" "url" (printf "http://%s-prometheus.%s:9090/api/v1/write" $kps.name $kps.namespace))
+        (dict "name" "loki" "type" "loki" "url" (printf "http://%s-gateway.%s:80/loki/api/v1/push" $loki.name $loki.namespace))
+        (dict "name" "tempo" "type" "otlp" "protocol" "grpc" "url" (printf "http://%s.%s:4317" $tempo.name $tempo.namespace))
+      )
+      "clusterMetrics" (dict
+        "enabled" true
+        "kube-state-metrics" (dict "deploy" false)
+        "opencost" (dict
+          "enabled" true
+          "metricsSource" "prometheus"
+          "opencost" (dict
+            "exporter" (dict "defaultClusterId" $state.clusterName)
+            "prometheus" (dict "external" (dict "url" (printf "http://%s-prometheus.%s:9090" $kps.name $kps.namespace)))
+          )
+        )
+      )
+      "alloy-metrics" (dict "enabled" true)
+      "clusterEvents" (dict "enabled" true)
+      "nodeLogs" (dict "enabled" true)
+      "podLogs" (dict "enabled" true)
+      "applicationObservability" (dict
+        "enabled" true
+        "receivers" (dict
+          "otlp" (dict
+            "grpc" (dict "enabled" true "port" 4317)
+            "http" (dict "enabled" true "port" 4318)
+          )
+        )
+      )
+      "prometheusOperatorObjects" (dict "enabled" true)
+      "alloy-logs" (dict "enabled" true)
+      "alloy-singleton" (dict "enabled" true)
+      "alloy-receiver" (dict "enabled" true)
+      "nodeExporter" (dict "enabled" false)
+    }}
+    {{- $merged := mustMergeOverwrite $defaults ($k8sMon.values | default dict) }}
     values:
-      cluster:
-        name: {{ $state.clusterName }}
-      destinations:
-      - name: prometheus
-        type: prometheus
-        url: http://{{ $kps.name }}-prometheus.{{ $kps.namespace }}:9090/api/v1/write
-      - name: loki
-        type: loki
-        url: http://{{ $loki.name }}-gateway.{{ $loki.namespace }}:80/loki/api/v1/push
-      - name: tempo
-        type: otlp
-        protocol: grpc
-        url: http://{{ $tempo.name }}.{{ $tempo.namespace }}:4317
-      clusterMetrics:
-        enabled: true
-        kube-state-metrics:
-          deploy: false
-        opencost:
-          enabled: true
-          metricsSource: prometheus
-          opencost:
-            exporter:
-              defaultClusterId: {{ $state.clusterName }}
-            prometheus:
-              external:
-                url: http://{{ $kps.name }}-prometheus.{{ $kps.namespace }}:9090
-      alloy-metrics:
-        enabled: true
-      clusterEvents:
-        enabled: true
-      nodeLogs:
-        enabled: true
-      podLogs:
-        enabled: true
-      applicationObservability:
-        enabled: true
-        receivers:
-          otlp:
-            grpc:
-              enabled: true
-              port: 4317
-            http:
-              enabled: true
-              port: 4318
-      prometheusOperatorObjects:
-        enabled: true
-      alloy-logs:
-        enabled: true
-      alloy-singleton:
-        enabled: true
-      alloy-receiver:
-        enabled: true
-      nodeExporter:
-        enabled: false
-      {{- if $k8sMon.values }}
-      {{- toYaml $k8sMon.values | nindent 6 }}
-      {{- end }}
+      {{- toYaml $merged | nindent 6 }}
     {{- end }}
   rollbackLimit: 3
   providerConfigRef:

@@ -30,194 +30,107 @@ spec:
     values:
       {{- toYaml $kps.overrideAllValues | nindent 6 }}
     {{- else }}
+    {{- /* Build VPA custom resource state metrics */}}
+    {{- $containerPath := list "status" "recommendation" "containerRecommendations" }}
+    {{- $containerLabel := dict "container" (list "containerName") }}
+    {{- $vpaMetrics := list
+      (dict "name" "vpa_containerrecommendations_target" "help" "VPA target recommendation for a container resource." "each" (dict "type" "Gauge" "gauge" (dict "path" $containerPath "valueFrom" (list "target" "cpu") "labelsFromPath" $containerLabel "labelFromKey" "")) "commonLabels" (dict "resource" "cpu" "unit" "core"))
+      (dict "name" "vpa_containerrecommendations_target" "help" "VPA target recommendation for a container resource." "each" (dict "type" "Gauge" "gauge" (dict "path" $containerPath "valueFrom" (list "target" "memory") "labelsFromPath" $containerLabel)) "commonLabels" (dict "resource" "memory" "unit" "byte"))
+      (dict "name" "vpa_containerrecommendations_lowerbound" "help" "VPA lower bound recommendation for a container resource." "each" (dict "type" "Gauge" "gauge" (dict "path" $containerPath "valueFrom" (list "lowerBound" "cpu") "labelsFromPath" $containerLabel)) "commonLabels" (dict "resource" "cpu" "unit" "core"))
+      (dict "name" "vpa_containerrecommendations_lowerbound" "help" "VPA lower bound recommendation for a container resource." "each" (dict "type" "Gauge" "gauge" (dict "path" $containerPath "valueFrom" (list "lowerBound" "memory") "labelsFromPath" $containerLabel)) "commonLabels" (dict "resource" "memory" "unit" "byte"))
+      (dict "name" "vpa_containerrecommendations_upperbound" "help" "VPA upper bound recommendation for a container resource." "each" (dict "type" "Gauge" "gauge" (dict "path" $containerPath "valueFrom" (list "upperBound" "cpu") "labelsFromPath" $containerLabel)) "commonLabels" (dict "resource" "cpu" "unit" "core"))
+      (dict "name" "vpa_containerrecommendations_upperbound" "help" "VPA upper bound recommendation for a container resource." "each" (dict "type" "Gauge" "gauge" (dict "path" $containerPath "valueFrom" (list "upperBound" "memory") "labelsFromPath" $containerLabel)) "commonLabels" (dict "resource" "memory" "unit" "byte"))
+      (dict "name" "vpa_containerrecommendations_uncappedtarget" "help" "VPA uncapped target recommendation for a container resource." "each" (dict "type" "Gauge" "gauge" (dict "path" $containerPath "valueFrom" (list "uncappedTarget" "cpu") "labelsFromPath" $containerLabel)) "commonLabels" (dict "resource" "cpu" "unit" "core"))
+      (dict "name" "vpa_containerrecommendations_uncappedtarget" "help" "VPA uncapped target recommendation for a container resource." "each" (dict "type" "Gauge" "gauge" (dict "path" $containerPath "valueFrom" (list "uncappedTarget" "memory") "labelsFromPath" $containerLabel)) "commonLabels" (dict "resource" "memory" "unit" "byte"))
+    }}
+    {{- $defaults := dict
+      "prometheusOperator" (dict "enabled" true)
+      "prometheus" (dict
+        "enabled" true
+        "prometheusSpec" (dict
+          "enableRemoteWriteReceiver" true
+          "retention" (printf "%vd" $state.aws.prometheus.retentionDays)
+          "serviceMonitorSelectorNilUsesHelmValues" false
+          "podMonitorSelectorNilUsesHelmValues" false
+          "ruleSelectorNilUsesHelmValues" false
+          "storageSpec" (dict
+            "volumeClaimTemplate" (dict
+              "spec" (dict
+                "storageClassName" $state.aws.prometheus.pvc.storageClass.name
+                "resources" (dict "requests" (dict "storage" $state.aws.prometheus.pvc.size))
+              )
+            )
+          )
+        )
+      )
+      "alertmanager" (dict "enabled" true)
+      "grafana" (dict
+        "enabled" true
+        "sidecar" (dict
+          "datasources" (dict
+            "enabled" false
+            "defaultDatasourceEnabled" false
+            "alertmanager" (dict "enabled" false)
+          )
+        )
+        "additionalDataSources" (list
+          (dict "name" "Loki" "type" "loki" "uid" "loki" "access" "proxy"
+            "url" (printf "http://%s-gateway.%s:80" $loki.name $loki.namespace)
+            "jsonData" (dict
+              "maxLines" 1000
+              "derivedFields" (list (dict
+                "name" "TraceID"
+                "matcherRegex" "\"traceId\":\"([a-f0-9]+)\""
+                "url" "$${__value.raw}"
+                "datasourceUid" "tempo"
+              ))
+            )
+          )
+          (dict "name" "Tempo" "type" "tempo" "uid" "tempo" "access" "proxy"
+            "url" (printf "http://%s.%s:3200" $tempo.name $tempo.namespace)
+            "jsonData" (dict
+              "httpMethod" "GET"
+              "tracesToLogsV2" (dict "datasourceUid" "loki" "spanStartTimeShift" "-1h" "spanEndTimeShift" "1h" "filterByTraceID" true "filterBySpanID" false)
+              "tracesToMetrics" (dict "datasourceUid" "prometheus" "spanStartTimeShift" "-1h" "spanEndTimeShift" "1h")
+              "serviceMap" (dict "datasourceUid" "prometheus")
+              "nodeGraph" (dict "enabled" true)
+              "lokiSearch" (dict "datasourceUid" "loki")
+            )
+          )
+        )
+      )
+      "kube-state-metrics" (dict
+        "rbac" (dict
+          "extraRules" (list (dict
+            "apiGroups" (list "autoscaling.k8s.io")
+            "resources" (list "verticalpodautoscalers")
+            "verbs" (list "list" "watch")
+          ))
+        )
+        "customResourceState" (dict
+          "enabled" true
+          "config" (dict
+            "spec" (dict
+              "resources" (list (dict
+                "groupVersionKind" (dict "group" "autoscaling.k8s.io" "version" "v1" "kind" "VerticalPodAutoscaler")
+                "labelsFromPath" (dict
+                  "namespace" (list "metadata" "namespace")
+                  "verticalpodautoscaler" (list "metadata" "name")
+                  "target_kind" (list "spec" "targetRef" "kind")
+                  "target_name" (list "spec" "targetRef" "name")
+                  "target_api_version" (list "spec" "targetRef" "apiVersion")
+                )
+                "metrics" $vpaMetrics
+              ))
+            )
+          )
+        )
+      )
+      "nodeExporter" (dict "enabled" false)
+    }}
+    {{- $merged := mustMergeOverwrite $defaults ($kps.values | default dict) }}
     values:
-      prometheusOperator:
-        enabled: true
-      prometheus:
-        enabled: true
-        prometheusSpec:
-          enableRemoteWriteReceiver: true
-          retention: {{ $state.aws.prometheus.retentionDays }}d
-          serviceMonitorSelectorNilUsesHelmValues: false
-          podMonitorSelectorNilUsesHelmValues: false
-          ruleSelectorNilUsesHelmValues: false
-          storageSpec:
-            volumeClaimTemplate:
-              spec:
-                storageClassName: {{ $state.aws.prometheus.pvc.storageClass.name }}
-                resources:
-                  requests:
-                    storage: {{ $state.aws.prometheus.pvc.size }}
-      alertmanager:
-        enabled: true
-      grafana:
-        enabled: true
-        sidecar:
-          datasources:
-            enabled: false
-            defaultDatasourceEnabled: false
-            alertmanager:
-              enabled: false
-        additionalDataSources:
-        - name: Loki
-          type: loki
-          uid: loki
-          access: proxy
-          url: http://{{ $loki.name }}-gateway.{{ $loki.namespace }}:80
-          jsonData:
-            maxLines: 1000
-            derivedFields:
-            - name: TraceID
-              matcherRegex: '"traceId":"([a-f0-9]+)"'
-              url: "$${__value.raw}"
-              datasourceUid: tempo
-        - name: Tempo
-          type: tempo
-          uid: tempo
-          access: proxy
-          url: http://{{ $tempo.name }}.{{ $tempo.namespace }}:3200
-          jsonData:
-            httpMethod: GET
-            tracesToLogsV2:
-              datasourceUid: loki
-              spanStartTimeShift: "-1h"
-              spanEndTimeShift: "1h"
-              filterByTraceID: true
-              filterBySpanID: false
-            tracesToMetrics:
-              datasourceUid: prometheus
-              spanStartTimeShift: "-1h"
-              spanEndTimeShift: "1h"
-            serviceMap:
-              datasourceUid: prometheus
-            nodeGraph:
-              enabled: true
-            lokiSearch:
-              datasourceUid: loki
-      kube-state-metrics:
-        rbac:
-          extraRules:
-          - apiGroups: ["autoscaling.k8s.io"]
-            resources: ["verticalpodautoscalers"]
-            verbs: ["list", "watch"]
-        customResourceState:
-          enabled: true
-          config:
-            spec:
-              resources:
-              - groupVersionKind:
-                  group: autoscaling.k8s.io
-                  version: v1
-                  kind: VerticalPodAutoscaler
-                labelsFromPath:
-                  namespace: [metadata, namespace]
-                  verticalpodautoscaler: [metadata, name]
-                  target_kind: [spec, targetRef, kind]
-                  target_name: [spec, targetRef, name]
-                  target_api_version: [spec, targetRef, apiVersion]
-                metrics:
-                - name: vpa_containerrecommendations_target
-                  help: "VPA target recommendation for a container resource."
-                  each:
-                    type: Gauge
-                    gauge:
-                      path: [status, recommendation, containerRecommendations]
-                      valueFrom: [target, cpu]
-                      labelsFromPath:
-                        container: [containerName]
-                      labelFromKey: ""
-                  commonLabels:
-                    resource: cpu
-                    unit: core
-                - name: vpa_containerrecommendations_target
-                  help: "VPA target recommendation for a container resource."
-                  each:
-                    type: Gauge
-                    gauge:
-                      path: [status, recommendation, containerRecommendations]
-                      valueFrom: [target, memory]
-                      labelsFromPath:
-                        container: [containerName]
-                  commonLabels:
-                    resource: memory
-                    unit: byte
-                - name: vpa_containerrecommendations_lowerbound
-                  help: "VPA lower bound recommendation for a container resource."
-                  each:
-                    type: Gauge
-                    gauge:
-                      path: [status, recommendation, containerRecommendations]
-                      valueFrom: [lowerBound, cpu]
-                      labelsFromPath:
-                        container: [containerName]
-                  commonLabels:
-                    resource: cpu
-                    unit: core
-                - name: vpa_containerrecommendations_lowerbound
-                  help: "VPA lower bound recommendation for a container resource."
-                  each:
-                    type: Gauge
-                    gauge:
-                      path: [status, recommendation, containerRecommendations]
-                      valueFrom: [lowerBound, memory]
-                      labelsFromPath:
-                        container: [containerName]
-                  commonLabels:
-                    resource: memory
-                    unit: byte
-                - name: vpa_containerrecommendations_upperbound
-                  help: "VPA upper bound recommendation for a container resource."
-                  each:
-                    type: Gauge
-                    gauge:
-                      path: [status, recommendation, containerRecommendations]
-                      valueFrom: [upperBound, cpu]
-                      labelsFromPath:
-                        container: [containerName]
-                  commonLabels:
-                    resource: cpu
-                    unit: core
-                - name: vpa_containerrecommendations_upperbound
-                  help: "VPA upper bound recommendation for a container resource."
-                  each:
-                    type: Gauge
-                    gauge:
-                      path: [status, recommendation, containerRecommendations]
-                      valueFrom: [upperBound, memory]
-                      labelsFromPath:
-                        container: [containerName]
-                  commonLabels:
-                    resource: memory
-                    unit: byte
-                - name: vpa_containerrecommendations_uncappedtarget
-                  help: "VPA uncapped target recommendation for a container resource."
-                  each:
-                    type: Gauge
-                    gauge:
-                      path: [status, recommendation, containerRecommendations]
-                      valueFrom: [uncappedTarget, cpu]
-                      labelsFromPath:
-                        container: [containerName]
-                  commonLabels:
-                    resource: cpu
-                    unit: core
-                - name: vpa_containerrecommendations_uncappedtarget
-                  help: "VPA uncapped target recommendation for a container resource."
-                  each:
-                    type: Gauge
-                    gauge:
-                      path: [status, recommendation, containerRecommendations]
-                      valueFrom: [uncappedTarget, memory]
-                      labelsFromPath:
-                        container: [containerName]
-                  commonLabels:
-                    resource: memory
-                    unit: byte
-      nodeExporter:
-        enabled: false
-      {{- if $kps.values }}
-      {{- toYaml $kps.values | nindent 6 }}
-      {{- end }}
+      {{- toYaml $merged | nindent 6 }}
     {{- end }}
   rollbackLimit: 3
   providerConfigRef:

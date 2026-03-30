@@ -29,61 +29,61 @@ spec:
     values:
       {{- toYaml $tempo.overrideAllValues | nindent 6 }}
     {{- else }}
+    {{- $traceStorage := dict }}
+    {{- if $state.aws.tempo.s3.enabled }}
+    {{- $traceStorage = dict
+      "backend" "s3"
+      "s3" (dict
+        "bucket" $state.aws.tempo.s3.bucketName
+        "endpoint" (printf "s3.%s.amazonaws.com" $state.aws.region)
+        "region" $state.aws.region
+      )
+    }}
+    {{- else }}
+    {{- $traceStorage = dict
+      "backend" "local"
+      "local" (dict "path" "/var/tempo/traces")
+      "wal" (dict "path" "/var/tempo/wal")
+    }}
+    {{- end }}
+    {{- $defaults := dict
+      "tempo" (dict
+        "receivers" (dict
+          "otlp" (dict "protocols" (dict
+            "grpc" (dict "endpoint" "0.0.0.0:4317")
+            "http" (dict "endpoint" "0.0.0.0:4318")
+          ))
+          "jaeger" (dict "protocols" (dict
+            "grpc" (dict "endpoint" "0.0.0.0:14250")
+            "thrift_binary" (dict "endpoint" "0.0.0.0:6832")
+            "thrift_compact" (dict "endpoint" "0.0.0.0:6831")
+            "thrift_http" (dict "endpoint" "0.0.0.0:14268")
+          ))
+          "zipkin" (dict "endpoint" "0.0.0.0:9411")
+        )
+        "searchEnabled" true
+        "metricsGenerator" (dict
+          "enabled" true
+          "remoteWriteUrl" (printf "http://%s-prometheus.%s:9090/api/v1/write" $kps.name $kps.namespace)
+        )
+        "storage" (dict "trace" $traceStorage)
+        "compactor" (dict "compaction" (dict
+          "block_retention" (printf "%vh" (mul $state.aws.tempo.retentionDays 24))
+        ))
+      )
+      "service" (dict "type" "ClusterIP")
+    }}
+    {{- if not $state.aws.tempo.s3.enabled }}
+    {{- $_ := set $defaults "persistence" (dict
+      "enabled" true
+      "storageClass" $state.aws.tempo.pvc.storageClass.name
+      "storageClassName" $state.aws.tempo.pvc.storageClass.name
+      "size" $state.aws.tempo.pvc.size
+    ) }}
+    {{- end }}
+    {{- $merged := mustMergeOverwrite $defaults ($tempo.values | default dict) }}
     values:
-      tempo:
-        receivers:
-          otlp:
-            protocols:
-              grpc:
-                endpoint: "0.0.0.0:4317"
-              http:
-                endpoint: "0.0.0.0:4318"
-          jaeger:
-            protocols:
-              grpc:
-                endpoint: "0.0.0.0:14250"
-              thrift_binary:
-                endpoint: "0.0.0.0:6832"
-              thrift_compact:
-                endpoint: "0.0.0.0:6831"
-              thrift_http:
-                endpoint: "0.0.0.0:14268"
-          zipkin:
-            endpoint: "0.0.0.0:9411"
-        searchEnabled: true
-        metricsGenerator:
-          enabled: true
-          remoteWriteUrl: http://{{ $kps.name }}-prometheus.{{ $kps.namespace }}:9090/api/v1/write
-        storage:
-          trace:
-            {{- if $state.aws.tempo.s3.enabled }}
-            backend: s3
-            s3:
-              bucket: {{ $state.aws.tempo.s3.bucketName }}
-              endpoint: s3.{{ $state.aws.region }}.amazonaws.com
-              region: {{ $state.aws.region }}
-            {{- else }}
-            backend: local
-            local:
-              path: /var/tempo/traces
-            wal:
-              path: /var/tempo/wal
-            {{- end }}
-        compactor:
-          compaction:
-            block_retention: {{ mul $state.aws.tempo.retentionDays 24 }}h
-      service:
-        type: ClusterIP
-      {{- if not $state.aws.tempo.s3.enabled }}
-      persistence:
-        enabled: true
-        storageClass: {{ $state.aws.tempo.pvc.storageClass.name }}
-        storageClassName: {{ $state.aws.tempo.pvc.storageClass.name }}
-        size: {{ $state.aws.tempo.pvc.size }}
-      {{- end }}
-      {{- if $tempo.values }}
-      {{- toYaml $tempo.values | nindent 6 }}
-      {{- end }}
+      {{- toYaml $merged | nindent 6 }}
     {{- end }}
   rollbackLimit: 3
   providerConfigRef:

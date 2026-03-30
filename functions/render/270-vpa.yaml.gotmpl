@@ -30,14 +30,12 @@ spec:
     values:
       {{- toYaml $vpa.overrideAllValues | nindent 6 }}
     {{- else }}
+    {{- $defaults := dict
+      "recommender" (dict "extraArgs" (dict "prometheus-address" $prometheusUrl "storage" "prometheus"))
+    }}
+    {{- $merged := mustMergeOverwrite $defaults ($vpa.values | default dict) }}
     values:
-      recommender:
-        extraArgs:
-          prometheus-address: {{ $prometheusUrl }}
-          storage: prometheus
-    {{- if $vpa.values }}
-      {{- toYaml $vpa.values | nindent 6 }}
-    {{- end }}
+      {{- toYaml $merged | nindent 6 }}
     {{- end }}
   rollbackLimit: 3
   providerConfigRef:
