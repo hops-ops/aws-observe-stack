@@ -29,9 +29,17 @@ spec:
     values:
       {{- toYaml $goldilocks.overrideAllValues | nindent 6 }}
     {{- else }}
+    {{- $controller := dict "flags" (dict "on-by-default" "true") }}
+    {{- $dashboard := dict "enabled" true "flags" (dict "on-by-default" "true") }}
+    {{- if $state.nodePool.enabled }}
+      {{- $_ := set $controller "nodeSelector" $state.nodePool.nodeSelector }}
+      {{- $_ := set $controller "tolerations" $state.nodePool.tolerations }}
+      {{- $_ := set $dashboard "nodeSelector" $state.nodePool.nodeSelector }}
+      {{- $_ := set $dashboard "tolerations" $state.nodePool.tolerations }}
+    {{- end }}
     {{- $defaults := dict
-      "controller" (dict "flags" (dict "on-by-default" "true"))
-      "dashboard" (dict "enabled" true "flags" (dict "on-by-default" "true"))
+      "controller" $controller
+      "dashboard" $dashboard
     }}
     {{- $merged := mustMergeOverwrite $defaults ($goldilocks.values | default dict) }}
     values:

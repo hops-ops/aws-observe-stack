@@ -43,89 +43,114 @@ spec:
       (dict "name" "vpa_containerrecommendations_uncappedtarget" "help" "VPA uncapped target recommendation for a container resource." "each" (dict "type" "Gauge" "gauge" (dict "path" $containerPath "valueFrom" (list "uncappedTarget" "cpu") "labelsFromPath" $containerLabel)) "commonLabels" (dict "resource" "cpu" "unit" "core"))
       (dict "name" "vpa_containerrecommendations_uncappedtarget" "help" "VPA uncapped target recommendation for a container resource." "each" (dict "type" "Gauge" "gauge" (dict "path" $containerPath "valueFrom" (list "uncappedTarget" "memory") "labelsFromPath" $containerLabel)) "commonLabels" (dict "resource" "memory" "unit" "byte"))
     }}
+    {{- /* NodePool scheduling for non-daemonset components */}}
+    {{- $promSpec := dict
+      "enableRemoteWriteReceiver" true
+      "retention" (printf "%vd" $state.aws.prometheus.retentionDays)
+      "serviceMonitorSelectorNilUsesHelmValues" false
+      "podMonitorSelectorNilUsesHelmValues" false
+      "ruleSelectorNilUsesHelmValues" false
+      "storageSpec" (dict
+        "volumeClaimTemplate" (dict
+          "spec" (dict
+            "storageClassName" $state.aws.prometheus.pvc.storageClass.name
+            "resources" (dict "requests" (dict "storage" $state.aws.prometheus.pvc.size))
+          )
+        )
+      )
+    }}
+    {{- $alertmanagerSpec := dict }}
+    {{- $grafanaValues := dict
+      "enabled" true
+    }}
+    {{- $operatorValues := dict "enabled" true }}
+    {{- $ksmValues := dict }}
+    {{- if $state.nodePool.enabled }}
+      {{- $_ := set $promSpec "nodeSelector" $state.nodePool.nodeSelector }}
+      {{- $_ := set $promSpec "tolerations" $state.nodePool.tolerations }}
+      {{- $_ := set $alertmanagerSpec "nodeSelector" $state.nodePool.nodeSelector }}
+      {{- $_ := set $alertmanagerSpec "tolerations" $state.nodePool.tolerations }}
+      {{- $_ := set $grafanaValues "nodeSelector" $state.nodePool.nodeSelector }}
+      {{- $_ := set $grafanaValues "tolerations" $state.nodePool.tolerations }}
+      {{- $_ := set $operatorValues "nodeSelector" $state.nodePool.nodeSelector }}
+      {{- $_ := set $operatorValues "tolerations" $state.nodePool.tolerations }}
+      {{- $_ := set $ksmValues "nodeSelector" $state.nodePool.nodeSelector }}
+      {{- $_ := set $ksmValues "tolerations" $state.nodePool.tolerations }}
+    {{- end }}
+    {{- /* Build grafana values with optional nodeSelector/tolerations */}}
+    {{- $grafanaBase := dict
+      "sidecar" (dict
+        "datasources" (dict
+          "enabled" false
+          "defaultDatasourceEnabled" false
+          "alertmanager" (dict "enabled" false)
+        )
+      )
+      "additionalDataSources" (list
+        (dict "name" "Loki" "type" "loki" "uid" "loki" "access" "proxy"
+          "url" (printf "http://%s-gateway.%s:80" $loki.name $loki.namespace)
+          "jsonData" (dict
+            "maxLines" 1000
+            "derivedFields" (list (dict
+              "name" "TraceID"
+              "matcherRegex" "\"traceId\":\"([a-f0-9]+)\""
+              "url" "$${__value.raw}"
+              "datasourceUid" "tempo"
+            ))
+          )
+        )
+        (dict "name" "Tempo" "type" "tempo" "uid" "tempo" "access" "proxy"
+          "url" (printf "http://%s.%s:3200" $tempo.name $tempo.namespace)
+          "jsonData" (dict
+            "httpMethod" "GET"
+            "tracesToLogsV2" (dict "datasourceUid" "loki" "spanStartTimeShift" "-1h" "spanEndTimeShift" "1h" "filterByTraceID" true "filterBySpanID" false)
+            "tracesToMetrics" (dict "datasourceUid" "prometheus" "spanStartTimeShift" "-1h" "spanEndTimeShift" "1h")
+            "serviceMap" (dict "datasourceUid" "prometheus")
+            "nodeGraph" (dict "enabled" true)
+            "lokiSearch" (dict "datasourceUid" "loki")
+          )
+        )
+      )
+    }}
+    {{- $grafana := merge $grafanaValues $grafanaBase }}
+    {{- /* Build kube-state-metrics values with optional nodeSelector/tolerations */}}
+    {{- $ksmBase := dict
+      "rbac" (dict
+        "extraRules" (list (dict
+          "apiGroups" (list "autoscaling.k8s.io")
+          "resources" (list "verticalpodautoscalers")
+          "verbs" (list "list" "watch")
+        ))
+      )
+      "customResourceState" (dict
+        "enabled" true
+        "config" (dict
+          "spec" (dict
+            "resources" (list (dict
+              "groupVersionKind" (dict "group" "autoscaling.k8s.io" "version" "v1" "kind" "VerticalPodAutoscaler")
+              "labelsFromPath" (dict
+                "namespace" (list "metadata" "namespace")
+                "verticalpodautoscaler" (list "metadata" "name")
+                "target_kind" (list "spec" "targetRef" "kind")
+                "target_name" (list "spec" "targetRef" "name")
+                "target_api_version" (list "spec" "targetRef" "apiVersion")
+              )
+              "metrics" $vpaMetrics
+            ))
+          )
+        )
+      )
+    }}
+    {{- $ksm := merge $ksmValues $ksmBase }}
     {{- $defaults := dict
-      "prometheusOperator" (dict "enabled" true)
+      "prometheusOperator" $operatorValues
       "prometheus" (dict
         "enabled" true
-        "prometheusSpec" (dict
-          "enableRemoteWriteReceiver" true
-          "retention" (printf "%vd" $state.aws.prometheus.retentionDays)
-          "serviceMonitorSelectorNilUsesHelmValues" false
-          "podMonitorSelectorNilUsesHelmValues" false
-          "ruleSelectorNilUsesHelmValues" false
-          "storageSpec" (dict
-            "volumeClaimTemplate" (dict
-              "spec" (dict
-                "storageClassName" $state.aws.prometheus.pvc.storageClass.name
-                "resources" (dict "requests" (dict "storage" $state.aws.prometheus.pvc.size))
-              )
-            )
-          )
-        )
+        "prometheusSpec" $promSpec
       )
-      "alertmanager" (dict "enabled" true)
-      "grafana" (dict
-        "enabled" true
-        "sidecar" (dict
-          "datasources" (dict
-            "enabled" false
-            "defaultDatasourceEnabled" false
-            "alertmanager" (dict "enabled" false)
-          )
-        )
-        "additionalDataSources" (list
-          (dict "name" "Loki" "type" "loki" "uid" "loki" "access" "proxy"
-            "url" (printf "http://%s-gateway.%s:80" $loki.name $loki.namespace)
-            "jsonData" (dict
-              "maxLines" 1000
-              "derivedFields" (list (dict
-                "name" "TraceID"
-                "matcherRegex" "\"traceId\":\"([a-f0-9]+)\""
-                "url" "$${__value.raw}"
-                "datasourceUid" "tempo"
-              ))
-            )
-          )
-          (dict "name" "Tempo" "type" "tempo" "uid" "tempo" "access" "proxy"
-            "url" (printf "http://%s.%s:3200" $tempo.name $tempo.namespace)
-            "jsonData" (dict
-              "httpMethod" "GET"
-              "tracesToLogsV2" (dict "datasourceUid" "loki" "spanStartTimeShift" "-1h" "spanEndTimeShift" "1h" "filterByTraceID" true "filterBySpanID" false)
-              "tracesToMetrics" (dict "datasourceUid" "prometheus" "spanStartTimeShift" "-1h" "spanEndTimeShift" "1h")
-              "serviceMap" (dict "datasourceUid" "prometheus")
-              "nodeGraph" (dict "enabled" true)
-              "lokiSearch" (dict "datasourceUid" "loki")
-            )
-          )
-        )
-      )
-      "kube-state-metrics" (dict
-        "rbac" (dict
-          "extraRules" (list (dict
-            "apiGroups" (list "autoscaling.k8s.io")
-            "resources" (list "verticalpodautoscalers")
-            "verbs" (list "list" "watch")
-          ))
-        )
-        "customResourceState" (dict
-          "enabled" true
-          "config" (dict
-            "spec" (dict
-              "resources" (list (dict
-                "groupVersionKind" (dict "group" "autoscaling.k8s.io" "version" "v1" "kind" "VerticalPodAutoscaler")
-                "labelsFromPath" (dict
-                  "namespace" (list "metadata" "namespace")
-                  "verticalpodautoscaler" (list "metadata" "name")
-                  "target_kind" (list "spec" "targetRef" "kind")
-                  "target_name" (list "spec" "targetRef" "name")
-                  "target_api_version" (list "spec" "targetRef" "apiVersion")
-                )
-                "metrics" $vpaMetrics
-              ))
-            )
-          )
-        )
-      )
+      "alertmanager" (dict "enabled" true "alertmanagerSpec" $alertmanagerSpec)
+      "grafana" $grafana
+      "kube-state-metrics" $ksm
       "nodeExporter" (dict "enabled" false)
     }}
     {{- $merged := mustMergeOverwrite $defaults ($kps.values | default dict) }}

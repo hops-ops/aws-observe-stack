@@ -1339,6 +1339,143 @@ _items = [
             ]
         }
     }
+
+    # ==========================================================================
+    # Test: NodePool enabled renders NodePool object and scheduling constraints
+    # ==========================================================================
+    metav1alpha1.CompositionTest {
+        metadata.name = "nodepool-enabled-renders-nodepool-and-scheduling"
+        spec = {
+            compositionPath = "apis/observestacks/composition.yaml"
+            xrdPath = "apis/observestacks/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = {
+                apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                kind = "ObserveStack"
+                metadata.name = "observe"
+                spec = {
+                    clusterName = "my-cluster"
+                    aws = {
+                        region = "us-east-1"
+                    }
+                    nodePool = {
+                        enabled = True
+                    }
+                }
+            }
+            assertResources = [
+                # NodePool object is created
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-nodepool-observe"
+                    spec.forProvider.manifest = {
+                        apiVersion = "karpenter.sh/v1"
+                        kind = "NodePool"
+                        metadata.name = "my-cluster-observe"
+                        spec.template.metadata.labels = {
+                            "workload-type" = "observe"
+                        }
+                        spec.template.spec.taints = [
+                            {key = "observe", value = "true", effect = "NoSchedule"}
+                        ]
+                    }
+                }
+                # Prometheus gets nodeSelector + tolerations
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "kube-prometheus-stack"
+                    spec.forProvider.values.prometheus.prometheusSpec.nodeSelector = {
+                        "workload-type" = "observe"
+                    }
+                    spec.forProvider.values.prometheus.prometheusSpec.tolerations = [
+                        {key = "observe", value = "true", effect = "NoSchedule"}
+                    ]
+                }
+                # Loki singleBinary gets nodeSelector + tolerations
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "loki"
+                    spec.forProvider.values.singleBinary.nodeSelector = {
+                        "workload-type" = "observe"
+                    }
+                    spec.forProvider.values.singleBinary.tolerations = [
+                        {key = "observe", value = "true", effect = "NoSchedule"}
+                    ]
+                }
+                # Tempo gets nodeSelector + tolerations
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "tempo"
+                    spec.forProvider.values.nodeSelector = {
+                        "workload-type" = "observe"
+                    }
+                    spec.forProvider.values.tolerations = [
+                        {key = "observe", value = "true", effect = "NoSchedule"}
+                    ]
+                }
+                # Alloy-metrics (daemonset) tolerates ALL taints — runs on every node
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "k8s-monitoring"
+                    spec.forProvider.values = {
+                        "alloy-metrics" = {
+                            enabled = True
+                            controller = {
+                                tolerations = [
+                                    {operator = "Exists"}
+                                ]
+                            }
+                        }
+                    }
+                }
+            ]
+        }
+    }
+
+    # ==========================================================================
+    # Test: NodePool disabled (default) renders no NodePool object
+    # ==========================================================================
+    metav1alpha1.CompositionTest {
+        metadata.name = "nodepool-disabled-no-nodepool-object"
+        spec = {
+            compositionPath = "apis/observestacks/composition.yaml"
+            xrdPath = "apis/observestacks/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = {
+                apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                kind = "ObserveStack"
+                metadata.name = "observe"
+                spec = {
+                    clusterName = "my-cluster"
+                    aws = {
+                        region = "us-east-1"
+                    }
+                }
+            }
+            assertResources = [
+                # No nodeSelector on Prometheus when nodePool disabled
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "kube-prometheus-stack"
+                    spec.forProvider.values.prometheus.prometheusSpec = {
+                        enableRemoteWriteReceiver = True
+                        retention = "30d"
+                        serviceMonitorSelectorNilUsesHelmValues = False
+                        podMonitorSelectorNilUsesHelmValues = False
+                        ruleSelectorNilUsesHelmValues = False
+                    }
+                }
+            ]
+        }
+    }
 ]
 
 items = _items
