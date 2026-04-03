@@ -40,6 +40,7 @@ spec:
       {{- $_ := set $updater "tolerations" $state.nodePool.tolerations }}
       {{- $_ := set $admissionController "nodeSelector" $state.nodePool.nodeSelector }}
       {{- $_ := set $admissionController "tolerations" $state.nodePool.tolerations }}
+      {{- $_ := set $admissionController "certGen" (dict "nodeSelector" $state.nodePool.nodeSelector "tolerations" $state.nodePool.tolerations) }}
     {{- end }}
     {{- $defaults := dict
       "recommender" $recommender
