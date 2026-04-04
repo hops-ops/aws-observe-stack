@@ -50,4 +50,45 @@ spec:
   providerConfigRef:
     name: {{ $state.kubernetes.providerConfigRef.name }}
     kind: {{ $state.kubernetes.providerConfigRef.kind }}
+
+# ==============================================================================
+# Usages: Protect NodePool from deletion until pinned Helm releases are deleted
+# ==============================================================================
+# When nodePool.enabled, non-daemonset workloads schedule pods onto the NodePool.
+# If the NodePool is deleted first, those pods lose their nodes and cleanup hangs.
+# Each pinned Release must be deleted (pods drained) before the NodePool goes away.
+{{- $pinnedReleases := dict
+  "kube-prometheus-stack" "kubePrometheusStack"
+  "loki" "loki"
+  "tempo" "tempo"
+  "k8s-monitoring" "k8sMonitoring"
+  "grafana-operator" "grafanaOperator"
+  "vpa" "vpa"
+  "goldilocks" "goldilocks"
+}}
+{{- range $release, $obsKey := $pinnedReleases }}
+  {{- $releaseReady := (get (get $state.observed $obsKey | default dict) "ready") }}
+  {{- if and $state.observed.nodepoolObserve.ready $releaseReady }}
+---
+apiVersion: protection.crossplane.io/v1beta1
+kind: Usage
+metadata:
+  name: {{ $state.name }}-delete-{{ $release }}-before-nodepool
+  annotations:
+    {{ setResourceNameAnnotation (printf "usage-np-%s" $release) }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  replayDeletion: true
+  of:
+    apiVersion: kubernetes.m.crossplane.io/v1alpha1
+    kind: Object
+    resourceRef:
+      name: {{ $state.name }}-nodepool-observe
+  by:
+    apiVersion: helm.m.crossplane.io/v1beta1
+    kind: Release
+    resourceRef:
+      name: {{ $release }}
+  {{- end }}
+{{- end }}
 {{- end }}

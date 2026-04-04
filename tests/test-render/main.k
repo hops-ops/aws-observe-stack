@@ -1491,6 +1491,138 @@ _items = [
     }
 
     # ==========================================================================
+    # Test: NodePool Usage protects NodePool from deletion until releases deleted
+    # ==========================================================================
+    metav1alpha1.CompositionTest {
+        metadata.name = "nodepool-usage-protects-deletion-order"
+        spec = {
+            compositionPath = "apis/observestacks/composition.yaml"
+            xrdPath = "apis/observestacks/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = {
+                apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                kind = "ObserveStack"
+                metadata.name = "observe"
+                spec = {
+                    clusterName = "my-cluster"
+                    aws = {
+                        region = "us-east-1"
+                    }
+                    nodePool = {
+                        enabled = True
+                    }
+                }
+            }
+            observedResources = [
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata = {
+                        name = "observe-nodepool-observe"
+                        annotations = {"crossplane.io/composition-resource-name" = "nodepool-observe"}
+                    }
+                    status = {
+                        conditions = [{type = "Ready", status = "True"}, {type = "Synced", status = "True"}]
+                    }
+                }
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata = {
+                        name = "kube-prometheus-stack"
+                        annotations = {"crossplane.io/composition-resource-name" = "kube-prometheus-stack"}
+                    }
+                    status = {
+                        conditions = [{type = "Ready", status = "True"}, {type = "Synced", status = "True"}]
+                    }
+                }
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata = {
+                        name = "loki"
+                        annotations = {"crossplane.io/composition-resource-name" = "loki"}
+                    }
+                    status = {
+                        conditions = [{type = "Ready", status = "True"}, {type = "Synced", status = "True"}]
+                    }
+                }
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata = {
+                        name = "tempo"
+                        annotations = {"crossplane.io/composition-resource-name" = "tempo"}
+                    }
+                    status = {
+                        conditions = [{type = "Ready", status = "True"}, {type = "Synced", status = "True"}]
+                    }
+                }
+            ]
+            assertResources = [
+                # Usage: kube-prometheus-stack must be deleted before nodepool
+                {
+                    apiVersion = "protection.crossplane.io/v1beta1"
+                    kind = "Usage"
+                    metadata.name = "observe-delete-kube-prometheus-stack-before-nodepool"
+                    spec = {
+                        of = {
+                            apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                            kind = "Object"
+                            resourceRef.name = "observe-nodepool-observe"
+                        }
+                        by = {
+                            apiVersion = "helm.m.crossplane.io/v1beta1"
+                            kind = "Release"
+                            resourceRef.name = "kube-prometheus-stack"
+                        }
+                        replayDeletion = True
+                    }
+                }
+                # Usage: loki must be deleted before nodepool
+                {
+                    apiVersion = "protection.crossplane.io/v1beta1"
+                    kind = "Usage"
+                    metadata.name = "observe-delete-loki-before-nodepool"
+                    spec = {
+                        of = {
+                            apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                            kind = "Object"
+                            resourceRef.name = "observe-nodepool-observe"
+                        }
+                        by = {
+                            apiVersion = "helm.m.crossplane.io/v1beta1"
+                            kind = "Release"
+                            resourceRef.name = "loki"
+                        }
+                        replayDeletion = True
+                    }
+                }
+                # Usage: tempo must be deleted before nodepool
+                {
+                    apiVersion = "protection.crossplane.io/v1beta1"
+                    kind = "Usage"
+                    metadata.name = "observe-delete-tempo-before-nodepool"
+                    spec = {
+                        of = {
+                            apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                            kind = "Object"
+                            resourceRef.name = "observe-nodepool-observe"
+                        }
+                        by = {
+                            apiVersion = "helm.m.crossplane.io/v1beta1"
+                            kind = "Release"
+                            resourceRef.name = "tempo"
+                        }
+                        replayDeletion = True
+                    }
+                }
+            ]
+        }
+    }
+
+    # ==========================================================================
     # Test: NodePool disabled (default) renders no NodePool object
     # ==========================================================================
     metav1alpha1.CompositionTest {
