@@ -81,6 +81,10 @@ spec:
       "size" $state.aws.tempo.pvc.size
     ) }}
     {{- end }}
+    {{- if $state.nodePool.enabled }}
+      {{- $_ := set $defaults "nodeSelector" $state.nodePool.nodeSelector }}
+      {{- $_ := set $defaults "tolerations" $state.nodePool.tolerations }}
+    {{- end }}
     {{- $merged := mustMergeOverwrite $defaults ($tempo.values | default dict) }}
     values:
       {{- toYaml $merged | nindent 6 }}

@@ -10,7 +10,7 @@
 # ==============================================================================
 
 {{- $checkReady := dict }}
-{{- range $key := list "kube-prometheus-stack" "loki" "tempo" "k8s-monitoring" "grafana-operator" "grafana-instance" "datasource-prometheus" "datasource-loki" "datasource-tempo" "opencost-pod-identity" "loki-pod-identity" "tempo-pod-identity" "vpa" "goldilocks" }}
+{{- range $key := list "kube-prometheus-stack" "loki" "tempo" "k8s-monitoring" "grafana-operator" "grafana-instance" "datasource-prometheus" "datasource-loki" "datasource-tempo" "opencost-pod-identity" "loki-pod-identity" "tempo-pod-identity" "vpa" "goldilocks" "nodepool-observe" }}
   {{- $entry := get $observed $key | default dict }}
   {{- $resource := $entry.resource | default dict }}
   {{- $status := $resource.status | default dict }}
@@ -41,6 +41,7 @@
   "tempoPodIdentity" (dict "ready" (get $checkReady "tempo-pod-identity"))
   "vpa" (dict "ready" (get $checkReady "vpa"))
   "goldilocks" (dict "ready" (get $checkReady "goldilocks"))
+  "nodepoolObserve" (dict "ready" (get $checkReady "nodepool-observe"))
 ) }}
 
 # ==============================================================================

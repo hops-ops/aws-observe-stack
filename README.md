@@ -73,11 +73,52 @@ spec:
     rolePrefix: prod-
 ```
 
+### Dedicated NodePool
+
+Isolate observe workloads on a dedicated Karpenter NodePool (opt-in):
+
+```yaml
+spec:
+  clusterName: my-cluster
+  aws:
+    region: us-east-1
+  nodePool:
+    enabled: true
+```
+
+When enabled:
+- A Karpenter NodePool (`<clusterName>-observe`) is created with broad spot + on-demand instance selection
+- Non-daemonset pods (Prometheus, Loki, Tempo, Grafana, OpenCost, VPA, Goldilocks) are scheduled to the NodePool via `nodeSelector` and `tolerations`
+- Daemonsets (alloy-metrics, alloy-logs) continue to run on **all** nodes, including the observe NodePool
+
+Custom NodePool settings:
+
+```yaml
+spec:
+  nodePool:
+    enabled: true
+    nodeClassName: custom-nodeclass
+    limits:
+      nodes: 20
+    requirements:
+    - key: kubernetes.io/arch
+      operator: In
+      values: [amd64]
+    - key: karpenter.sh/capacity-type
+      operator: In
+      values: [spot]
+    disruption:
+      consolidationPolicy: WhenEmpty
+      consolidateAfter: "120s"
+```
+
 ## What Gets Created
 
-1. `hops.ops.com.ai/ObserveStack` - the base observability stack (Prometheus, Loki, Tempo, k8s-monitoring/OpenCost, Grafana)
-2. `aws.hops.ops.com.ai/PodIdentity` - IAM role + Pod Identity association with billing permissions
-3. `protection.crossplane.io/Usage` - deletion ordering: Observe deleted before PodIdentity
+1. **Helm Releases** - Prometheus, Loki, Tempo, k8s-monitoring/OpenCost, Grafana Operator, VPA, Goldilocks
+2. **PodIdentity** - IAM role + Pod Identity association with billing permissions for OpenCost
+3. **Usage** - deletion ordering: Observe deleted before PodIdentity
+4. **StorageClasses** - gp3 EBS classes for Prometheus, Loki, Tempo (when using PVC storage)
+5. **NodePool** *(opt-in)* - dedicated Karpenter NodePool for observe workloads
 
 ## Development
 

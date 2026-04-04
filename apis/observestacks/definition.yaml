@@ -113,6 +113,71 @@ spec:
                     - Immediate
                     - WaitForFirstConsumer
                     default: WaitForFirstConsumer
+              nodePool:
+                description: Optional dedicated Karpenter NodePool for observe workloads. When enabled, non-daemonset pods are scheduled to a dedicated NodePool via nodeSelector and tolerations. Daemonsets (node-exporter, alloy) continue to run on all nodes.
+                type: object
+                properties:
+                  enabled:
+                    description: Whether to create a dedicated NodePool for observe workloads. Defaults to false.
+                    type: boolean
+                    default: false
+                  nodeClassName:
+                    description: Name of the EKS NodeClass to reference. Defaults to the EKS Auto Mode default.
+                    type: string
+                  limits:
+                    description: Karpenter NodePool resource limits. Defaults to cpu/memory-based limits for dynamic scaling. Set nodes to cap node count.
+                    type: object
+                    properties:
+                      cpu:
+                        description: Maximum total vCPUs across all nodes. Defaults to "40".
+                        type: string
+                        default: "40"
+                      memory:
+                        description: Maximum total memory across all nodes. Defaults to "160Gi".
+                        type: string
+                        default: "160Gi"
+                      nodes:
+                        description: Maximum number of nodes. Optional — omit for pure resource-based scaling.
+                        type: integer
+                  requirements:
+                    description: Karpenter NodePool scheduling requirements. Defaults to broad spot instance selection.
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        key:
+                          type: string
+                        operator:
+                          type: string
+                          enum:
+                          - In
+                          - NotIn
+                          - Exists
+                          - DoesNotExist
+                          - Gt
+                          - Lt
+                        values:
+                          type: array
+                          items:
+                            type: string
+                      required:
+                      - key
+                      - operator
+                  disruption:
+                    description: Karpenter disruption settings.
+                    type: object
+                    properties:
+                      consolidationPolicy:
+                        description: Consolidation policy. Defaults to WhenEmptyOrUnderutilized.
+                        type: string
+                        enum:
+                        - WhenEmpty
+                        - WhenEmptyOrUnderutilized
+                        default: WhenEmptyOrUnderutilized
+                      consolidateAfter:
+                        description: Duration to wait before consolidating. Defaults to 60s.
+                        type: string
+                        default: "60s"
               aws:
                 description: AWS account and IAM configuration.
                 type: object

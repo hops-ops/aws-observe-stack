@@ -30,6 +30,37 @@ spec:
     values:
       {{- toYaml $k8sMon.overrideAllValues | nindent 6 }}
     {{- else }}
+    {{- /* OpenCost values — deployment, gets nodeSelector + tolerations */}}
+    {{- $opencostValues := dict
+      "enabled" true
+      "metricsSource" "prometheus"
+      "opencost" (dict
+        "exporter" (dict "defaultClusterId" $state.clusterName)
+        "prometheus" (dict "external" (dict "url" (printf "http://%s-prometheus.%s:9090" $kps.name $kps.namespace)))
+      )
+    }}
+    {{- /* DaemonSets (alloy-logs, alloy-receiver) tolerate ALL taints so they run on
+         every node, including dedicated NodePools (crossplane, observe, etc.) */}}
+    {{- $tolerateAll := list (dict "operator" "Exists") }}
+    {{- $alloyLogs := dict "enabled" true "controller" (dict "tolerations" $tolerateAll) }}
+    {{- $alloyReceiver := dict "enabled" true "controller" (dict "tolerations" $tolerateAll) }}
+    {{- /* alloy-metrics (StatefulSet), alloy-singleton, and alloy-operator
+         get nodeSelector + tolerations when nodePool enabled; otherwise no scheduling constraints */}}
+    {{- $alloyMetrics := dict "enabled" true }}
+    {{- $alloySingleton := dict "enabled" true }}
+    {{- $alloyOperator := dict }}
+    {{- if $state.nodePool.enabled }}
+      {{- $_ := set $opencostValues "opencost" (dict
+        "exporter" (dict "defaultClusterId" $state.clusterName)
+        "prometheus" (dict "external" (dict "url" (printf "http://%s-prometheus.%s:9090" $kps.name $kps.namespace)))
+        "nodeSelector" $state.nodePool.nodeSelector
+        "tolerations" $state.nodePool.tolerations
+      ) }}
+      {{- $_ := set $alloyMetrics "controller" (dict "nodeSelector" $state.nodePool.nodeSelector "tolerations" $state.nodePool.tolerations) }}
+      {{- $_ := set $alloySingleton "controller" (dict "nodeSelector" $state.nodePool.nodeSelector "tolerations" $state.nodePool.tolerations) }}
+      {{- $_ := set $alloyOperator "nodeSelector" $state.nodePool.nodeSelector }}
+      {{- $_ := set $alloyOperator "tolerations" $state.nodePool.tolerations }}
+    {{- end }}
     {{- $defaults := dict
       "cluster" (dict "name" $state.clusterName)
       "destinations" (list
@@ -40,16 +71,9 @@ spec:
       "clusterMetrics" (dict
         "enabled" true
         "kube-state-metrics" (dict "deploy" false)
-        "opencost" (dict
-          "enabled" true
-          "metricsSource" "prometheus"
-          "opencost" (dict
-            "exporter" (dict "defaultClusterId" $state.clusterName)
-            "prometheus" (dict "external" (dict "url" (printf "http://%s-prometheus.%s:9090" $kps.name $kps.namespace)))
-          )
-        )
+        "opencost" $opencostValues
       )
-      "alloy-metrics" (dict "enabled" true)
+      "alloy-metrics" $alloyMetrics
       "clusterEvents" (dict "enabled" true)
       "nodeLogs" (dict "enabled" true)
       "podLogs" (dict "enabled" true)
@@ -63,9 +87,10 @@ spec:
         )
       )
       "prometheusOperatorObjects" (dict "enabled" true)
-      "alloy-logs" (dict "enabled" true)
-      "alloy-singleton" (dict "enabled" true)
-      "alloy-receiver" (dict "enabled" true)
+      "alloy-logs" $alloyLogs
+      "alloy-singleton" $alloySingleton
+      "alloy-receiver" $alloyReceiver
+      "alloy-operator" $alloyOperator
       "nodeExporter" (dict "enabled" false)
     }}
     {{- $merged := mustMergeOverwrite $defaults ($k8sMon.values | default dict) }}

@@ -68,14 +68,32 @@ spec:
     {{- if not $state.aws.loki.s3.enabled }}
     {{- $_ := set $singleBinary "persistence" (dict "enabled" true "storageClass" $state.aws.loki.pvc.storageClass.name "size" $state.aws.loki.pvc.size) }}
     {{- end }}
+    {{- $gatewayValues := dict "enabled" true }}
+    {{- $resultsCache := dict }}
+    {{- $chunksCache := dict }}
+    {{- if $state.nodePool.enabled }}
+      {{- $_ := set $singleBinary "nodeSelector" $state.nodePool.nodeSelector }}
+      {{- $_ := set $singleBinary "tolerations" $state.nodePool.tolerations }}
+      {{- $_ := set $gatewayValues "nodeSelector" $state.nodePool.nodeSelector }}
+      {{- $_ := set $gatewayValues "tolerations" $state.nodePool.tolerations }}
+      {{- $_ := set $resultsCache "nodeSelector" $state.nodePool.nodeSelector }}
+      {{- $_ := set $resultsCache "tolerations" $state.nodePool.tolerations }}
+      {{- $_ := set $chunksCache "nodeSelector" $state.nodePool.nodeSelector }}
+      {{- $_ := set $chunksCache "tolerations" $state.nodePool.tolerations }}
+    {{- end }}
+    {{- /* lokiCanary is a DaemonSet — tolerate all taints so it runs on every node */}}
+    {{- $tolerateAll := list (dict "operator" "Exists") }}
     {{- $defaults := dict
       "loki" $lokiConfig
       "deploymentMode" "SingleBinary"
       "singleBinary" $singleBinary
+      "resultsCache" $resultsCache
+      "chunksCache" $chunksCache
       "read" (dict "replicas" 0)
       "write" (dict "replicas" 0)
       "backend" (dict "replicas" 0)
-      "gateway" (dict "enabled" true)
+      "gateway" $gatewayValues
+      "lokiCanary" (dict "tolerations" $tolerateAll)
     }}
     {{- $merged := mustMergeOverwrite $defaults ($loki.values | default dict) }}
     values:

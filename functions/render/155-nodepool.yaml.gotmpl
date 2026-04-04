@@ -1,0 +1,94 @@
+# code: language=yaml
+#
+# Karpenter NodePool for dedicated observe workloads.
+# Non-daemonset pods (Prometheus, Loki, Tempo, Grafana, OpenCost) are scheduled
+# here via nodeSelector + tolerations. Daemonsets (node-exporter, alloy) run on
+# ALL nodes because they tolerate all taints by default.
+#
+
+{{- if $state.nodePool.enabled }}
+---
+apiVersion: kubernetes.m.crossplane.io/v1alpha1
+kind: Object
+metadata:
+  name: {{ $state.name }}-nodepool-observe
+  annotations:
+    {{ setResourceNameAnnotation "nodepool-observe" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  managementPolicies: {{ $state.managementPolicies | toJson }}
+  forProvider:
+    manifest:
+      apiVersion: karpenter.sh/v1
+      kind: NodePool
+      metadata:
+        name: {{ $state.nodePool.name }}
+      spec:
+        template:
+          metadata:
+            labels:
+              workload-type: observe
+          spec:
+            {{- if $state.nodePool.nodeClassName }}
+            nodeClassRef:
+              group: eks.amazonaws.com
+              kind: NodeClass
+              name: {{ $state.nodePool.nodeClassName }}
+            {{- else }}
+            nodeClassRef:
+              group: eks.amazonaws.com
+              kind: NodeClass
+              name: default
+            {{- end }}
+            taints:
+            - key: {{ $state.nodePool.taintKey }}
+              value: {{ $state.nodePool.taintValue | quote }}
+              effect: NoSchedule
+            requirements: {{ $state.nodePool.requirements | toJson }}
+        limits: {{ $state.nodePool.limits | toJson }}
+        disruption: {{ $state.nodePool.disruption | toJson }}
+  providerConfigRef:
+    name: {{ $state.kubernetes.providerConfigRef.name }}
+    kind: {{ $state.kubernetes.providerConfigRef.kind }}
+
+# ==============================================================================
+# Usages: Protect NodePool from deletion until pinned Helm releases are deleted
+# ==============================================================================
+# When nodePool.enabled, non-daemonset workloads schedule pods onto the NodePool.
+# If the NodePool is deleted first, those pods lose their nodes and cleanup hangs.
+# Each pinned Release must be deleted (pods drained) before the NodePool goes away.
+{{- $pinnedReleases := dict
+  "kube-prometheus-stack" "kubePrometheusStack"
+  "loki" "loki"
+  "tempo" "tempo"
+  "k8s-monitoring" "k8sMonitoring"
+  "grafana-operator" "grafanaOperator"
+  "vpa" "vpa"
+  "goldilocks" "goldilocks"
+}}
+{{- range $release, $obsKey := $pinnedReleases }}
+  {{- $releaseReady := (get (get $state.observed $obsKey | default dict) "ready") }}
+  {{- if and $state.observed.nodepoolObserve.ready $releaseReady }}
+---
+apiVersion: protection.crossplane.io/v1beta1
+kind: Usage
+metadata:
+  name: {{ $state.name }}-delete-{{ $release }}-before-nodepool
+  annotations:
+    {{ setResourceNameAnnotation (printf "usage-np-%s" $release) }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  replayDeletion: true
+  of:
+    apiVersion: kubernetes.m.crossplane.io/v1alpha1
+    kind: Object
+    resourceRef:
+      name: {{ $state.name }}-nodepool-observe
+  by:
+    apiVersion: helm.m.crossplane.io/v1beta1
+    kind: Release
+    resourceRef:
+      name: {{ $release }}
+  {{- end }}
+{{- end }}
+{{- end }}

@@ -19,14 +19,15 @@ build:
 
 generate-configuration:
 	@set -euo pipefail; \
-	hops config generate --path . --api-path "$(XRD_DIR)"
+	hops validate generate-configuration --path . --api-path "$(XRD_DIR)"
 
 # Examples list - mirrors GitHub Actions workflow
 # Format: example_path::observed_resources_path (observed_resources_path is optional)
 EXAMPLES := \
     examples/observestacks/minimal.yaml:: \
     examples/observestacks/pvc.yaml:: \
-    examples/observestacks/s3.yaml::
+    examples/observestacks/s3.yaml:: \
+    examples/observestacks/nodepool.yaml::
 
 # Render all examples (parallel execution, output shown per-job when complete)
 render\:all:
