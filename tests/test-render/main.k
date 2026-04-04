@@ -1373,7 +1373,7 @@ _items = [
                     spec.forProvider.manifest = {
                         apiVersion = "karpenter.sh/v1"
                         kind = "NodePool"
-                        metadata.name = "my-cluster-observe"
+                        metadata.name = "hops-observe"
                         spec.template.metadata.labels = {
                             "workload-type" = "observe"
                         }

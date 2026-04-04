@@ -64,7 +64,7 @@
 {{- if hasKey $nodePoolSpec "enabled" }}
   {{- $nodePoolEnabled = $nodePoolSpec.enabled }}
 {{- end }}
-{{- $nodePoolName := printf "%s-observe" $clusterName }}
+{{- $nodePoolName := "hops-observe" }}
 {{- $nodePoolNodeClassName := $nodePoolSpec.nodeClassName | default "" }}
 {{- $nodePoolLimits := $nodePoolSpec.limits | default (dict "nodes" 10) }}
 {{- $nodePoolRequirements := $nodePoolSpec.requirements | default (list

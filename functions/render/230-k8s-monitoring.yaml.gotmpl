@@ -44,9 +44,10 @@ spec:
     {{- $tolerateAll := list (dict "operator" "Exists") }}
     {{- $alloyMetrics := dict "enabled" true "controller" (dict "tolerations" $tolerateAll) }}
     {{- $alloyLogs := dict "enabled" true "controller" (dict "tolerations" $tolerateAll) }}
-    {{- /* Alloy deployments get nodeSelector + tolerations when nodePool enabled */}}
+    {{- /* Alloy deployments/operator get nodeSelector + tolerations when nodePool enabled */}}
     {{- $alloySingleton := dict "enabled" true }}
     {{- $alloyReceiver := dict "enabled" true }}
+    {{- $alloyOperator := dict }}
     {{- if $state.nodePool.enabled }}
       {{- $_ := set $opencostValues "opencost" (dict
         "exporter" (dict "defaultClusterId" $state.clusterName)
@@ -56,6 +57,8 @@ spec:
       ) }}
       {{- $_ := set $alloySingleton "controller" (dict "nodeSelector" $state.nodePool.nodeSelector "tolerations" $state.nodePool.tolerations) }}
       {{- $_ := set $alloyReceiver "controller" (dict "nodeSelector" $state.nodePool.nodeSelector "tolerations" $state.nodePool.tolerations) }}
+      {{- $_ := set $alloyOperator "nodeSelector" $state.nodePool.nodeSelector }}
+      {{- $_ := set $alloyOperator "tolerations" $state.nodePool.tolerations }}
     {{- end }}
     {{- $defaults := dict
       "cluster" (dict "name" $state.clusterName)
@@ -86,6 +89,7 @@ spec:
       "alloy-logs" $alloyLogs
       "alloy-singleton" $alloySingleton
       "alloy-receiver" $alloyReceiver
+      "alloy-operator" $alloyOperator
       "nodeExporter" (dict "enabled" false)
     }}
     {{- $merged := mustMergeOverwrite $defaults ($k8sMon.values | default dict) }}
