@@ -234,6 +234,9 @@ _items = [
                         aws = {
                             region = "us-east-2"
                         }
+                        nodePool = {
+                            enabled = True
+                        }
                         kubePrometheusStack = {
                             storage = {
                                 retentionDays = 30

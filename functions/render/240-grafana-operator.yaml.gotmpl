@@ -24,9 +24,17 @@ spec:
     {{- if $grafOp.overrideAllValues }}
     values:
       {{- toYaml $grafOp.overrideAllValues | nindent 6 }}
-    {{- else if $grafOp.values }}
+    {{- else }}
+    {{- $defaults := dict }}
+    {{- if $state.nodePool.enabled }}
+      {{- $_ := set $defaults "nodeSelector" $state.nodePool.nodeSelector }}
+      {{- $_ := set $defaults "tolerations" $state.nodePool.tolerations }}
+    {{- end }}
+    {{- $merged := mustMergeOverwrite $defaults ($grafOp.values | default dict) }}
+    {{- if $merged }}
     values:
-      {{- toYaml $grafOp.values | nindent 6 }}
+      {{- toYaml $merged | nindent 6 }}
+    {{- end }}
     {{- end }}
   rollbackLimit: 3
   providerConfigRef:
