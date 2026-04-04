@@ -39,14 +39,15 @@ spec:
         "prometheus" (dict "external" (dict "url" (printf "http://%s-prometheus.%s:9090" $kps.name $kps.namespace)))
       )
     }}
-    {{- /* Alloy daemonsets tolerate ALL taints — monitoring must run on every node,
-         including dedicated NodePools (crossplane, observe, etc.) */}}
+    {{- /* DaemonSets (alloy-logs, alloy-receiver) tolerate ALL taints so they run on
+         every node, including dedicated NodePools (crossplane, observe, etc.) */}}
     {{- $tolerateAll := list (dict "operator" "Exists") }}
-    {{- $alloyMetrics := dict "enabled" true "controller" (dict "tolerations" $tolerateAll) }}
     {{- $alloyLogs := dict "enabled" true "controller" (dict "tolerations" $tolerateAll) }}
-    {{- /* Alloy deployments/operator get nodeSelector + tolerations when nodePool enabled */}}
+    {{- $alloyReceiver := dict "enabled" true "controller" (dict "tolerations" $tolerateAll) }}
+    {{- /* alloy-metrics (StatefulSet), alloy-singleton, and alloy-operator
+         get nodeSelector + tolerations when nodePool enabled; otherwise no scheduling constraints */}}
+    {{- $alloyMetrics := dict "enabled" true }}
     {{- $alloySingleton := dict "enabled" true }}
-    {{- $alloyReceiver := dict "enabled" true }}
     {{- $alloyOperator := dict }}
     {{- if $state.nodePool.enabled }}
       {{- $_ := set $opencostValues "opencost" (dict
@@ -55,8 +56,8 @@ spec:
         "nodeSelector" $state.nodePool.nodeSelector
         "tolerations" $state.nodePool.tolerations
       ) }}
+      {{- $_ := set $alloyMetrics "controller" (dict "nodeSelector" $state.nodePool.nodeSelector "tolerations" $state.nodePool.tolerations) }}
       {{- $_ := set $alloySingleton "controller" (dict "nodeSelector" $state.nodePool.nodeSelector "tolerations" $state.nodePool.tolerations) }}
-      {{- $_ := set $alloyReceiver "controller" (dict "nodeSelector" $state.nodePool.nodeSelector "tolerations" $state.nodePool.tolerations) }}
       {{- $_ := set $alloyOperator "nodeSelector" $state.nodePool.nodeSelector }}
       {{- $_ := set $alloyOperator "tolerations" $state.nodePool.tolerations }}
     {{- end }}

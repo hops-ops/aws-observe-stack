@@ -1418,13 +1418,65 @@ _items = [
                         {key = "observe", value = "true", effect = "NoSchedule"}
                     ]
                 }
-                # Alloy-metrics (daemonset) tolerates ALL taints — runs on every node
+                # k8s-monitoring collectors get pinned scheduling when nodePool enabled
                 {
                     apiVersion = "helm.m.crossplane.io/v1beta1"
                     kind = "Release"
                     metadata.name = "k8s-monitoring"
                     spec.forProvider.values = {
+                        # alloy-metrics (StatefulSet) pinned to observe pool
                         "alloy-metrics" = {
+                            enabled = True
+                            controller = {
+                                nodeSelector = {"workload-type" = "observe"}
+                                tolerations = [
+                                    {key = "observe", value = "true", effect = "NoSchedule"}
+                                ]
+                            }
+                        }
+                        # alloy-singleton pinned to observe pool
+                        "alloy-singleton" = {
+                            enabled = True
+                            controller = {
+                                nodeSelector = {"workload-type" = "observe"}
+                                tolerations = [
+                                    {key = "observe", value = "true", effect = "NoSchedule"}
+                                ]
+                            }
+                        }
+                        # alloy-receiver (DaemonSet) tolerates ALL taints — runs on every node
+                        "alloy-receiver" = {
+                            enabled = True
+                            controller = {
+                                tolerations = [
+                                    {operator = "Exists"}
+                                ]
+                            }
+                        }
+                        # alloy-operator pinned to observe pool
+                        "alloy-operator" = {
+                            nodeSelector = {"workload-type" = "observe"}
+                            tolerations = [
+                                {key = "observe", value = "true", effect = "NoSchedule"}
+                            ]
+                        }
+                        # opencost pinned to observe pool
+                        clusterMetrics = {
+                            enabled = True
+                            "kube-state-metrics" = {deploy = False}
+                            opencost = {
+                                enabled = True
+                                metricsSource = "prometheus"
+                                opencost = {
+                                    nodeSelector = {"workload-type" = "observe"}
+                                    tolerations = [
+                                        {key = "observe", value = "true", effect = "NoSchedule"}
+                                    ]
+                                }
+                            }
+                        }
+                        # alloy-logs (DaemonSet) still tolerates ALL taints
+                        "alloy-logs" = {
                             enabled = True
                             controller = {
                                 tolerations = [

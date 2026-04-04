@@ -66,9 +66,9 @@
 {{- end }}
 {{- $nodePoolName := "hops-observe" }}
 {{- $nodePoolNodeClassName := $nodePoolSpec.nodeClassName | default "" }}
-{{- $nodePoolLimits := $nodePoolSpec.limits | default (dict "nodes" 10) }}
+{{- $nodePoolLimits := $nodePoolSpec.limits | default (dict "cpu" "40" "memory" "160Gi") }}
 {{- $nodePoolRequirements := $nodePoolSpec.requirements | default (list
-  (dict "key" "kubernetes.io/arch" "operator" "In" "values" (list "amd64"))
+  (dict "key" "kubernetes.io/arch" "operator" "In" "values" (list "amd64" "arm64"))
   (dict "key" "karpenter.sh/capacity-type" "operator" "In" "values" (list "spot" "on-demand"))
 ) }}
 {{- $nodePoolDisruption := $nodePoolSpec.disruption | default (dict "consolidationPolicy" "WhenEmptyOrUnderutilized" "consolidateAfter" "60s") }}
