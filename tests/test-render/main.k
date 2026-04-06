@@ -1932,6 +1932,63 @@ _items = [
                     }
                 }
             }
+            observedResources = [
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata = {
+                        name = "grafana-operator"
+                        annotations = {"crossplane.io/composition-resource-name" = "grafana-operator"}
+                    }
+                    status = {
+                        conditions = [{type = "Ready", status = "True"}, {type = "Synced", status = "True"}]
+                    }
+                }
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata = {
+                        name = "kube-prometheus-stack"
+                        annotations = {"crossplane.io/composition-resource-name" = "kube-prometheus-stack"}
+                    }
+                    status = {
+                        conditions = [{type = "Ready", status = "True"}, {type = "Synced", status = "True"}]
+                    }
+                }
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata = {
+                        name = "loki"
+                        annotations = {"crossplane.io/composition-resource-name" = "loki"}
+                    }
+                    status = {
+                        conditions = [{type = "Ready", status = "True"}, {type = "Synced", status = "True"}]
+                    }
+                }
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata = {
+                        name = "tempo"
+                        annotations = {"crossplane.io/composition-resource-name" = "tempo"}
+                    }
+                    status = {
+                        conditions = [{type = "Ready", status = "True"}, {type = "Synced", status = "True"}]
+                    }
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata = {
+                        name = "observe-grafana-instance"
+                        annotations = {"crossplane.io/composition-resource-name" = "grafana-instance"}
+                    }
+                    status = {
+                        conditions = [{type = "Ready", status = "True"}, {type = "Synced", status = "True"}]
+                    }
+                }
+            ]
             assertResources = [
                 {
                     apiVersion = "aws.hops.ops.com.ai/v1alpha1"
@@ -1940,6 +1997,111 @@ _items = [
                     spec = {
                         clusterName = "my-cluster"
                         region = "us-east-1"
+                    }
+                }
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "kube-prometheus-stack"
+                    spec.forProvider.values = {
+                        cleanPrometheusOperatorObjectNames = False
+                        fullnameOverride = ""
+                    }
+                }
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "k8s-monitoring"
+                    spec.forProvider.values = {
+                        destinations = [
+                            {
+                                name = "prometheus"
+                                type = "prometheus"
+                                url = "http://kube-prometheus-stack-prometheus.monitoring:9090/api/v1/write"
+                            }
+                            {
+                                name = "loki"
+                                type = "loki"
+                                url = "http://loki-gateway.monitoring:80/loki/api/v1/push"
+                            }
+                            {
+                                name = "tempo"
+                                type = "otlp"
+                                protocol = "grpc"
+                                url = "http://tempo.monitoring:4317"
+                            }
+                        ]
+                        clusterMetrics = {
+                            opencost = {
+                                opencost = {
+                                    prometheus = {
+                                        external = {
+                                            url = "http://kube-prometheus-stack-prometheus.monitoring:9090"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-grafana-instance"
+                    spec.forProvider.manifest = {
+                        apiVersion = "grafana.integreatly.org/v1beta1"
+                        kind = "Grafana"
+                        metadata.name = "observe-grafana"
+                    }
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-datasource-prometheus"
+                    spec.forProvider.manifest = {
+                        apiVersion = "grafana.integreatly.org/v1beta1"
+                        kind = "GrafanaDatasource"
+                        metadata.name = "observe-prometheus"
+                    }
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-datasource-loki"
+                    spec.forProvider.manifest = {
+                        apiVersion = "grafana.integreatly.org/v1beta1"
+                        kind = "GrafanaDatasource"
+                        metadata.name = "observe-loki"
+                    }
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-datasource-tempo"
+                    spec.forProvider.manifest = {
+                        apiVersion = "grafana.integreatly.org/v1beta1"
+                        kind = "GrafanaDatasource"
+                        metadata.name = "observe-tempo"
+                    }
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-dashboard-opencost-overview"
+                    spec.forProvider.manifest = {
+                        apiVersion = "grafana.integreatly.org/v1beta1"
+                        kind = "GrafanaDashboard"
+                        metadata.name = "observe-opencost-overview"
+                    }
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-dashboard-opencost-namespace"
+                    spec.forProvider.manifest = {
+                        apiVersion = "grafana.integreatly.org/v1beta1"
+                        kind = "GrafanaDashboard"
+                        metadata.name = "observe-opencost-namespace"
                     }
                 }
             ]
