@@ -6,6 +6,12 @@
 
 {{- $kps := $state.kubePrometheusStack }}
 {{- $k8sPCR := $state.kubernetes.providerConfigRef }}
+{{- $opencostOverviewDashboardName := printf "%s-opencost-overview" $state.name }}
+{{- $opencostNamespaceDashboardName := printf "%s-opencost-namespace" $state.name }}
+{{- if $state.prettyNames }}
+  {{- $opencostOverviewDashboardName = "opencost-overview" }}
+  {{- $opencostNamespaceDashboardName = "opencost-namespace" }}
+{{- end }}
 
 {{- if and $state.observed.grafanaOperator.ready $state.observed.grafanaInstance.ready }}
 
@@ -27,7 +33,7 @@ spec:
       apiVersion: grafana.integreatly.org/v1beta1
       kind: GrafanaDashboard
       metadata:
-        name: {{ $state.name }}-opencost-overview
+        name: {{ $opencostOverviewDashboardName }}
         namespace: {{ $kps.namespace }}
       spec:
         instanceSelector:
@@ -57,7 +63,7 @@ spec:
       apiVersion: grafana.integreatly.org/v1beta1
       kind: GrafanaDashboard
       metadata:
-        name: {{ $state.name }}-opencost-namespace
+        name: {{ $opencostNamespaceDashboardName }}
         namespace: {{ $kps.namespace }}
       spec:
         instanceSelector:

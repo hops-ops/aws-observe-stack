@@ -36,7 +36,7 @@ spec:
       "metricsSource" "prometheus"
       "opencost" (dict
         "exporter" (dict "defaultClusterId" $state.clusterName)
-        "prometheus" (dict "external" (dict "url" (printf "http://%s-prometheus.%s:9090" $kps.name $kps.namespace)))
+        "prometheus" (dict "external" (dict "url" (printf "http://%s.%s:9090" $kps.prometheusServiceName $kps.namespace)))
       )
     }}
     {{- /* DaemonSets (alloy-logs, alloy-receiver) tolerate ALL taints so they run on
@@ -49,10 +49,11 @@ spec:
     {{- $alloyMetrics := dict "enabled" true }}
     {{- $alloySingleton := dict "enabled" true }}
     {{- $alloyOperator := dict }}
+    {{- $nodeExporterValues := dict "enabled" true }}
     {{- if $state.nodePool.enabled }}
       {{- $_ := set $opencostValues "opencost" (dict
         "exporter" (dict "defaultClusterId" $state.clusterName)
-        "prometheus" (dict "external" (dict "url" (printf "http://%s-prometheus.%s:9090" $kps.name $kps.namespace)))
+        "prometheus" (dict "external" (dict "url" (printf "http://%s.%s:9090" $kps.prometheusServiceName $kps.namespace)))
         "nodeSelector" $state.nodePool.nodeSelector
         "tolerations" $state.nodePool.tolerations
       ) }}
@@ -61,10 +62,19 @@ spec:
       {{- $_ := set $alloyOperator "nodeSelector" $state.nodePool.nodeSelector }}
       {{- $_ := set $alloyOperator "tolerations" $state.nodePool.tolerations }}
     {{- end }}
+    {{- if $state.prettyNames }}
+      {{- $_ := set $opencostValues "fullnameOverride" "opencost" }}
+      {{- $_ := set $alloyMetrics "fullnameOverride" "alloy-metrics" }}
+      {{- $_ := set $alloySingleton "fullnameOverride" "alloy-singleton" }}
+      {{- $_ := set $alloyReceiver "fullnameOverride" "alloy-receiver" }}
+      {{- $_ := set $alloyOperator "fullnameOverride" "alloy-operator" }}
+      {{- $_ := set $alloyLogs "fullnameOverride" "alloy-logs" }}
+      {{- $_ := set $nodeExporterValues "fullnameOverride" "node-exporter" }}
+    {{- end }}
     {{- $defaults := dict
       "cluster" (dict "name" $state.clusterName)
       "destinations" (list
-        (dict "name" "prometheus" "type" "prometheus" "url" (printf "http://%s-prometheus.%s:9090/api/v1/write" $kps.name $kps.namespace))
+        (dict "name" "prometheus" "type" "prometheus" "url" (printf "http://%s.%s:9090/api/v1/write" $kps.prometheusServiceName $kps.namespace))
         (dict "name" "loki" "type" "loki" "url" (printf "http://%s-gateway.%s:80/loki/api/v1/push" $loki.name $loki.namespace))
         (dict "name" "tempo" "type" "otlp" "protocol" "grpc" "url" (printf "http://%s.%s:4317" $tempo.name $tempo.namespace))
       )
@@ -72,6 +82,7 @@ spec:
         "enabled" true
         "kube-state-metrics" (dict "deploy" false)
         "opencost" $opencostValues
+        "node-exporter" $nodeExporterValues
       )
       "alloy-metrics" $alloyMetrics
       "clusterEvents" (dict "enabled" true)

@@ -14,6 +14,10 @@
 {{- $clusterName := $spec.clusterName | default $name }}
 {{- $namespace := $spec.namespace | default "monitoring" }}
 {{- $managementPolicies := $spec.managementPolicies | default (list "*") }}
+{{- $prettyNames := false }}
+{{- if hasKey $spec "prettyNames" }}
+  {{- $prettyNames = $spec.prettyNames }}
+{{- end }}
 
 # Labels
 {{- $defaultLabels := dict
@@ -87,6 +91,11 @@
 # Per-component configuration (resolved from spec)
 # ==============================================================================
 {{- $kubePrometheusStack := $spec.kubePrometheusStack | default dict }}
+{{- $kubePrometheusStackReleaseName := $kubePrometheusStack.name | default "kube-prometheus-stack" }}
+{{- $kubePrometheusStackFullname := $kubePrometheusStackReleaseName }}
+{{- if $prettyNames }}
+  {{- $kubePrometheusStackFullname = "observe" }}
+{{- end }}
 {{- $loki := $spec.loki | default dict }}
 {{- $tempo := $spec.tempo | default dict }}
 {{- $k8sMonitoring := $spec.k8sMonitoring | default dict }}
@@ -202,6 +211,7 @@
   "clusterName" $clusterName
   "namespace" $namespace
   "managementPolicies" $managementPolicies
+  "prettyNames" $prettyNames
   "labels" $labels
   "helm" (dict
     "providerConfigRef" $helmProviderConfigRef
@@ -253,12 +263,16 @@
       )
     )
   )
+  "podIdentitySuffix" (ternary "" "-pod-identity" $prettyNames)
   "serviceAccount" (dict
     "name" "k8s-monitoring-opencost"
     "namespace" $namespace
   )
   "kubePrometheusStack" (dict
-    "name" ($kubePrometheusStack.name | default "kube-prometheus-stack")
+    "name" $kubePrometheusStackReleaseName
+    "fullname" $kubePrometheusStackFullname
+    "grafanaServiceName" "grafana"
+    "prometheusServiceName" (printf "%s-prometheus" $kubePrometheusStackFullname)
     "namespace" ($kubePrometheusStack.namespace | default $namespace)
     "values" ($kubePrometheusStack.values | default dict)
     "overrideAllValues" ($kubePrometheusStack.overrideAllValues | default dict)

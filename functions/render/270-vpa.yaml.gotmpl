@@ -8,7 +8,7 @@
 
 {{- $vpa := $state.vpa }}
 {{- $kps := $state.kubePrometheusStack }}
-{{- $prometheusUrl := printf "http://%s-prometheus.%s.svc:9090" $kps.name $kps.namespace }}
+{{- $prometheusUrl := printf "http://%s.%s.svc:9090" $kps.prometheusServiceName $kps.namespace }}
 
 ---
 apiVersion: helm.m.crossplane.io/v1beta1

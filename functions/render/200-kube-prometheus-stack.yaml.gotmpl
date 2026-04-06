@@ -65,6 +65,7 @@ spec:
     }}
     {{- $operatorValues := dict "enabled" true }}
     {{- $ksmValues := dict }}
+    {{- $nodeExporterValues := dict "enabled" false }}
     {{- if $state.nodePool.enabled }}
       {{- $_ := set $promSpec "nodeSelector" $state.nodePool.nodeSelector }}
       {{- $_ := set $promSpec "tolerations" $state.nodePool.tolerations }}
@@ -112,6 +113,13 @@ spec:
         )
       )
     }}
+    {{- if $state.prettyNames }}
+      {{- $_ := set $alertmanagerSpec "fullnameOverride" "alertmanager" }}
+      {{- $_ := set $promSpec "fullnameOverride" "prometheus" }}
+      {{- $_ := set $grafanaBase "fullnameOverride" "grafana" }}
+      {{- $_ := set $operatorValues "fullnameOverride" "prometheus-operator" }}
+      {{- $_ := set $nodeExporterValues "fullnameOverride" "node-exporter" }}
+    {{- end }}
     {{- $grafana := merge $grafanaValues $grafanaBase }}
     {{- /* Build kube-state-metrics values with optional nodeSelector/tolerations */}}
     {{- $ksmBase := dict
@@ -141,8 +149,13 @@ spec:
         )
       )
     }}
+    {{- if $state.prettyNames }}
+      {{- $_ := set $ksmBase "fullnameOverride" "kube-state-metrics" }}
+    {{- end }}
     {{- $ksm := merge $ksmValues $ksmBase }}
     {{- $defaults := dict
+      "cleanPrometheusOperatorObjectNames" false
+      "fullnameOverride" ""
       "prometheusOperator" $operatorValues
       "prometheus" (dict
         "enabled" true
@@ -151,8 +164,12 @@ spec:
       "alertmanager" (dict "enabled" true "alertmanagerSpec" $alertmanagerSpec)
       "grafana" $grafana
       "kube-state-metrics" $ksm
-      "nodeExporter" (dict "enabled" false)
+      "nodeExporter" $nodeExporterValues
     }}
+    {{- if $state.prettyNames }}
+      {{- $_ := set $defaults "cleanPrometheusOperatorObjectNames" true }}
+      {{- $_ := set $defaults "fullnameOverride" "observe" }}
+    {{- end }}
     {{- $merged := mustMergeOverwrite $defaults ($kps.values | default dict) }}
     values:
       {{- toYaml $merged | nindent 6 }}

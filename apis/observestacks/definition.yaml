@@ -74,6 +74,16 @@ spec:
                   kind:
                     description: Kind of the ProviderConfig. Defaults to ProviderConfig.
                     type: string
+              prettyNames:
+                description: |
+                  When true, overrides in-cluster resource names to be short and clean
+                  (e.g. "grafana" instead of "kube-prometheus-stack-grafana") and removes
+                  redundant "-pod-identity" suffixes from PodIdentity XR names.
+                  WARNING: Enabling on an existing install is a breaking change — service
+                  names, PVCs, and cross-component wiring will change, causing resource
+                  recreation. Recommended for fresh installs only.
+                type: boolean
+                default: false
               namespace:
                 description: Shared namespace for all components. Defaults to monitoring.
                 type: string
