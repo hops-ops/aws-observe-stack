@@ -7,7 +7,7 @@
 apiVersion: aws.hops.ops.com.ai/v1alpha1
 kind: PodIdentity
 metadata:
-  name: {{ $state.name }}-opencost-pod-identity
+  name: {{ $state.name }}-opencost{{ $state.podIdentitySuffix }}
   annotations:
     {{ setResourceNameAnnotation "opencost-pod-identity" }}
   labels: {{ $state.labels | toJson }}
@@ -71,7 +71,7 @@ spec:
 # ==============================================================================
 # OpenCost (deployed by k8s-monitoring) depends on the PodIdentity for AWS
 # credentials.
-{{- $podIdentityAssociationName := printf "%s-%s-opencost-pod-identity" $state.clusterName $state.name }}
+{{- $podIdentityAssociationName := printf "%s-%s-opencost%s" $state.clusterName $state.name $state.podIdentitySuffix }}
 {{- if and $state.observed.k8sMonitoring.ready $state.observed.opencostPodIdentity.ready }}
 ---
 apiVersion: protection.crossplane.io/v1beta1

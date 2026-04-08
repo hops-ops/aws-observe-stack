@@ -14,10 +14,20 @@
 {{- $tempo := $state.tempo }}
 {{- $grafOp := $state.grafanaOperator }}
 {{- $k8sPCR := $state.kubernetes.providerConfigRef }}
+{{- $grafanaObjectName := printf "%s-grafana" $state.name }}
+{{- $prometheusDatasourceName := printf "%s-prometheus" $state.name }}
+{{- $lokiDatasourceName := printf "%s-loki" $state.name }}
+{{- $tempoDatasourceName := printf "%s-tempo" $state.name }}
+{{- if $state.prettyNames }}
+  {{- $grafanaObjectName = "grafana" }}
+  {{- $prometheusDatasourceName = "prometheus" }}
+  {{- $lokiDatasourceName = "loki" }}
+  {{- $tempoDatasourceName = "tempo" }}
+{{- end }}
 
 # Service URLs derived from component names/namespaces
-{{- $grafanaServiceUrl := printf "http://%s-grafana.%s.svc:80" $kps.name $kps.namespace }}
-{{- $prometheusUrl := printf "http://%s-prometheus.%s.svc:9090" $kps.name $kps.namespace }}
+{{- $grafanaServiceUrl := printf "http://%s.%s.svc:80" $kps.grafanaServiceName $kps.namespace }}
+{{- $prometheusUrl := printf "http://%s.%s.svc:9090" $kps.prometheusServiceName $kps.namespace }}
 {{- $lokiUrl := printf "http://%s-gateway.%s.svc:80" $loki.name $loki.namespace }}
 {{- $tempoUrl := printf "http://%s.%s.svc:3200" $tempo.name $tempo.namespace }}
 
@@ -41,7 +51,7 @@ spec:
       apiVersion: grafana.integreatly.org/v1beta1
       kind: Grafana
       metadata:
-        name: {{ $state.name }}-grafana
+        name: {{ $grafanaObjectName }}
         namespace: {{ $kps.namespace }}
         labels:
           dashboards: grafana
@@ -49,10 +59,10 @@ spec:
         external:
           url: {{ $grafanaServiceUrl }}
           adminPassword:
-            name: {{ $kps.name }}-grafana
+            name: {{ $kps.grafanaServiceName }}
             key: admin-password
           adminUser:
-            name: {{ $kps.name }}-grafana
+            name: {{ $kps.grafanaServiceName }}
             key: admin-user
   providerConfigRef:
     name: {{ $k8sPCR.name }}
@@ -79,7 +89,7 @@ spec:
       apiVersion: grafana.integreatly.org/v1beta1
       kind: GrafanaDatasource
       metadata:
-        name: {{ $state.name }}-prometheus
+        name: {{ $prometheusDatasourceName }}
         namespace: {{ $kps.namespace }}
       spec:
         instanceSelector:
@@ -120,7 +130,7 @@ spec:
       apiVersion: grafana.integreatly.org/v1beta1
       kind: GrafanaDatasource
       metadata:
-        name: {{ $state.name }}-loki
+        name: {{ $lokiDatasourceName }}
         namespace: {{ $kps.namespace }}
       spec:
         instanceSelector:
@@ -160,7 +170,7 @@ spec:
       apiVersion: grafana.integreatly.org/v1beta1
       kind: GrafanaDatasource
       metadata:
-        name: {{ $state.name }}-tempo
+        name: {{ $tempoDatasourceName }}
         namespace: {{ $kps.namespace }}
       spec:
         instanceSelector:

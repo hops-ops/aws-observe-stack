@@ -89,7 +89,7 @@ spec:
 apiVersion: aws.hops.ops.com.ai/v1alpha1
 kind: PodIdentity
 metadata:
-  name: {{ $state.name }}-loki-pod-identity
+  name: {{ $state.name }}-loki{{ $state.podIdentitySuffix }}
   annotations:
     {{ setResourceNameAnnotation "loki-pod-identity" }}
   labels: {{ $state.labels | toJson }}
@@ -132,7 +132,7 @@ spec:
 # ==============================================================================
 # Usage: Protect Loki PodIdentity from deletion until Loki Release is deleted
 # ==============================================================================
-{{- $lokiPodIdentityAssociationName := printf "%s-%s-loki-pod-identity" $state.clusterName $state.name }}
+{{- $lokiPodIdentityAssociationName := printf "%s-%s-loki%s" $state.clusterName $state.name $state.podIdentitySuffix }}
 {{- if and $state.observed.loki.ready $state.observed.lokiPodIdentity.ready }}
 ---
 apiVersion: protection.crossplane.io/v1beta1

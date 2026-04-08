@@ -89,7 +89,7 @@ spec:
 apiVersion: aws.hops.ops.com.ai/v1alpha1
 kind: PodIdentity
 metadata:
-  name: {{ $state.name }}-tempo-pod-identity
+  name: {{ $state.name }}-tempo{{ $state.podIdentitySuffix }}
   annotations:
     {{ setResourceNameAnnotation "tempo-pod-identity" }}
   labels: {{ $state.labels | toJson }}
@@ -132,7 +132,7 @@ spec:
 # ==============================================================================
 # Usage: Protect Tempo PodIdentity from deletion until Tempo Release is deleted
 # ==============================================================================
-{{- $tempoPodIdentityAssociationName := printf "%s-%s-tempo-pod-identity" $state.clusterName $state.name }}
+{{- $tempoPodIdentityAssociationName := printf "%s-%s-tempo%s" $state.clusterName $state.name $state.podIdentitySuffix }}
 {{- if and $state.observed.tempo.ready $state.observed.tempoPodIdentity.ready }}
 ---
 apiVersion: protection.crossplane.io/v1beta1

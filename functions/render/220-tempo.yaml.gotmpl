@@ -64,7 +64,7 @@ spec:
         "searchEnabled" true
         "metricsGenerator" (dict
           "enabled" true
-          "remoteWriteUrl" (printf "http://%s-prometheus.%s:9090/api/v1/write" $kps.name $kps.namespace)
+          "remoteWriteUrl" (printf "http://%s.%s:9090/api/v1/write" $kps.prometheusServiceName $kps.namespace)
         )
         "storage" (dict "trace" $traceStorage)
         "compactor" (dict "compaction" (dict
