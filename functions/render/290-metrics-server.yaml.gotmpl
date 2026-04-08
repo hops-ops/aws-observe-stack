@@ -1,0 +1,40 @@
+# code: language=yaml
+#
+# Helm Release: metrics-server (opt-in)
+#
+
+{{- if $state.metricsServer.enabled }}
+
+{{- $ms := $state.metricsServer }}
+
+---
+apiVersion: helm.m.crossplane.io/v1beta1
+kind: Release
+metadata:
+  name: {{ $ms.name }}
+  annotations:
+    {{ setResourceNameAnnotation "metrics-server" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  managementPolicies: {{ $state.managementPolicies | toJson }}
+  forProvider:
+    chart:
+      name: metrics-server
+      repository: https://kubernetes-sigs.github.io/metrics-server/
+      version: 3.12.2
+    namespace: {{ $ms.namespace }}
+    {{- if $ms.overrideAllValues }}
+    values:
+      {{- toYaml $ms.overrideAllValues | nindent 6 }}
+    {{- else }}
+    {{- $defaults := dict }}
+    {{- $merged := mustMergeOverwrite $defaults ($ms.values | default dict) }}
+    values:
+      {{- toYaml $merged | nindent 6 }}
+    {{- end }}
+  rollbackLimit: 3
+  providerConfigRef:
+    name: {{ $state.helm.providerConfigRef.name }}
+    kind: {{ $state.helm.providerConfigRef.kind }}
+
+{{- end }}

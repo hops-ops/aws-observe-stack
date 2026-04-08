@@ -88,6 +88,12 @@
   {{- $nodePoolTolerations = list (dict "key" $nodePoolTaintKey "value" $nodePoolTaintValue "effect" "NoSchedule") }}
 {{- end }}
 
+# OpenCost service account name depends on prettyNames
+{{- $opencostServiceAccountName := "k8s-monitoring-opencost" }}
+{{- if $prettyNames }}
+  {{- $opencostServiceAccountName = "opencost" }}
+{{- end }}
+
 # ==============================================================================
 # Per-component configuration (resolved from spec)
 # ==============================================================================
@@ -107,6 +113,8 @@
 {{- $grafanaOperator := $spec.grafanaOperator | default dict }}
 {{- $vpa := $spec.vpa | default dict }}
 {{- $goldilocks := $spec.goldilocks | default dict }}
+{{- $metricsServer := $spec.metricsServer | default dict }}
+{{- $metricsServerEnabled := $metricsServer.enabled | default false }}
 
 # ==============================================================================
 # Storage config
@@ -209,6 +217,12 @@
 }}
 
 # ==============================================================================
+# Spot feed configuration
+# ==============================================================================
+{{- $spotFeed := $spec.spotFeed | default dict }}
+{{- $spotFeedEnabled := $spotFeed.enabled | default false }}
+
+# ==============================================================================
 # Initialize $state
 # ==============================================================================
 {{- $state := dict
@@ -270,7 +284,7 @@
   )
   "podIdentitySuffix" (ternary "" "-pod-identity" $prettyNames)
   "serviceAccount" (dict
-    "name" "k8s-monitoring-opencost"
+    "name" $opencostServiceAccountName
     "namespace" $namespace
   )
   "kubePrometheusStack" (dict
@@ -318,6 +332,13 @@
     "values" ($goldilocks.values | default dict)
     "overrideAllValues" ($goldilocks.overrideAllValues | default dict)
   )
+  "metricsServer" (dict
+    "enabled" $metricsServerEnabled
+    "name" "metrics-server"
+    "namespace" ($metricsServer.namespace | default "kube-system")
+    "values" ($metricsServer.values | default dict)
+    "overrideAllValues" ($metricsServer.overrideAllValues | default dict)
+  )
   "nodePool" (dict
     "enabled" $nodePoolEnabled
     "name" $nodePoolName
@@ -329,6 +350,13 @@
     "taintValue" $nodePoolTaintValue
     "nodeSelector" $nodePoolNodeSelector
     "tolerations" $nodePoolTolerations
+  )
+  "spotFeed" (dict
+    "enabled" $spotFeedEnabled
+    "bucketName" ($spotFeed.bucketName | default "")
+    "region" ($spotFeed.region | default $awsRegion)
+    "accountId" ($spotFeed.accountId | default "")
+    "prefix" ($spotFeed.prefix | default "")
   )
   "observed" (dict)
   "status" (dict)

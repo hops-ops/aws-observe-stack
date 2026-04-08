@@ -62,6 +62,25 @@ spec:
       {{- $_ := set $alloyOperator "nodeSelector" $state.nodePool.nodeSelector }}
       {{- $_ := set $alloyOperator "tolerations" $state.nodePool.tolerations }}
     {{- end }}
+    {{- if $state.spotFeed.enabled }}
+      {{- $costModel := dict
+        "awsSpotDataBucket" $state.spotFeed.bucketName
+        "awsSpotDataRegion" $state.spotFeed.region
+        "projectID" $state.spotFeed.accountId
+        "spotLabel" "karpenter.sh/capacity-type"
+        "spotLabelValue" "spot"
+      }}
+      {{- if $state.spotFeed.prefix }}
+        {{- $_ := set $costModel "awsSpotDataPrefix" $state.spotFeed.prefix }}
+      {{- end }}
+      {{- $existingOpencost := $opencostValues.opencost | default dict }}
+      {{- $_ := set $existingOpencost "customPricing" (dict
+        "enabled" true
+        "provider" "aws"
+        "costModel" $costModel
+      ) }}
+      {{- $_ := set $opencostValues "opencost" $existingOpencost }}
+    {{- end }}
     {{- if $state.prettyNames }}
       {{- $_ := set $opencostValues "fullnameOverride" "opencost" }}
       {{- $_ := set $alloyMetrics "fullnameOverride" "alloy-metrics" }}

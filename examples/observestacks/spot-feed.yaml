@@ -1,0 +1,17 @@
+apiVersion: aws.hops.ops.com.ai/v1alpha1
+kind: ObserveStack
+metadata:
+  name: observe
+  namespace: default
+spec:
+  clusterName: production
+  namespace: monitoring
+  aws:
+    region: us-west-2
+    tags:
+      environment: production
+  spotFeed:
+    enabled: true
+    bucketName: my-account-spot-feed
+    accountId: "123456789012"
+    region: us-west-2
