@@ -96,6 +96,10 @@
 {{- if $prettyNames }}
   {{- $kubePrometheusStackFullname = "observe" }}
 {{- end }}
+{{- $kubePrometheusStackGrafanaServiceName := printf "%s-grafana" $kubePrometheusStackFullname }}
+{{- if $prettyNames }}
+  {{- $kubePrometheusStackGrafanaServiceName = "grafana" }}
+{{- end }}
 {{- $loki := $spec.loki | default dict }}
 {{- $tempo := $spec.tempo | default dict }}
 {{- $k8sMonitoring := $spec.k8sMonitoring | default dict }}
@@ -271,7 +275,7 @@
   "kubePrometheusStack" (dict
     "name" $kubePrometheusStackReleaseName
     "fullname" $kubePrometheusStackFullname
-    "grafanaServiceName" "grafana"
+    "grafanaServiceName" $kubePrometheusStackGrafanaServiceName
     "prometheusServiceName" (printf "%s-prometheus" $kubePrometheusStackFullname)
     "namespace" ($kubePrometheusStack.namespace | default $namespace)
     "values" ($kubePrometheusStack.values | default dict)

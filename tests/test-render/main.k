@@ -1053,6 +1053,19 @@ _items = [
                         apiVersion = "grafana.integreatly.org/v1beta1"
                         kind = "Grafana"
                         metadata.name = "grafana"
+                        spec = {
+                            external = {
+                                url = "http://grafana.monitoring.svc:80"
+                                adminPassword = {
+                                    name = "grafana"
+                                    key = "admin-password"
+                                }
+                                adminUser = {
+                                    name = "grafana"
+                                    key = "admin-user"
+                                }
+                            }
+                        }
                     }
                 }
                 {
@@ -2052,6 +2065,19 @@ _items = [
                         apiVersion = "grafana.integreatly.org/v1beta1"
                         kind = "Grafana"
                         metadata.name = "observe-grafana"
+                        spec = {
+                            external = {
+                                url = "http://kube-prometheus-stack-grafana.monitoring.svc:80"
+                                adminPassword = {
+                                    name = "kube-prometheus-stack-grafana"
+                                    key = "admin-password"
+                                }
+                                adminUser = {
+                                    name = "kube-prometheus-stack-grafana"
+                                    key = "admin-user"
+                                }
+                            }
+                        }
                     }
                 }
                 {
