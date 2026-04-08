@@ -23,6 +23,7 @@
 {{- $defaultLabels := dict
   "hops.ops.com.ai/managed" "true"
   "hops.ops.com.ai/observe" $name
+  (printf "hops.ops.com.ai/%s" (lower $xr.kind)) $name
 }}
 {{- $labels := merge $defaultLabels ($spec.labels | default dict) }}
 
@@ -56,7 +57,7 @@
 # Default tags
 {{- $defaultTags := dict
   "hops.ops.com.ai/managed" "true"
-  "hops.ops.com.ai/observe" $name
+  "hops.ops.com.ai/observestack" $name
 }}
 {{- $awsTags := merge $defaultTags ($aws.tags | default dict) }}
 
