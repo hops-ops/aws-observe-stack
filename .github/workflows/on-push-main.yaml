@@ -50,7 +50,8 @@ jobs:
         {
           "ADMIN_ROLE_ARN": "${{ vars.ADMIN_ROLE_ARN }}",
           "PRIVATE_SUBNET_ID_A": "${{ vars.PRIVATE_SUBNET_ID_A }}",
-          "PRIVATE_SUBNET_ID_B": "${{ vars.PRIVATE_SUBNET_ID_B }}"
+          "PRIVATE_SUBNET_ID_B": "${{ vars.PRIVATE_SUBNET_ID_B }}",
+          "SPOT_FEED_BUCKET_NAME": "${{ vars.SPOT_FEED_BUCKET_NAME }}"
         }
       debug-resource-types: |
         [

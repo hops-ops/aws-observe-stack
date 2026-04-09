@@ -27,7 +27,9 @@ EXAMPLES := \
     examples/observestacks/minimal.yaml:: \
     examples/observestacks/pvc.yaml:: \
     examples/observestacks/s3.yaml:: \
-    examples/observestacks/nodepool.yaml::
+    examples/observestacks/nodepool.yaml:: \
+    examples/observestacks/spot-feed.yaml:: \
+    examples/observestacks/metrics-server.yaml::
 
 # Render all examples (parallel execution, output shown per-job when complete)
 render\:all:

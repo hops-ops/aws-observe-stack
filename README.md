@@ -112,6 +112,28 @@ spec:
       consolidateAfter: "120s"
 ```
 
+### Spot Instance Pricing
+
+Enable accurate spot pricing in OpenCost by pointing it at a [SpotFeed](https://github.com/hops-ops/aws-spot-feed) bucket:
+
+```yaml
+spec:
+  clusterName: my-cluster
+  aws:
+    region: us-east-1
+  spotFeed:
+    enabled: true
+    bucketName: hops-root-account-spot-feed
+    region: us-east-1
+```
+
+When enabled:
+- OpenCost PodIdentity gets S3 read permissions for the spot feed bucket
+- OpenCost exporter is configured with `spot_data_bucket`, `spot_data_region`, and spot node labels (`karpenter.sh/capacity-type=spot`)
+- Optional `prefix` field if the spot feed uses an S3 key prefix
+
+> **Prerequisite:** Deploy a `SpotFeed` XRD in the same AWS account first. See [aws-spot-feed](https://github.com/hops-ops/aws-spot-feed).
+
 ## What Gets Created
 
 1. **Helm Releases** - Prometheus, Loki, Tempo, k8s-monitoring/OpenCost, Grafana Operator, VPA, Goldilocks

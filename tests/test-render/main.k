@@ -2133,6 +2133,98 @@ _items = [
             ]
         }
     }
+    # ==========================================================================
+    # Test: Spot feed enabled wires OpenCost Helm values and adds IAM policy
+    # ==========================================================================
+    metav1alpha1.CompositionTest {
+        metadata.name = "spot-feed-enabled-wires-opencost"
+        spec = {
+            compositionPath = "apis/observestacks/composition.yaml"
+            xrdPath = "apis/observestacks/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = {
+                apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                kind = "ObserveStack"
+                metadata.name = "observe"
+                spec = {
+                    clusterName = "my-cluster"
+                    aws.region = "us-west-2"
+                    spotFeed = {
+                        enabled = True
+                        bucketName = "my-spot-bucket"
+                        accountId = "123456789012"
+                        region = "us-west-2"
+                    }
+                }
+            }
+            assertResources = [
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "k8s-monitoring"
+                    spec.forProvider.values.clusterMetrics.opencost.opencost.customPricing = {
+                        enabled = True
+                        provider = "aws"
+                        costModel = {
+                            awsSpotDataBucket = "my-spot-bucket"
+                            awsSpotDataRegion = "us-west-2"
+                            projectID = "123456789012"
+                            spotLabel = "karpenter.sh/capacity-type"
+                            spotLabelValue = "spot"
+                        }
+                    }
+                }
+                {
+                    apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                    kind = "PodIdentity"
+                    metadata.name = "observe-opencost-pod-identity"
+                    spec.inlinePolicy = [
+                        {
+                            name = "opencost-billing"
+                        }
+                        {
+                            name = "opencost-spot-feed-s3-read"
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+
+    # ==========================================================================
+    # Test: Spot feed disabled (default) — no aws config in OpenCost values
+    # ==========================================================================
+    metav1alpha1.CompositionTest {
+        metadata.name = "spot-feed-disabled-no-aws-config"
+        spec = {
+            compositionPath = "apis/observestacks/composition.yaml"
+            xrdPath = "apis/observestacks/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = {
+                apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                kind = "ObserveStack"
+                metadata.name = "observe"
+                spec = {
+                    clusterName = "my-cluster"
+                    aws.region = "us-east-1"
+                }
+            }
+            assertResources = [
+                {
+                    apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                    kind = "PodIdentity"
+                    metadata.name = "observe-opencost-pod-identity"
+                    spec.inlinePolicy = [
+                        {
+                            name = "opencost-billing"
+                        }
+                    ]
+                }
+            ]
+        }
+    }
 ]
 
 items = _items

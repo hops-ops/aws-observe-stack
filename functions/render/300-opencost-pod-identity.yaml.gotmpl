@@ -64,6 +64,25 @@ spec:
             }
           ]
         }
+  {{- if $state.spotFeed.enabled }}
+    - name: opencost-spot-feed-s3-read
+      policy: |
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": ["s3:ListBucket", "s3:HeadBucket"],
+              "Resource": "arn:aws:s3:::{{ $state.spotFeed.bucketName }}"
+            },
+            {
+              "Effect": "Allow",
+              "Action": ["s3:GetObject", "s3:HeadObject", "s3:List*"],
+              "Resource": "arn:aws:s3:::{{ $state.spotFeed.bucketName }}/*"
+            }
+          ]
+        }
+  {{- end }}
   tags: {{ $state.aws.tags | toJson }}
 
 # ==============================================================================

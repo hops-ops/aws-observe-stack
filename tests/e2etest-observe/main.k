@@ -40,6 +40,7 @@ _region = file.read("env/AWS_REGION").strip()
 # CI test account
 _account_id = file.read("env/AWS_ACCOUNT_ID").strip()
 _admin_role_arn = file.read("env/ADMIN_ROLE_ARN").strip()
+_spot_feed_bucket = file.read("env/SPOT_FEED_BUCKET_NAME").strip()
 # =============================================================================
 # Persistent Network Infrastructure (from aws-network e2e test - hops-test)
 # =============================================================================
@@ -234,6 +235,15 @@ _items = [
                         prettyNames = True
                         aws = {
                             region = "us-east-2"
+                        }
+                        metricsServer = {
+                            enabled = True
+                        }
+                        spotFeed = {
+                            enabled = True
+                            bucketName = _spot_feed_bucket
+                            accountId = _account_id
+                            region = _region
                         }
                         nodePool = {
                             enabled = True

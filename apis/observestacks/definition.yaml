@@ -512,6 +512,42 @@ spec:
                     description: Helm values that replace all defaults for this component.
                     type: object
                     x-kubernetes-preserve-unknown-fields: true
+              metricsServer:
+                description: Optional metrics-server deployment for kubectl top and HPA support.
+                type: object
+                properties:
+                  enabled:
+                    description: Whether to deploy metrics-server. Defaults to false.
+                    type: boolean
+                    default: false
+                  values:
+                    description: Helm values merged with chart defaults.
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+                  overrideAllValues:
+                    description: Helm values that replace all defaults.
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+              spotFeed:
+                description: Spot instance pricing feed for OpenCost. Requires a SpotFeed XRD deployed in the same AWS account.
+                type: object
+                properties:
+                  enabled:
+                    description: Whether to configure OpenCost with spot pricing data from S3. Defaults to false.
+                    type: boolean
+                    default: false
+                  bucketName:
+                    description: Name of the S3 bucket containing spot datafeed data. Required when enabled.
+                    type: string
+                  region:
+                    description: AWS region of the spot feed S3 bucket. Defaults to aws.region.
+                    type: string
+                  accountId:
+                    description: AWS account ID for spot feed. Required when enabled.
+                    type: string
+                  prefix:
+                    description: S3 key prefix for spot datafeed files.
+                    type: string
             required:
             - clusterName
             - aws
