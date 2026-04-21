@@ -2274,12 +2274,22 @@ _items = [
                                 athenaDatabase = "my_account_cur"
                                 athenaTable = "my_account_cur"
                                 athenaWorkgroup = "my-account-cur-workgroup"
+                                athenaProjectID = "123456789012"
                                 projectID = "123456789012"
                             }
                         }
                         exporter = {
+                            image = {
+                                tag = "1.120.0"
+                            }
                             extraEnv = {
                                 CLOUD_COST_CONFIG_PATH = "/var/configs/cloud-integration/cloud-integration.json"
+                                PLUGIN_CONFIG_DIR = "/var/configs"
+                            }
+                        }
+                        ui = {
+                            image = {
+                                tag = "1.120.0"
                             }
                         }
                     }
@@ -2296,7 +2306,7 @@ _items = [
                             namespace = "monitoring"
                         }
                         data = {
-                            "cloud-integration.json" = "eyJhd3MiOnsiYXRoZW5hIjpbeyJidWNrZXQiOiJzMzovL215LWFjY291bnQtY3VyL2F0aGVuYS1yZXN1bHRzIiwicmVnaW9uIjoidXMtZWFzdC0yIiwiZGF0YWJhc2UiOiJteV9hY2NvdW50X2N1ciIsInRhYmxlIjoibXlfYWNjb3VudF9jdXIiLCJ3b3JrZ3JvdXAiOiJteS1hY2NvdW50LWN1ci13b3JrZ3JvdXAiLCJhY2NvdW50IjoiMTIzNDU2Nzg5MDEyIn1dfX0="
+                            "cloud-integration.json" = "eyJhd3MiOlt7ImF0aGVuYUJ1Y2tldE5hbWUiOiJzMzovL215LWFjY291bnQtY3VyL2F0aGVuYS1yZXN1bHRzIiwiYXRoZW5hUmVnaW9uIjoidXMtZWFzdC0yIiwiYXRoZW5hRGF0YWJhc2UiOiJteV9hY2NvdW50X2N1ciIsImF0aGVuYVRhYmxlIjoibXlfYWNjb3VudF9jdXIiLCJhdGhlbmFXb3JrZ3JvdXAiOiJteS1hY2NvdW50LWN1ci13b3JrZ3JvdXAiLCJwcm9qZWN0SUQiOiIxMjM0NTY3ODkwMTIifV19"
                         }
                     }
                 }
@@ -2365,12 +2375,22 @@ _items = [
                                 athenaDatabase = "hops_root_account_cur"
                                 athenaTable = "hops_root_account_cur"
                                 athenaWorkgroup = "hops-root-account-cur-workgroup"
+                                athenaProjectID = "123456789012"
                                 projectID = "123456789012"
                             }
                         }
                         exporter = {
+                            image = {
+                                tag = "1.120.0"
+                            }
                             extraEnv = {
                                 CLOUD_COST_CONFIG_PATH = "/var/configs/cloud-integration/cloud-integration.json"
+                                PLUGIN_CONFIG_DIR = "/var/configs"
+                            }
+                        }
+                        ui = {
+                            image = {
+                                tag = "1.120.0"
                             }
                         }
                     }
@@ -2387,7 +2407,7 @@ _items = [
                             namespace = "monitoring"
                         }
                         data = {
-                            "cloud-integration.json" = "eyJhd3MiOnsiYXRoZW5hIjpbeyJidWNrZXQiOiJzMzovL2hvcHMtcm9vdC1hY2NvdW50LWN1ci9hdGhlbmEtcmVzdWx0cyIsInJlZ2lvbiI6InVzLWVhc3QtMiIsImRhdGFiYXNlIjoiaG9wc19yb290X2FjY291bnRfY3VyIiwidGFibGUiOiJob3BzX3Jvb3RfYWNjb3VudF9jdXIiLCJ3b3JrZ3JvdXAiOiJob3BzLXJvb3QtYWNjb3VudC1jdXItd29ya2dyb3VwIiwiYWNjb3VudCI6IjEyMzQ1Njc4OTAxMiJ9XX19"
+                            "cloud-integration.json" = "eyJhd3MiOlt7ImF0aGVuYUJ1Y2tldE5hbWUiOiJzMzovL2hvcHMtcm9vdC1hY2NvdW50LWN1ci9hdGhlbmEtcmVzdWx0cyIsImF0aGVuYVJlZ2lvbiI6InVzLWVhc3QtMiIsImF0aGVuYURhdGFiYXNlIjoiaG9wc19yb290X2FjY291bnRfY3VyIiwiYXRoZW5hVGFibGUiOiJob3BzX3Jvb3RfYWNjb3VudF9jdXIiLCJhdGhlbmFXb3JrZ3JvdXAiOiJob3BzLXJvb3QtYWNjb3VudC1jdXItd29ya2dyb3VwIiwicHJvamVjdElEIjoiMTIzNDU2Nzg5MDEyIn1dfQ=="
                         }
                     }
                 }

@@ -164,7 +164,7 @@ When enabled:
 - ObserveStack derives CUR/Athena names from the referenced `CostReport`
 - OpenCost is wired through the chart's native `cloudIntegrationSecret` support
 - The OpenCost PodIdentity gets Athena, Glue, and S3 permissions for the CUR bucket/workgroup
-- The generated `cloud-integration.json` uses the Athena query-results location `s3://{bucketName}/athena-results`
+- The generated `cloud-integration.json` uses OpenCost's legacy flat AWS format with the Athena query-results location `s3://{bucketName}/athena-results`
 
 `CostReport` is account-level and should be managed separately, one per AWS account. If your `CostReport` uses non-default names, set the corresponding overrides under `cloudCosts.costReportRef`. The legacy manual `cloudCosts` fields still work as a fallback.
 

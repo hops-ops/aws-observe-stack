@@ -30,6 +30,8 @@ spec:
     values:
       {{- toYaml $k8sMon.overrideAllValues | nindent 6 }}
     {{- else }}
+    {{- /* Pin OpenCost to a version where missing RI data is logged as WARN instead of ERR. */}}
+    {{- $opencostImageTag := "1.120.0" }}
     {{- /* OpenCost values — deployment, gets nodeSelector + tolerations */}}
     {{- $opencostValues := dict
       "enabled" true
@@ -37,12 +39,17 @@ spec:
       "opencost" (dict
         "exporter" (dict
           "defaultClusterId" $state.clusterName
+          "image" (dict "tag" $opencostImageTag)
           "extraEnv" (dict
             "CLOUD_COST_CONFIG_PATH" "/var/configs/cloud-integration/cloud-integration.json"
+            "PLUGIN_CONFIG_DIR" "/var/configs"
           )
         )
         "prometheus" (dict "external" (dict "url" (printf "http://%s.%s:9090" $kps.prometheusServiceName $kps.namespace)))
-        "ui" (dict "enabled" true)
+        "ui" (dict
+          "enabled" true
+          "image" (dict "tag" $opencostImageTag)
+        )
       )
     }}
     {{- /* DaemonSets (alloy-logs, alloy-receiver) tolerate ALL taints so they run on
@@ -76,12 +83,16 @@ spec:
         {{- $_ := set $costModel "athenaTable" $state.cloudCosts.tableName }}
         {{- $_ := set $costModel "athenaWorkgroup" $state.cloudCosts.workgroupName }}
         {{- $_ := set $costModel "projectID" $state.cloudCosts.accountId }}
+        {{- $_ := set $costModel "athenaProjectID" $state.cloudCosts.accountId }}
       {{- end }}
       {{- if $state.spotFeed.enabled }}
         {{- $_ := set $costModel "awsSpotDataBucket" $state.spotFeed.bucketName }}
         {{- $_ := set $costModel "awsSpotDataRegion" $state.spotFeed.region }}
         {{- if not (hasKey $costModel "projectID") }}
           {{- $_ := set $costModel "projectID" $state.spotFeed.accountId }}
+        {{- end }}
+        {{- if not (hasKey $costModel "athenaProjectID") }}
+          {{- $_ := set $costModel "athenaProjectID" $state.spotFeed.accountId }}
         {{- end }}
         {{- $_ := set $costModel "spotLabel" "karpenter.sh/capacity-type" }}
         {{- $_ := set $costModel "spotLabelValue" "spot" }}
