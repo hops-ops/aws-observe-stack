@@ -134,6 +134,40 @@ When enabled:
 
 > **Prerequisite:** Deploy a `SpotFeed` XRD in the same AWS account first. See [aws-spot-feed](https://github.com/hops-ops/aws-spot-feed).
 
+### Cloud Costs via CUR/Athena
+
+Enable full AWS cloud cost ingestion in OpenCost by referencing a separately managed `CostReport` XR:
+
+```yaml
+apiVersion: aws.hops.ops.com.ai/v1alpha1
+kind: CostReport
+metadata:
+  name: hops-root-account
+  namespace: default
+spec:
+  accountId: "123456789012"
+  region: us-east-2
+---
+spec:
+  clusterName: my-cluster
+  aws:
+    region: us-east-2
+  cloudCosts:
+    costReportRef:
+      enabled: true
+      name: hops-root-account
+      accountId: "123456789012"
+      region: us-east-2
+```
+
+When enabled:
+- ObserveStack derives CUR/Athena names from the referenced `CostReport`
+- OpenCost is wired through the chart's native `cloudIntegrationSecret` support
+- The OpenCost PodIdentity gets Athena, Glue, and S3 permissions for the CUR bucket/workgroup
+- The generated `cloud-integration.json` uses the Athena query-results location `s3://{bucketName}/athena-results`
+
+`CostReport` is account-level and should be managed separately, one per AWS account. If your `CostReport` uses non-default names, set the corresponding overrides under `cloudCosts.costReportRef`. The legacy manual `cloudCosts` fields still work as a fallback.
+
 ## What Gets Created
 
 1. **Helm Releases** - Prometheus, Loki, Tempo, k8s-monitoring/OpenCost, Grafana Operator, VPA, Goldilocks

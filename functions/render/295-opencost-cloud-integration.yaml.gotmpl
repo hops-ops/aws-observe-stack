@@ -1,0 +1,39 @@
+# code: language=yaml
+#
+# Cloud integration secret for OpenCost (CUR/Athena)
+# Wired into the k8s-monitoring chart's OpenCost subchart via cloudIntegrationSecret.
+#
+# Only rendered when cloudCosts is enabled.
+#
+
+{{- if $state.cloudCosts.enabled }}
+{{- $cloudIntegrationJSON := printf "{\"aws\":{\"athena\":[{\"bucket\":%q,\"region\":%q,\"database\":%q,\"table\":%q,\"workgroup\":%q,\"account\":%q}]}}" (printf "s3://%s/athena-results" $state.cloudCosts.bucketName) $state.cloudCosts.region $state.cloudCosts.databaseName $state.cloudCosts.tableName $state.cloudCosts.workgroupName $state.cloudCosts.accountId }}
+
+# ==============================================================================
+# Secret with Athena connection details
+# ==============================================================================
+---
+apiVersion: kubernetes.m.crossplane.io/v1alpha1
+kind: Object
+metadata:
+  name: {{ $state.name }}-cloud-integration-secret
+  annotations:
+    {{ setResourceNameAnnotation "cloud-integration-secret" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  managementPolicies: {{ $state.managementPolicies | toJson }}
+  forProvider:
+    manifest:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: {{ $state.cloudCosts.secretName }}
+        namespace: {{ $state.namespace }}
+      type: Opaque
+      data:
+        cloud-integration.json: {{ $cloudIntegrationJSON | b64enc | quote }}
+  providerConfigRef:
+    name: {{ $state.kubernetes.providerConfigRef.name }}
+    kind: {{ $state.kubernetes.providerConfigRef.kind }}
+
+{{- end }}

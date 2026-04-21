@@ -26,7 +26,7 @@
 # ==============================================================================
 # Set observed state
 # ==============================================================================
-{{- $state = set $state "observed" (dict
+{{- $state = set $state "observed" (merge $state.observed (dict
   "kubePrometheusStack" (dict "ready" (get $checkReady "kube-prometheus-stack"))
   "loki" (dict "ready" (get $checkReady "loki"))
   "tempo" (dict "ready" (get $checkReady "tempo"))
@@ -42,7 +42,7 @@
   "vpa" (dict "ready" (get $checkReady "vpa"))
   "goldilocks" (dict "ready" (get $checkReady "goldilocks"))
   "nodepoolObserve" (dict "ready" (get $checkReady "nodepool-observe"))
-) }}
+)) }}
 
 # ==============================================================================
 # Compute status (readiness determined by function-auto-ready)

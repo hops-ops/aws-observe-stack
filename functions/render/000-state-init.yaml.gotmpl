@@ -223,6 +223,32 @@
 {{- $spotFeedEnabled := $spotFeed.enabled | default false }}
 
 # ==============================================================================
+# Cloud cost configuration (CUR/Athena)
+# ==============================================================================
+{{- $cloudCosts := $spec.cloudCosts | default dict }}
+{{- $cloudCostsConfigEnabled := $cloudCosts.enabled | default false }}
+{{- $cloudCostsCostReportRef := $cloudCosts.costReportRef | default dict }}
+{{- $cloudCostsCostReportRefEnabled := $cloudCostsCostReportRef.enabled | default false }}
+{{- $cloudCostsEnabled := or $cloudCostsConfigEnabled $cloudCostsCostReportRefEnabled }}
+{{- $cloudCostsSecretName := printf "%s-cloud-integration" $name }}
+{{- $cloudCostsBucketName := $cloudCosts.bucketName | default "" }}
+{{- $cloudCostsRegion := $cloudCosts.region | default $awsRegion }}
+{{- $cloudCostsAccountId := $cloudCosts.accountId | default "" }}
+{{- $cloudCostsDatabaseName := $cloudCosts.databaseName | default "" }}
+{{- $cloudCostsTableName := $cloudCosts.tableName | default "" }}
+{{- $cloudCostsWorkgroupName := $cloudCosts.workgroupName | default "" }}
+{{- $cloudCostsCostReportRefName := $cloudCostsCostReportRef.name | default "" }}
+{{- $cloudCostsCostReportRefNameUnderscored := $cloudCostsCostReportRefName | replace "-" "_" }}
+{{- if $cloudCostsCostReportRefEnabled }}
+  {{- $cloudCostsBucketName = $cloudCostsCostReportRef.bucketName | default (printf "%s-cur" $cloudCostsCostReportRefName) }}
+  {{- $cloudCostsRegion = $cloudCostsCostReportRef.region | default $awsRegion }}
+  {{- $cloudCostsAccountId = $cloudCostsCostReportRef.accountId | default "" }}
+  {{- $cloudCostsDatabaseName = $cloudCostsCostReportRef.databaseName | default (printf "%s_cur" $cloudCostsCostReportRefNameUnderscored) }}
+  {{- $cloudCostsTableName = $cloudCostsCostReportRef.reportName | default (printf "%s_cur" $cloudCostsCostReportRefNameUnderscored) }}
+  {{- $cloudCostsWorkgroupName = $cloudCostsCostReportRef.workgroupName | default (printf "%s-cur-workgroup" $cloudCostsCostReportRefName) }}
+{{- end }}
+
+# ==============================================================================
 # Initialize $state
 # ==============================================================================
 {{- $state := dict
@@ -357,6 +383,27 @@
     "region" ($spotFeed.region | default $awsRegion)
     "accountId" ($spotFeed.accountId | default "")
     "prefix" ($spotFeed.prefix | default "")
+  )
+  "cloudCosts" (dict
+    "enabled" $cloudCostsEnabled
+    "secretName" $cloudCostsSecretName
+    "bucketName" $cloudCostsBucketName
+    "region" $cloudCostsRegion
+    "accountId" $cloudCostsAccountId
+    "databaseName" $cloudCostsDatabaseName
+    "tableName" $cloudCostsTableName
+    "workgroupName" $cloudCostsWorkgroupName
+    "costReportRef" (dict
+      "enabled" $cloudCostsCostReportRefEnabled
+      "name" $cloudCostsCostReportRefName
+      "namespace" ($cloudCostsCostReportRef.namespace | default ($metadata.namespace | default "default"))
+      "accountId" ($cloudCostsCostReportRef.accountId | default "")
+      "region" ($cloudCostsCostReportRef.region | default $awsRegion)
+      "bucketName" ($cloudCostsCostReportRef.bucketName | default "")
+      "reportName" ($cloudCostsCostReportRef.reportName | default "")
+      "databaseName" ($cloudCostsCostReportRef.databaseName | default "")
+      "workgroupName" ($cloudCostsCostReportRef.workgroupName | default "")
+    )
   )
   "observed" (dict)
   "status" (dict)

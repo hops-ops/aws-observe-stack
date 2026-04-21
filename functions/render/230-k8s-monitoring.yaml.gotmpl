@@ -35,8 +35,14 @@ spec:
       "enabled" true
       "metricsSource" "prometheus"
       "opencost" (dict
-        "exporter" (dict "defaultClusterId" $state.clusterName)
+        "exporter" (dict
+          "defaultClusterId" $state.clusterName
+          "extraEnv" (dict
+            "CLOUD_COST_CONFIG_PATH" "/var/configs/cloud-integration/cloud-integration.json"
+          )
+        )
         "prometheus" (dict "external" (dict "url" (printf "http://%s.%s:9090" $kps.prometheusServiceName $kps.namespace)))
+        "ui" (dict "enabled" true)
       )
     }}
     {{- /* DaemonSets (alloy-logs, alloy-receiver) tolerate ALL taints so they run on
@@ -51,25 +57,35 @@ spec:
     {{- $alloyOperator := dict }}
     {{- $nodeExporterValues := dict "enabled" true }}
     {{- if $state.nodePool.enabled }}
-      {{- $_ := set $opencostValues "opencost" (dict
-        "exporter" (dict "defaultClusterId" $state.clusterName)
-        "prometheus" (dict "external" (dict "url" (printf "http://%s.%s:9090" $kps.prometheusServiceName $kps.namespace)))
-        "nodeSelector" $state.nodePool.nodeSelector
-        "tolerations" $state.nodePool.tolerations
-      ) }}
+      {{- $existingOpencost := $opencostValues.opencost | default dict }}
+      {{- $_ := set $existingOpencost "nodeSelector" $state.nodePool.nodeSelector }}
+      {{- $_ := set $existingOpencost "tolerations" $state.nodePool.tolerations }}
+      {{- $_ := set $opencostValues "opencost" $existingOpencost }}
       {{- $_ := set $alloyMetrics "controller" (dict "nodeSelector" $state.nodePool.nodeSelector "tolerations" $state.nodePool.tolerations) }}
       {{- $_ := set $alloySingleton "controller" (dict "nodeSelector" $state.nodePool.nodeSelector "tolerations" $state.nodePool.tolerations) }}
       {{- $_ := set $alloyOperator "nodeSelector" $state.nodePool.nodeSelector }}
       {{- $_ := set $alloyOperator "tolerations" $state.nodePool.tolerations }}
     {{- end }}
-    {{- if $state.spotFeed.enabled }}
-      {{- $costModel := dict
-        "awsSpotDataBucket" $state.spotFeed.bucketName
-        "awsSpotDataRegion" $state.spotFeed.region
-        "projectID" $state.spotFeed.accountId
-        "spotLabel" "karpenter.sh/capacity-type"
-        "spotLabelValue" "spot"
-      }}
+    {{- $enableCustomPricing := or $state.spotFeed.enabled $state.cloudCosts.enabled }}
+    {{- if $enableCustomPricing }}
+      {{- $costModel := dict }}
+      {{- if $state.cloudCosts.enabled }}
+        {{- $_ := set $costModel "athenaBucketName" (printf "s3://%s/athena-results" $state.cloudCosts.bucketName) }}
+        {{- $_ := set $costModel "athenaRegion" $state.cloudCosts.region }}
+        {{- $_ := set $costModel "athenaDatabase" $state.cloudCosts.databaseName }}
+        {{- $_ := set $costModel "athenaTable" $state.cloudCosts.tableName }}
+        {{- $_ := set $costModel "athenaWorkgroup" $state.cloudCosts.workgroupName }}
+        {{- $_ := set $costModel "projectID" $state.cloudCosts.accountId }}
+      {{- end }}
+      {{- if $state.spotFeed.enabled }}
+        {{- $_ := set $costModel "awsSpotDataBucket" $state.spotFeed.bucketName }}
+        {{- $_ := set $costModel "awsSpotDataRegion" $state.spotFeed.region }}
+        {{- if not (hasKey $costModel "projectID") }}
+          {{- $_ := set $costModel "projectID" $state.spotFeed.accountId }}
+        {{- end }}
+        {{- $_ := set $costModel "spotLabel" "karpenter.sh/capacity-type" }}
+        {{- $_ := set $costModel "spotLabelValue" "spot" }}
+      {{- end }}
       {{- if $state.spotFeed.prefix }}
         {{- $_ := set $costModel "awsSpotDataPrefix" $state.spotFeed.prefix }}
       {{- end }}
@@ -79,6 +95,12 @@ spec:
         "provider" "aws"
         "costModel" $costModel
       ) }}
+      {{- $_ := set $opencostValues "opencost" $existingOpencost }}
+    {{- end }}
+    {{- if $state.cloudCosts.enabled }}
+      {{- $existingOpencost := $opencostValues.opencost | default dict }}
+      {{- $_ := set $existingOpencost "cloudCost" (dict "enabled" true) }}
+      {{- $_ := set $existingOpencost "cloudIntegrationSecret" $state.cloudCosts.secretName }}
       {{- $_ := set $opencostValues "opencost" $existingOpencost }}
     {{- end }}
     {{- if $state.prettyNames }}

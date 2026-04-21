@@ -27,6 +27,7 @@ EXAMPLES := \
     examples/observestacks/minimal.yaml:: \
     examples/observestacks/pvc.yaml:: \
     examples/observestacks/s3.yaml:: \
+    examples/observestacks/cloud-costs.yaml:: \
     examples/observestacks/nodepool.yaml:: \
     examples/observestacks/spot-feed.yaml:: \
     examples/observestacks/metrics-server.yaml::
