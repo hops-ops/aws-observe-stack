@@ -9,6 +9,7 @@ spec:
   aws:
     region: us-east-2
   cloudCosts:
+    enabled: true
     costReportRef:
       enabled: true
       name: hops-root-account

@@ -551,6 +551,23 @@ spec:
               cloudCosts:
                 description: AWS cloud cost integration via CUR/Athena for OpenCost. Requires a CostReport XRD deployed in the same AWS account.
                 type: object
+                x-kubernetes-validations:
+                - rule: "self.enabled != true || (has(self.costReportRef) && self.costReportRef.enabled == true) || (has(self.bucketName) && self.bucketName != '')"
+                  message: cloudCosts.bucketName is required when cloudCosts.enabled is true and cloudCosts.costReportRef.enabled is not true.
+                - rule: "self.enabled != true || (has(self.costReportRef) && self.costReportRef.enabled == true) || (has(self.accountId) && self.accountId != '')"
+                  message: cloudCosts.accountId is required when cloudCosts.enabled is true and cloudCosts.costReportRef.enabled is not true.
+                - rule: "self.enabled != true || (has(self.costReportRef) && self.costReportRef.enabled == true) || (has(self.databaseName) && self.databaseName != '')"
+                  message: cloudCosts.databaseName is required when cloudCosts.enabled is true and cloudCosts.costReportRef.enabled is not true.
+                - rule: "self.enabled != true || (has(self.costReportRef) && self.costReportRef.enabled == true) || (has(self.tableName) && self.tableName != '')"
+                  message: cloudCosts.tableName is required when cloudCosts.enabled is true and cloudCosts.costReportRef.enabled is not true.
+                - rule: "self.enabled != true || (has(self.costReportRef) && self.costReportRef.enabled == true) || (has(self.workgroupName) && self.workgroupName != '')"
+                  message: cloudCosts.workgroupName is required when cloudCosts.enabled is true and cloudCosts.costReportRef.enabled is not true.
+                - rule: "!has(self.costReportRef) || self.costReportRef.enabled != true || self.enabled == true"
+                  message: cloudCosts.enabled must be true when cloudCosts.costReportRef.enabled is true.
+                - rule: "!has(self.costReportRef) || self.costReportRef.enabled != true || (has(self.costReportRef.name) && self.costReportRef.name != '')"
+                  message: cloudCosts.costReportRef.name is required when cloudCosts.costReportRef.enabled is true.
+                - rule: "!has(self.costReportRef) || self.costReportRef.enabled != true || (has(self.costReportRef.accountId) && self.costReportRef.accountId != '')"
+                  message: cloudCosts.costReportRef.accountId is required when cloudCosts.costReportRef.enabled is true.
                 properties:
                   enabled:
                     description: Whether to enable cloud cost integration via Athena. Defaults to false.
@@ -561,7 +578,7 @@ spec:
                     type: object
                     properties:
                       enabled:
-                        description: Whether to derive cloudCosts settings from a separately managed CostReport. When true, this also enables cloudCosts.
+                        description: Whether to derive cloudCosts settings from a separately managed CostReport. When true, cloudCosts.enabled must also be true.
                         type: boolean
                         default: false
                       name:
@@ -589,22 +606,22 @@ spec:
                         description: Athena workgroup name override from the CostReport. Defaults to {name}-cur-workgroup.
                         type: string
                   bucketName:
-                    description: "Manual fallback: base S3 bucket name used for CUR storage and Athena results. OpenCost derives the Athena query-results location as s3://{bucketName}/athena-results."
+                    description: "Manual fallback: base S3 bucket name used for CUR storage and Athena results. OpenCost derives the Athena query-results location as s3://{bucketName}/athena-results. Required when cloudCosts.enabled is true and cloudCosts.costReportRef.enabled is not true."
                     type: string
                   region:
                     description: "Manual fallback: AWS region of the Athena workgroup and Glue database. Defaults to aws.region."
                     type: string
                   accountId:
-                    description: "Manual fallback: AWS account ID. Required when enabled without cloudCosts.costReportRef."
+                    description: "Manual fallback: AWS account ID. Required when cloudCosts.enabled is true and cloudCosts.costReportRef.enabled is not true."
                     type: string
                   databaseName:
-                    description: "Manual fallback: Glue catalog database name containing CUR tables. Required when enabled without cloudCosts.costReportRef."
+                    description: "Manual fallback: Glue catalog database name containing CUR tables. Required when cloudCosts.enabled is true and cloudCosts.costReportRef.enabled is not true."
                     type: string
                   tableName:
-                    description: "Manual fallback: Glue table name for CUR data. Typically the CUR report name (with underscores)."
+                    description: "Manual fallback: Glue table name for CUR data. Typically the CUR report name (with underscores). Required when cloudCosts.enabled is true and cloudCosts.costReportRef.enabled is not true."
                     type: string
                   workgroupName:
-                    description: "Manual fallback: Athena workgroup name. Required when enabled without cloudCosts.costReportRef."
+                    description: "Manual fallback: Athena workgroup name. Required when cloudCosts.enabled is true and cloudCosts.costReportRef.enabled is not true."
                     type: string
             required:
             - clusterName

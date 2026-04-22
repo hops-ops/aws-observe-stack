@@ -32,7 +32,7 @@ spec:
       kind: Secret
       metadata:
         name: {{ $state.cloudCosts.secretName }}
-        namespace: {{ $state.namespace }}
+        namespace: {{ $state.k8sMonitoring.namespace }}
       type: Opaque
       data:
         cloud-integration.json: {{ $cloudIntegrationJSON | b64enc | quote }}

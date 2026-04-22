@@ -2264,7 +2264,7 @@ _items = [
                         cloudCost = {
                             enabled = True
                         }
-                        cloudIntegrationSecret = "observe-cloud-integration"
+                        cloudIntegrationSecret = "opencost-cloud-integration"
                         customPricing = {
                             enabled = True
                             provider = "aws"
@@ -2302,7 +2302,7 @@ _items = [
                         apiVersion = "v1"
                         kind = "Secret"
                         metadata = {
-                            name = "observe-cloud-integration"
+                            name = "opencost-cloud-integration"
                             namespace = "monitoring"
                         }
                         data = {
@@ -2329,6 +2329,60 @@ _items = [
     }
 
     # ==========================================================================
+    # Test: Cloud integration secret follows the k8s-monitoring namespace
+    # ==========================================================================
+    metav1alpha1.CompositionTest {
+        metadata.name = "cloud-costs-secret-uses-k8s-monitoring-namespace"
+        spec = {
+            compositionPath = "apis/observestacks/composition.yaml"
+            xrdPath = "apis/observestacks/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = {
+                apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                kind = "ObserveStack"
+                metadata.name = "observe"
+                spec = {
+                    clusterName = "my-cluster"
+                    namespace = "observability"
+                    aws.region = "us-east-2"
+                    k8sMonitoring.namespace = "cost-monitoring"
+                    cloudCosts = {
+                        enabled = True
+                        bucketName = "my-account-cur"
+                        accountId = "123456789012"
+                        region = "us-east-2"
+                        databaseName = "my_account_cur"
+                        tableName = "my_account_cur"
+                        workgroupName = "my-account-cur-workgroup"
+                    }
+                }
+            }
+            assertResources = [
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "k8s-monitoring"
+                    spec.forProvider.namespace = "cost-monitoring"
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-cloud-integration-secret"
+                    spec.forProvider.manifest = {
+                        apiVersion = "v1"
+                        kind = "Secret"
+                        metadata = {
+                            name = "opencost-cloud-integration"
+                            namespace = "cost-monitoring"
+                        }
+                    }
+                }
+            ]
+        }
+    }
+
+    # ==========================================================================
     # Test: CostReport reference derives cloud cost integration values
     # ==========================================================================
     metav1alpha1.CompositionTest {
@@ -2347,6 +2401,7 @@ _items = [
                     clusterName = "my-cluster"
                     aws.region = "us-east-2"
                     cloudCosts = {
+                        enabled = True
                         costReportRef = {
                             enabled = True
                             name = "hops-root-account"
@@ -2365,7 +2420,7 @@ _items = [
                         cloudCost = {
                             enabled = True
                         }
-                        cloudIntegrationSecret = "observe-cloud-integration"
+                        cloudIntegrationSecret = "opencost-cloud-integration"
                         customPricing = {
                             enabled = True
                             provider = "aws"
@@ -2403,7 +2458,7 @@ _items = [
                         apiVersion = "v1"
                         kind = "Secret"
                         metadata = {
-                            name = "observe-cloud-integration"
+                            name = "opencost-cloud-integration"
                             namespace = "monitoring"
                         }
                         data = {

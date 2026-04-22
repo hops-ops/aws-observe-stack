@@ -230,7 +230,7 @@
 {{- $cloudCostsCostReportRef := $cloudCosts.costReportRef | default dict }}
 {{- $cloudCostsCostReportRefEnabled := $cloudCostsCostReportRef.enabled | default false }}
 {{- $cloudCostsEnabled := or $cloudCostsConfigEnabled $cloudCostsCostReportRefEnabled }}
-{{- $cloudCostsSecretName := printf "%s-cloud-integration" $name }}
+{{- $cloudCostsSecretName := "opencost-cloud-integration" }}
 {{- $cloudCostsBucketName := $cloudCosts.bucketName | default "" }}
 {{- $cloudCostsRegion := $cloudCosts.region | default $awsRegion }}
 {{- $cloudCostsAccountId := $cloudCosts.accountId | default "" }}

@@ -148,11 +148,18 @@ spec:
   accountId: "123456789012"
   region: us-east-2
 ---
+apiVersion: aws.hops.ops.com.ai/v1alpha1
+kind: ObserveStack
+metadata:
+  name: observe
+  namespace: default
 spec:
-  clusterName: my-cluster
+  clusterName: production
+  namespace: monitoring
   aws:
     region: us-east-2
   cloudCosts:
+    enabled: true
     costReportRef:
       enabled: true
       name: hops-root-account
