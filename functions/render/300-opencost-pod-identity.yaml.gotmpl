@@ -83,6 +83,57 @@ spec:
           ]
         }
   {{- end }}
+  {{- if $state.cloudCosts.enabled }}
+    - name: opencost-cloud-costs-athena
+      policy: |
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "AthenaQueryAccess",
+              "Effect": "Allow",
+              "Action": [
+                "athena:StartQueryExecution",
+                "athena:GetQueryExecution",
+                "athena:GetQueryResults"
+              ],
+              "Resource": "arn:aws:athena:{{ $state.cloudCosts.region }}:{{ $state.cloudCosts.accountId }}:workgroup/{{ $state.cloudCosts.workgroupName }}"
+            },
+            {
+              "Sid": "GlueCatalogAccess",
+              "Effect": "Allow",
+              "Action": [
+                "glue:GetDatabase",
+                "glue:GetTable",
+                "glue:GetPartitions"
+              ],
+              "Resource": [
+                "arn:aws:glue:{{ $state.cloudCosts.region }}:{{ $state.cloudCosts.accountId }}:catalog",
+                "arn:aws:glue:{{ $state.cloudCosts.region }}:{{ $state.cloudCosts.accountId }}:database/{{ $state.cloudCosts.databaseName }}",
+                "arn:aws:glue:{{ $state.cloudCosts.region }}:{{ $state.cloudCosts.accountId }}:table/{{ $state.cloudCosts.databaseName }}/*"
+              ]
+            },
+            {
+              "Sid": "S3CURBucketRead",
+              "Effect": "Allow",
+              "Action": ["s3:GetBucketLocation", "s3:ListBucket", "s3:ListBucketMultipartUploads", "s3:HeadBucket"],
+              "Resource": "arn:aws:s3:::{{ $state.cloudCosts.bucketName }}"
+            },
+            {
+              "Sid": "S3CURDataRead",
+              "Effect": "Allow",
+              "Action": ["s3:GetObject", "s3:HeadObject", "s3:ListMultipartUploadParts", "s3:AbortMultipartUpload"],
+              "Resource": "arn:aws:s3:::{{ $state.cloudCosts.bucketName }}/*"
+            },
+            {
+              "Sid": "S3AthenaResultsWrite",
+              "Effect": "Allow",
+              "Action": ["s3:PutObject", "s3:GetObject", "s3:ListMultipartUploadParts", "s3:AbortMultipartUpload"],
+              "Resource": "arn:aws:s3:::{{ $state.cloudCosts.bucketName }}/athena-results/*"
+            }
+          ]
+        }
+  {{- end }}
   tags: {{ $state.aws.tags | toJson }}
 
 # ==============================================================================

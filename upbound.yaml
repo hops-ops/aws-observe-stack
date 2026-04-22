@@ -25,7 +25,8 @@ spec:
     package: xpkg.crossplane.io/crossplane-contrib/provider-aws-s3
     version: '>=v2'
   description: Deploys a complete observability stack (Prometheus, Loki, Tempo, k8s-monitoring,
-    Grafana) with AWS Pod Identity and S3 storage support.
+    Grafana) with AWS Pod Identity, CostReport-aware OpenCost cloud cost integration,
+    and S3 storage support.
   license: Apache-2.0
   maintainer: Patrick Lee Scott <pat@patscott.io>
   readme: |
@@ -34,6 +35,7 @@ spec:
     Deploys a complete observability stack with correct deletion ordering.
     Composes kube-prometheus-stack, Loki, Tempo, k8s-monitoring, Grafana Operator,
     and Grafana datasources/dashboards as direct Helm releases, with AWS Pod Identity
-    for OpenCost billing access and optional S3 storage for Loki and Tempo.
+    for OpenCost billing access, support for separately managed CostReport CUR/Athena
+    inputs, and optional S3 storage for Loki and Tempo.
   repository: ghcr.io/hops-ops/aws-observe-stack
   source: github.com/hops-ops/aws-observe-stack

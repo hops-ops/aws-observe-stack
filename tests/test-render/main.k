@@ -2225,6 +2225,297 @@ _items = [
             ]
         }
     }
+
+    # ==========================================================================
+    # Test: Cloud costs enabled wires OpenCost Helm values, secret, and IAM
+    # ==========================================================================
+    metav1alpha1.CompositionTest {
+        metadata.name = "cloud-costs-enabled-wires-opencost"
+        spec = {
+            compositionPath = "apis/observestacks/composition.yaml"
+            xrdPath = "apis/observestacks/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = {
+                apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                kind = "ObserveStack"
+                metadata.name = "observe"
+                spec = {
+                    clusterName = "my-cluster"
+                    aws.region = "us-east-2"
+                    cloudCosts = {
+                        enabled = True
+                        bucketName = "my-account-cur"
+                        accountId = "123456789012"
+                        region = "us-east-2"
+                        databaseName = "my_account_cur"
+                        tableName = "my_account_cur"
+                        workgroupName = "my-account-cur-workgroup"
+                    }
+                }
+            }
+            assertResources = [
+                # OpenCost Helm values should use the native cloudIntegrationSecret wiring
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "k8s-monitoring"
+                    spec.forProvider.values.clusterMetrics.opencost.opencost = {
+                        cloudCost = {
+                            enabled = True
+                        }
+                        cloudIntegrationSecret = "opencost-cloud-integration"
+                        customPricing = {
+                            enabled = True
+                            provider = "aws"
+                            costModel = {
+                                athenaBucketName = "s3://my-account-cur/athena-results"
+                                athenaRegion = "us-east-2"
+                                athenaDatabase = "my_account_cur"
+                                athenaTable = "my_account_cur"
+                                athenaWorkgroup = "my-account-cur-workgroup"
+                                athenaProjectID = "123456789012"
+                                projectID = "123456789012"
+                            }
+                        }
+                        exporter = {
+                            image = {
+                                tag = "1.120.0"
+                            }
+                            extraEnv = {
+                                CLOUD_COST_CONFIG_PATH = "/var/configs/cloud-integration/cloud-integration.json"
+                                PLUGIN_CONFIG_DIR = "/var/configs"
+                            }
+                        }
+                        ui = {
+                            image = {
+                                tag = "1.120.0"
+                            }
+                        }
+                    }
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-cloud-integration-secret"
+                    spec.forProvider.manifest = {
+                        apiVersion = "v1"
+                        kind = "Secret"
+                        metadata = {
+                            name = "opencost-cloud-integration"
+                            namespace = "monitoring"
+                        }
+                        data = {
+                            "cloud-integration.json" = "eyJhd3MiOlt7ImF0aGVuYUJ1Y2tldE5hbWUiOiJzMzovL215LWFjY291bnQtY3VyL2F0aGVuYS1yZXN1bHRzIiwiYXRoZW5hUmVnaW9uIjoidXMtZWFzdC0yIiwiYXRoZW5hRGF0YWJhc2UiOiJteV9hY2NvdW50X2N1ciIsImF0aGVuYVRhYmxlIjoibXlfYWNjb3VudF9jdXIiLCJhdGhlbmFXb3JrZ3JvdXAiOiJteS1hY2NvdW50LWN1ci13b3JrZ3JvdXAiLCJwcm9qZWN0SUQiOiIxMjM0NTY3ODkwMTIifV19"
+                        }
+                    }
+                }
+                # PodIdentity should have Athena IAM policy
+                {
+                    apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                    kind = "PodIdentity"
+                    metadata.name = "observe-opencost-pod-identity"
+                    spec.inlinePolicy = [
+                        {
+                            name = "opencost-billing"
+                        }
+                        {
+                            name = "opencost-cloud-costs-athena"
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+
+    # ==========================================================================
+    # Test: Cloud integration secret follows the k8s-monitoring namespace
+    # ==========================================================================
+    metav1alpha1.CompositionTest {
+        metadata.name = "cloud-costs-secret-uses-k8s-monitoring-namespace"
+        spec = {
+            compositionPath = "apis/observestacks/composition.yaml"
+            xrdPath = "apis/observestacks/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = {
+                apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                kind = "ObserveStack"
+                metadata.name = "observe"
+                spec = {
+                    clusterName = "my-cluster"
+                    namespace = "observability"
+                    aws.region = "us-east-2"
+                    k8sMonitoring.namespace = "cost-monitoring"
+                    cloudCosts = {
+                        enabled = True
+                        bucketName = "my-account-cur"
+                        accountId = "123456789012"
+                        region = "us-east-2"
+                        databaseName = "my_account_cur"
+                        tableName = "my_account_cur"
+                        workgroupName = "my-account-cur-workgroup"
+                    }
+                }
+            }
+            assertResources = [
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "k8s-monitoring"
+                    spec.forProvider.namespace = "cost-monitoring"
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-cloud-integration-secret"
+                    spec.forProvider.manifest = {
+                        apiVersion = "v1"
+                        kind = "Secret"
+                        metadata = {
+                            name = "opencost-cloud-integration"
+                            namespace = "cost-monitoring"
+                        }
+                    }
+                }
+            ]
+        }
+    }
+
+    # ==========================================================================
+    # Test: CostReport reference derives cloud cost integration values
+    # ==========================================================================
+    metav1alpha1.CompositionTest {
+        metadata.name = "cloud-costs-cost-report-ref-derives-values"
+        spec = {
+            compositionPath = "apis/observestacks/composition.yaml"
+            xrdPath = "apis/observestacks/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = {
+                apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                kind = "ObserveStack"
+                metadata.name = "observe"
+                metadata.namespace = "default"
+                spec = {
+                    clusterName = "my-cluster"
+                    aws.region = "us-east-2"
+                    cloudCosts = {
+                        enabled = True
+                        costReportRef = {
+                            enabled = True
+                            name = "hops-root-account"
+                            accountId = "123456789012"
+                            region = "us-east-2"
+                        }
+                    }
+                }
+            }
+            assertResources = [
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "k8s-monitoring"
+                    spec.forProvider.values.clusterMetrics.opencost.opencost = {
+                        cloudCost = {
+                            enabled = True
+                        }
+                        cloudIntegrationSecret = "opencost-cloud-integration"
+                        customPricing = {
+                            enabled = True
+                            provider = "aws"
+                            costModel = {
+                                athenaBucketName = "s3://hops-root-account-cur/athena-results"
+                                athenaRegion = "us-east-2"
+                                athenaDatabase = "hops_root_account_cur"
+                                athenaTable = "hops_root_account_cur"
+                                athenaWorkgroup = "hops-root-account-cur-workgroup"
+                                athenaProjectID = "123456789012"
+                                projectID = "123456789012"
+                            }
+                        }
+                        exporter = {
+                            image = {
+                                tag = "1.120.0"
+                            }
+                            extraEnv = {
+                                CLOUD_COST_CONFIG_PATH = "/var/configs/cloud-integration/cloud-integration.json"
+                                PLUGIN_CONFIG_DIR = "/var/configs"
+                            }
+                        }
+                        ui = {
+                            image = {
+                                tag = "1.120.0"
+                            }
+                        }
+                    }
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-cloud-integration-secret"
+                    spec.forProvider.manifest = {
+                        apiVersion = "v1"
+                        kind = "Secret"
+                        metadata = {
+                            name = "opencost-cloud-integration"
+                            namespace = "monitoring"
+                        }
+                        data = {
+                            "cloud-integration.json" = "eyJhd3MiOlt7ImF0aGVuYUJ1Y2tldE5hbWUiOiJzMzovL2hvcHMtcm9vdC1hY2NvdW50LWN1ci9hdGhlbmEtcmVzdWx0cyIsImF0aGVuYVJlZ2lvbiI6InVzLWVhc3QtMiIsImF0aGVuYURhdGFiYXNlIjoiaG9wc19yb290X2FjY291bnRfY3VyIiwiYXRoZW5hVGFibGUiOiJob3BzX3Jvb3RfYWNjb3VudF9jdXIiLCJhdGhlbmFXb3JrZ3JvdXAiOiJob3BzLXJvb3QtYWNjb3VudC1jdXItd29ya2dyb3VwIiwicHJvamVjdElEIjoiMTIzNDU2Nzg5MDEyIn1dfQ=="
+                        }
+                    }
+                }
+                {
+                    apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                    kind = "PodIdentity"
+                    metadata.name = "observe-opencost-pod-identity"
+                    spec.inlinePolicy = [
+                        {
+                            name = "opencost-billing"
+                        }
+                        {
+                            name = "opencost-cloud-costs-athena"
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+
+    # ==========================================================================
+    # Test: Cloud costs disabled (default) — no secret, no Athena IAM
+    # ==========================================================================
+    metav1alpha1.CompositionTest {
+        metadata.name = "cloud-costs-disabled-no-secret"
+        spec = {
+            compositionPath = "apis/observestacks/composition.yaml"
+            xrdPath = "apis/observestacks/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = {
+                apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                kind = "ObserveStack"
+                metadata.name = "observe"
+                spec = {
+                    clusterName = "my-cluster"
+                    aws.region = "us-east-1"
+                }
+            }
+            assertResources = [
+                {
+                    apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                    kind = "PodIdentity"
+                    metadata.name = "observe-opencost-pod-identity"
+                    spec.inlinePolicy = [
+                        {
+                            name = "opencost-billing"
+                        }
+                    ]
+                }
+            ]
+        }
+    }
 ]
 
 items = _items
