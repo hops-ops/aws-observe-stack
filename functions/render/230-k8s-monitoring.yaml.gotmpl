@@ -33,6 +33,10 @@ spec:
     {{- /* Pin OpenCost to a version where missing RI data is logged as WARN instead of ERR. */}}
     {{- $opencostImageTag := "1.120.0" }}
     {{- /* OpenCost values — deployment, gets nodeSelector + tolerations */}}
+    {{- /* Probe defaults: charts ship 1s timeouts and 3-failure thresholds that flake under
+         cluster load. 5s timeouts + 5 failures + a generous startup grace stops the restart loops. */}}
+    {{- $opencostExporterProbe := dict "timeoutSeconds" 5 "periodSeconds" 10 "failureThreshold" 5 "httpGet" (dict "path" "/healthz" "port" 9003) }}
+    {{- $opencostExporterStartupProbe := dict "timeoutSeconds" 5 "periodSeconds" 10 "failureThreshold" 30 "httpGet" (dict "path" "/healthz" "port" 9003) }}
     {{- $opencostValues := dict
       "enabled" true
       "metricsSource" "prometheus"
@@ -44,6 +48,9 @@ spec:
             "CLOUD_COST_CONFIG_PATH" "/var/configs/cloud-integration/cloud-integration.json"
             "PLUGIN_CONFIG_DIR" "/var/configs"
           )
+          "livenessProbe" $opencostExporterProbe
+          "readinessProbe" $opencostExporterProbe
+          "startupProbe" $opencostExporterStartupProbe
         )
         "prometheus" (dict "external" (dict "url" (printf "http://%s.%s:9090" $kps.prometheusServiceName $kps.namespace)))
         "ui" (dict
@@ -61,8 +68,16 @@ spec:
          get nodeSelector + tolerations when nodePool enabled; otherwise no scheduling constraints */}}
     {{- $alloyMetrics := dict "enabled" true }}
     {{- $alloySingleton := dict "enabled" true }}
-    {{- $alloyOperator := dict }}
-    {{- $nodeExporterValues := dict "enabled" true }}
+    {{- $alloyOperator := dict
+      "livenessProbe" (dict "timeoutSeconds" 5 "periodSeconds" 10 "failureThreshold" 10 "initialDelaySeconds" 30 "httpGet" (dict "path" "/healthz" "port" 8081))
+      "readinessProbe" (dict "timeoutSeconds" 5 "periodSeconds" 10 "failureThreshold" 10 "initialDelaySeconds" 15 "httpGet" (dict "path" "/readyz" "port" 8081))
+    }}
+    {{- $nodeExporterProbe := dict "timeoutSeconds" 5 "periodSeconds" 10 "failureThreshold" 5 "httpGet" (dict "path" "/" "port" 9100) }}
+    {{- $nodeExporterValues := dict
+      "enabled" true
+      "livenessProbe" $nodeExporterProbe
+      "readinessProbe" $nodeExporterProbe
+    }}
     {{- if $state.nodePool.enabled }}
       {{- $existingOpencost := $opencostValues.opencost | default dict }}
       {{- $_ := set $existingOpencost "nodeSelector" $state.nodePool.nodeSelector }}
