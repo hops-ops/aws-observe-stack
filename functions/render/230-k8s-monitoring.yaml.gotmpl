@@ -47,10 +47,12 @@ spec:
     {{- /* alloy-metrics holds discovered targets + remote-write WAL. Chart
          example is 512Mi but k8s-monitoring-helm#541 shows that's
          optimistic; real clusters with prometheus-operator-objects
-         enabled and many ServiceMonitors need 1Gi+. */}}
+         enabled and many ServiceMonitors need 1Gi+. Crossplane-heavy
+         clusters with hundreds of CRDs being scraped need 2Gi to
+         survive WAL replay after a restart without OOM-looping. */}}
     {{- $alloyMetricsResources := dict
-      "requests" (dict "cpu" "200m" "memory" "1Gi")
-      "limits" (dict "memory" "1Gi")
+      "requests" (dict "cpu" "200m" "memory" "2Gi")
+      "limits" (dict "memory" "2Gi")
     }}
     {{- $alloySingletonResources := dict
       "requests" (dict "cpu" "50m" "memory" "128Mi")
