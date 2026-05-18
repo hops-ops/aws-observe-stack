@@ -44,21 +44,12 @@ spec:
       (dict "name" "vpa_containerrecommendations_uncappedtarget" "help" "VPA uncapped target recommendation for a container resource." "each" (dict "type" "Gauge" "gauge" (dict "path" $containerPath "valueFrom" (list "uncappedTarget" "memory") "labelsFromPath" $containerLabel)) "commonLabels" (dict "resource" "memory" "unit" "byte"))
     }}
     {{- /* NodePool scheduling for non-daemonset components */}}
-    {{- /* Override the prometheus container's built-in probes via containers patch.
-         The operator generates 1s-timeout probes that flake during rule evaluation;
-         5s + 10-failure thresholds stop the SIGTERM restart loop. */}}
-    {{- $promContainerOverride := dict
-      "name" "prometheus"
-      "livenessProbe" (dict "timeoutSeconds" 10 "periodSeconds" 15 "failureThreshold" 10 "httpGet" (dict "path" "/-/healthy" "port" "http-web" "scheme" "HTTP"))
-      "readinessProbe" (dict "timeoutSeconds" 5 "periodSeconds" 10 "failureThreshold" 10 "httpGet" (dict "path" "/-/ready" "port" "http-web" "scheme" "HTTP"))
-    }}
     {{- $promSpec := dict
       "enableRemoteWriteReceiver" true
       "retention" (printf "%vd" $state.aws.prometheus.retentionDays)
       "serviceMonitorSelectorNilUsesHelmValues" false
       "podMonitorSelectorNilUsesHelmValues" false
       "ruleSelectorNilUsesHelmValues" false
-      "containers" (list $promContainerOverride)
       "storageSpec" (dict
         "volumeClaimTemplate" (dict
           "spec" (dict
