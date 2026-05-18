@@ -64,13 +64,32 @@ spec:
         )
       )
     ) }}
-    {{- $singleBinary := dict "replicas" 1 }}
+    {{- /* Resource defaults. singleBinary is stateful (holds chunks in memory) so
+         Guaranteed. Gateway, canary, and caches are Burstable.
+         See references/karpenter-resource-best-practices §7.3. */}}
+    {{- $singleBinaryResources := dict
+      "requests" (dict "cpu" "500m" "memory" "2Gi")
+      "limits" (dict "memory" "2Gi")
+    }}
+    {{- $gatewayResources := dict
+      "requests" (dict "cpu" "50m" "memory" "64Mi")
+      "limits" (dict "cpu" "100m" "memory" "128Mi")
+    }}
+    {{- $canaryResources := dict
+      "requests" (dict "cpu" "10m" "memory" "32Mi")
+      "limits" (dict "cpu" "50m" "memory" "64Mi")
+    }}
+    {{- $cacheResources := dict
+      "requests" (dict "cpu" "50m" "memory" "128Mi")
+      "limits" (dict "cpu" "100m" "memory" "256Mi")
+    }}
+    {{- $singleBinary := dict "replicas" 1 "resources" $singleBinaryResources }}
     {{- if not $state.aws.loki.s3.enabled }}
     {{- $_ := set $singleBinary "persistence" (dict "enabled" true "storageClass" $state.aws.loki.pvc.storageClass.name "size" $state.aws.loki.pvc.size) }}
     {{- end }}
-    {{- $gatewayValues := dict "enabled" true }}
-    {{- $resultsCache := dict }}
-    {{- $chunksCache := dict }}
+    {{- $gatewayValues := dict "enabled" true "resources" $gatewayResources }}
+    {{- $resultsCache := dict "resources" $cacheResources }}
+    {{- $chunksCache := dict "resources" $cacheResources }}
     {{- if $state.nodePool.enabled }}
       {{- $_ := set $singleBinary "nodeSelector" $state.nodePool.nodeSelector }}
       {{- $_ := set $singleBinary "tolerations" $state.nodePool.tolerations }}
@@ -93,7 +112,7 @@ spec:
       "write" (dict "replicas" 0)
       "backend" (dict "replicas" 0)
       "gateway" $gatewayValues
-      "lokiCanary" (dict "tolerations" $tolerateAll)
+      "lokiCanary" (dict "tolerations" $tolerateAll "resources" $canaryResources)
     }}
     {{- $merged := mustMergeOverwrite $defaults ($loki.values | default dict) }}
     values:

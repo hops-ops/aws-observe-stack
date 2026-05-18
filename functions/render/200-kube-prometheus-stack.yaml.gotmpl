@@ -43,6 +43,29 @@ spec:
       (dict "name" "vpa_containerrecommendations_uncappedtarget" "help" "VPA uncapped target recommendation for a container resource." "each" (dict "type" "Gauge" "gauge" (dict "path" $containerPath "valueFrom" (list "uncappedTarget" "cpu") "labelsFromPath" $containerLabel)) "commonLabels" (dict "resource" "cpu" "unit" "core"))
       (dict "name" "vpa_containerrecommendations_uncappedtarget" "help" "VPA uncapped target recommendation for a container resource." "each" (dict "type" "Gauge" "gauge" (dict "path" $containerPath "valueFrom" (list "uncappedTarget" "memory") "labelsFromPath" $containerLabel)) "commonLabels" (dict "resource" "memory" "unit" "byte"))
     }}
+    {{- /* Resource defaults. Stateful expensive-restart workloads get Guaranteed QoS
+         (request == limit). Stateless restart-cheap ones get Burstable so they can
+         soak unused node capacity. See references/karpenter-resource-best-practices §7.1. */}}
+    {{- $promResources := dict
+      "requests" (dict "cpu" "500m" "memory" "4Gi")
+      "limits" (dict "memory" "4Gi")
+    }}
+    {{- $alertmanagerResources := dict
+      "requests" (dict "cpu" "50m" "memory" "256Mi")
+      "limits" (dict "memory" "256Mi")
+    }}
+    {{- $grafanaResources := dict
+      "requests" (dict "cpu" "50m" "memory" "128Mi")
+      "limits" (dict "cpu" "200m" "memory" "512Mi")
+    }}
+    {{- $operatorResources := dict
+      "requests" (dict "cpu" "50m" "memory" "64Mi")
+      "limits" (dict "cpu" "100m" "memory" "256Mi")
+    }}
+    {{- $ksmResources := dict
+      "requests" (dict "cpu" "50m" "memory" "64Mi")
+      "limits" (dict "cpu" "100m" "memory" "256Mi")
+    }}
     {{- /* NodePool scheduling for non-daemonset components */}}
     {{- $promSpec := dict
       "enableRemoteWriteReceiver" true
@@ -50,6 +73,7 @@ spec:
       "serviceMonitorSelectorNilUsesHelmValues" false
       "podMonitorSelectorNilUsesHelmValues" false
       "ruleSelectorNilUsesHelmValues" false
+      "resources" $promResources
       "storageSpec" (dict
         "volumeClaimTemplate" (dict
           "spec" (dict
@@ -59,12 +83,13 @@ spec:
         )
       )
     }}
-    {{- $alertmanagerSpec := dict }}
+    {{- $alertmanagerSpec := dict "resources" $alertmanagerResources }}
     {{- $grafanaValues := dict
       "enabled" true
+      "resources" $grafanaResources
     }}
-    {{- $operatorValues := dict "enabled" true }}
-    {{- $ksmValues := dict }}
+    {{- $operatorValues := dict "enabled" true "resources" $operatorResources }}
+    {{- $ksmValues := dict "resources" $ksmResources }}
     {{- $nodeExporterValues := dict "enabled" false }}
     {{- if $state.nodePool.enabled }}
       {{- $_ := set $promSpec "nodeSelector" $state.nodePool.nodeSelector }}

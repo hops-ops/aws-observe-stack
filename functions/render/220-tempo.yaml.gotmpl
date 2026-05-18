@@ -46,6 +46,12 @@ spec:
       "wal" (dict "path" "/var/tempo/wal")
     }}
     {{- end }}
+    {{- /* Tempo single-binary holds WAL in memory — Guaranteed QoS.
+         See references/karpenter-resource-best-practices §7.4. */}}
+    {{- $tempoResources := dict
+      "requests" (dict "cpu" "500m" "memory" "1Gi")
+      "limits" (dict "memory" "1Gi")
+    }}
     {{- $defaults := dict
       "tempo" (dict
         "receivers" (dict
@@ -70,6 +76,7 @@ spec:
         "compactor" (dict "compaction" (dict
           "block_retention" (printf "%vh" (mul $state.aws.tempo.retentionDays 24))
         ))
+        "resources" $tempoResources
       )
       "service" (dict "type" "ClusterIP")
     }}

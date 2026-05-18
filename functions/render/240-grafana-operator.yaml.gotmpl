@@ -25,7 +25,13 @@ spec:
     values:
       {{- toYaml $grafOp.overrideAllValues | nindent 6 }}
     {{- else }}
-    {{- $defaults := dict }}
+    {{- /* Burstable: reconciler, low steady-state usage, restart-cheap. */}}
+    {{- $defaults := dict
+      "resources" (dict
+        "requests" (dict "cpu" "50m" "memory" "64Mi")
+        "limits" (dict "cpu" "100m" "memory" "256Mi")
+      )
+    }}
     {{- if $state.nodePool.enabled }}
       {{- $_ := set $defaults "nodeSelector" $state.nodePool.nodeSelector }}
       {{- $_ := set $defaults "tolerations" $state.nodePool.tolerations }}

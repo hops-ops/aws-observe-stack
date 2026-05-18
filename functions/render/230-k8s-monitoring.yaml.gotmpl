@@ -32,6 +32,42 @@ spec:
     {{- else }}
     {{- /* Pin OpenCost to a version where missing RI data is logged as WARN instead of ERR. */}}
     {{- $opencostImageTag := "1.120.0" }}
+    {{- /* Resource defaults. opencost exporter and UI are restart-cheap, so Burstable
+         with low requests + headroom-to-burst. alloy-metrics is Guaranteed (chart docs
+         warn 400 MiB OOMs on real clusters). DaemonSets stay Burstable + small.
+         See references/karpenter-resource-best-practices §7.2. */}}
+    {{- $opencostExporterResources := dict
+      "requests" (dict "cpu" "50m" "memory" "128Mi")
+      "limits" (dict "cpu" "100m" "memory" "256Mi")
+    }}
+    {{- $opencostUiResources := dict
+      "requests" (dict "cpu" "10m" "memory" "32Mi")
+      "limits" (dict "cpu" "50m" "memory" "128Mi")
+    }}
+    {{- $alloyMetricsResources := dict
+      "requests" (dict "cpu" "100m" "memory" "512Mi")
+      "limits" (dict "memory" "512Mi")
+    }}
+    {{- $alloySingletonResources := dict
+      "requests" (dict "cpu" "50m" "memory" "128Mi")
+      "limits" (dict "cpu" "100m" "memory" "256Mi")
+    }}
+    {{- $alloyReceiverResources := dict
+      "requests" (dict "cpu" "50m" "memory" "128Mi")
+      "limits" (dict "cpu" "200m" "memory" "512Mi")
+    }}
+    {{- $alloyLogsResources := dict
+      "requests" (dict "cpu" "50m" "memory" "128Mi")
+      "limits" (dict "cpu" "100m" "memory" "256Mi")
+    }}
+    {{- $alloyOperatorResources := dict
+      "requests" (dict "cpu" "10m" "memory" "64Mi")
+      "limits" (dict "cpu" "50m" "memory" "128Mi")
+    }}
+    {{- $nodeExporterResources := dict
+      "requests" (dict "cpu" "50m" "memory" "32Mi")
+      "limits" (dict "cpu" "100m" "memory" "64Mi")
+    }}
     {{- /* OpenCost values — deployment, gets nodeSelector + tolerations */}}
     {{- $opencostValues := dict
       "enabled" true
@@ -44,25 +80,38 @@ spec:
             "CLOUD_COST_CONFIG_PATH" "/var/configs/cloud-integration/cloud-integration.json"
             "PLUGIN_CONFIG_DIR" "/var/configs"
           )
+          "resources" $opencostExporterResources
         )
         "prometheus" (dict "external" (dict "url" (printf "http://%s.%s:9090" $kps.prometheusServiceName $kps.namespace)))
         "ui" (dict
           "enabled" true
           "image" (dict "tag" $opencostImageTag)
+          "resources" $opencostUiResources
         )
       )
     }}
     {{- /* DaemonSets (alloy-logs, alloy-receiver) tolerate ALL taints so they run on
          every node, including dedicated NodePools (crossplane, observe, etc.) */}}
     {{- $tolerateAll := list (dict "operator" "Exists") }}
-    {{- $alloyLogs := dict "enabled" true "controller" (dict "tolerations" $tolerateAll) }}
-    {{- $alloyReceiver := dict "enabled" true "controller" (dict "tolerations" $tolerateAll) }}
+    {{- /* For alloy-* the chart wraps an Alloy CR (spec.alloy.resources). The key
+         is `alloy.resources`, not bare `resources`. alloy-operator is the operator
+         helm release (not a CR wrapper) so uses bare `resources`. */}}
+    {{- $alloyLogs := dict
+      "enabled" true
+      "controller" (dict "tolerations" $tolerateAll)
+      "alloy" (dict "resources" $alloyLogsResources)
+    }}
+    {{- $alloyReceiver := dict
+      "enabled" true
+      "controller" (dict "tolerations" $tolerateAll)
+      "alloy" (dict "resources" $alloyReceiverResources)
+    }}
     {{- /* alloy-metrics (StatefulSet), alloy-singleton, and alloy-operator
          get nodeSelector + tolerations when nodePool enabled; otherwise no scheduling constraints */}}
-    {{- $alloyMetrics := dict "enabled" true }}
-    {{- $alloySingleton := dict "enabled" true }}
-    {{- $alloyOperator := dict }}
-    {{- $nodeExporterValues := dict "enabled" true }}
+    {{- $alloyMetrics := dict "enabled" true "alloy" (dict "resources" $alloyMetricsResources) }}
+    {{- $alloySingleton := dict "enabled" true "alloy" (dict "resources" $alloySingletonResources) }}
+    {{- $alloyOperator := dict "resources" $alloyOperatorResources }}
+    {{- $nodeExporterValues := dict "enabled" true "resources" $nodeExporterResources }}
     {{- if $state.nodePool.enabled }}
       {{- $existingOpencost := $opencostValues.opencost | default dict }}
       {{- $_ := set $existingOpencost "nodeSelector" $state.nodePool.nodeSelector }}
