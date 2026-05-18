@@ -24,7 +24,12 @@ status:
       enabled: {{ $comp.enabled }}
       {{- if and $comp.enabled (ne $comp.host "") }}
       url: {{ printf "https://%s/" $comp.host | quote }}
+      {{- if eq $comp.authMode "app_level" }}
+      ready: {{ $state.observed.exposure.grafanaReady }}
+      oidcClientReady: {{ $state.observed.exposure.grafanaOidcClientReady }}
+      {{- else }}
       ready: {{ and $state.observed.exposure.oauth2ProxyReady $state.observed.exposure.waypointReady }}
+      {{- end }}
       {{- end }}
     {{- end }}
   {{- end }}

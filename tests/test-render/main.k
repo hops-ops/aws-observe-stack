@@ -2260,6 +2260,118 @@ _items = [
     }
 
     # ==========================================================================
+    # exposure: grafana app-level OIDC composes its own Zitadel client,
+    # writes generic_oauth Helm values into kube-prometheus-stack, mounts
+    # the OIDC client Secret, and exposes via single-rule HTTPRoute with
+    # NO AuthorizationPolicy.CUSTOM (Grafana enforces its own auth).
+    # ==========================================================================
+    metav1alpha1.CompositionTest {
+        metadata.name = "exposure-grafana-app-level-oidc-shape"
+        spec = {
+            compositionPath = "apis/observestacks/composition.yaml"
+            xrdPath = "apis/observestacks/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = {
+                apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                kind = "ObserveStack"
+                metadata.name = "observe"
+                spec = {
+                    clusterName = "my-cluster"
+                    namespace = "monitoring"
+                    aws.region = "us-east-1"
+                    auth = {
+                        issuerURL = "https://auth.example.com"
+                        awsSecretsManagerPath = "push/my-cluster/zitadel-credentials"
+                        zitadelProjectId = "330000000000000001"
+                    }
+                    exposure = {
+                        enabled = True
+                        domain = "observe.example.com"
+                        oauth2Proxy.cookieSecretRef.name = "observe-oauth2-proxy-cookie"
+                        grafana = {
+                            enabled = True
+                            host = "grafana.observe.example.com"
+                            allowedDomains = ["example.com"]
+                            roleAttributePath = "contains(\"urn:zitadel:iam:org:project:roles\", \"observe-admin\") && \"Admin\" || \"Viewer\""
+                        }
+                    }
+                }
+            }
+            assertResources = [
+                # Dedicated Grafana OIDC client (separate from oauth2-proxy)
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-exposure-grafana-oidc-app"
+                    spec.forProvider.manifest = {
+                        apiVersion = "application.zitadel.m.crossplane.io/v1alpha1"
+                        kind = "Oidc"
+                        metadata.name = "monitoring-grafana"
+                        spec = {
+                            forProvider = {
+                                projectId = "330000000000000001"
+                                redirectUris = ["https://grafana.observe.example.com/login/generic_oauth"]
+                                postLogoutRedirectUris = ["https://grafana.observe.example.com/"]
+                            }
+                            writeConnectionSecretToRef.name = "monitoring-grafana-oidc-client"
+                            providerConfigRef.name = "zitadel-observe-stack"
+                        }
+                    }
+                }
+                # Sister Service for grafana (same waypoint labels as ext_authz components)
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-exposure-sister-svc-grafana"
+                    spec.forProvider.manifest = {
+                        apiVersion = "v1"
+                        kind = "Service"
+                        metadata.name = "exposure-grafana"
+                        metadata.labels = {
+                            "istio.io/use-waypoint" = "monitoring-waypoint"
+                            "istio.io/ingress-use-waypoint" = "true"
+                        }
+                        spec.selector = {
+                            "app.kubernetes.io/name" = "grafana"
+                            "app.kubernetes.io/instance" = "kube-prometheus-stack"
+                        }
+                    }
+                }
+                # Single-rule HTTPRoute (no /oauth2/* detour — Grafana speaks OIDC itself)
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-exposure-httproute-grafana"
+                    spec.forProvider.manifest = {
+                        apiVersion = "gateway.networking.k8s.io/v1"
+                        kind = "HTTPRoute"
+                        metadata.name = "exposure-grafana"
+                        spec.rules = [{
+                            matches = [{ path = { type = "PathPrefix", value = "/" } }]
+                            backendRefs = [{
+                                name = "exposure-grafana"
+                                namespace = "monitoring"
+                                port = 80
+                            }]
+                        }]
+                    }
+                }
+                # XR status surface (app_level branch populates oidcClientReady too)
+                {
+                    apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                    kind = "ObserveStack"
+                    metadata.name = "observe"
+                    status.exposure.grafana = {
+                        enabled = True
+                        url = "https://grafana.observe.example.com/"
+                    }
+                }
+            ]
+        }
+    }
+
+    # ==========================================================================
     # exposure: components default to disabled — no per-component resources
     # ==========================================================================
     metav1alpha1.CompositionTest {

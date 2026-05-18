@@ -350,10 +350,25 @@
   "opencost" (dict
     "app.kubernetes.io/name" "opencost"
   )
+  "grafana" (dict
+    "app.kubernetes.io/name" "grafana"
+    "app.kubernetes.io/instance" "kube-prometheus-stack"
+  )
+}}
+
+{{- /* authMode discriminator per component:
+       - ext_authz: gated via AuthorizationPolicy.CUSTOM + oauth2-proxy ext_authz
+       - app_level: app speaks OIDC itself; no AuthorizationPolicy, no /oauth2/* HTTPRoute rule.
+       See feedback_app_level_oidc. */}}
+{{- $defaultAuthMode := dict
+  "prometheus" "ext_authz"
+  "alertmanager" "ext_authz"
+  "opencost" "ext_authz"
+  "grafana" "app_level"
 }}
 
 {{- $exposureComponents := list }}
-{{- range $compName := list "prometheus" "alertmanager" "opencost" }}
+{{- range $compName := list "prometheus" "alertmanager" "opencost" "grafana" }}
   {{- $comp := get $exposure $compName | default dict }}
   {{- $compEnabled := false }}
   {{- if hasKey $comp "enabled" }}
@@ -374,9 +389,13 @@
   {{- else if eq $compName "opencost" }}
     {{- $compSvcName = $comp.serviceName | default "opencost" }}
     {{- $compSvcPort = $comp.servicePort | default 9090 }}
+  {{- else if eq $compName "grafana" }}
+    {{- $compSvcName = $comp.serviceName | default "grafana" }}
+    {{- $compSvcPort = $comp.servicePort | default 80 }}
   {{- end }}
   {{- $defaultSel := get $defaultPodSelectors $compName | default dict }}
   {{- $compPodSelector := $comp.podSelector | default $defaultSel }}
+  {{- $compAuthMode := get $defaultAuthMode $compName | default "ext_authz" }}
   {{- $exposureComponents = append $exposureComponents (dict
     "name" $compName
     "enabled" $compEnabled
@@ -384,9 +403,26 @@
     "serviceName" $compSvcName
     "servicePort" $compSvcPort
     "podSelector" $compPodSelector
+    "authMode" $compAuthMode
     "sisterServiceName" (printf "exposure-%s" $compName)
   ) }}
 {{- end }}
+
+{{- /* Grafana app-level OIDC config (extracted into its own struct so the
+       Grafana Helm-values template can reference it cleanly). */}}
+{{- $exposureGrafana := $exposure.grafana | default dict }}
+{{- $exposureGrafanaCfg := dict
+  "enabled" (and $exposureEnabled (hasKey $exposureGrafana "enabled") $exposureGrafana.enabled)
+  "host" ($exposureGrafana.host | default "")
+  "allowedDomains" ($exposureGrafana.allowedDomains | default list)
+  "roleAttributePath" ($exposureGrafana.roleAttributePath | default "")
+  "maxSessionDuration" ($exposureGrafana.maxSessionDuration | default "8h")
+  "tokenRotationMinutes" ($exposureGrafana.tokenRotationMinutes | default 10)
+  "useRefreshToken" (or (not (hasKey $exposureGrafana "useRefreshToken")) $exposureGrafana.useRefreshToken)
+  "autoLogin" (and (hasKey $exposureGrafana "autoLogin") $exposureGrafana.autoLogin)
+  "orgAttributePath" ($exposureGrafana.orgAttributePath | default "")
+  "orgMapping" ($exposureGrafana.orgMapping | default list)
+}}
 
 # ==============================================================================
 # Initialize $state
@@ -570,6 +606,7 @@
     "redis" $exposureRedis
     "oauth2Proxy" $exposureProxy
     "components" $exposureComponents
+    "grafana" $exposureGrafanaCfg
   )
   "observed" (dict)
   "status" (dict)

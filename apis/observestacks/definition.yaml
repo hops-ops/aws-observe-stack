@@ -821,6 +821,68 @@ spec:
                         additionalProperties:
                           type: string
                         x-kubernetes-preserve-unknown-fields: true
+                  grafana:
+                    description: |
+                      Public exposure for Grafana with app-level OIDC (Grafana speaks OIDC
+                      natively — per `feedback_app_level_oidc`, app-level integration beats
+                      proxy-trust for refresh tokens, sign-out, WebSocket auth). Composes
+                      a dedicated Zitadel OIDC Application and wires Grafana Helm values
+                      under spec.kubePrometheusStack.values.grafana — no AuthorizationPolicy.CUSTOM
+                      gate, Grafana enforces auth itself.
+                    type: object
+                    properties:
+                      enabled:
+                        type: boolean
+                        default: false
+                      host:
+                        description: Hostname for the HTTPRoute (e.g., "grafana.ops.com.ai").
+                        type: string
+                      serviceName:
+                        description: Upstream Grafana Service name. Defaults to "grafana" (kube-prometheus-stack chart's default).
+                        type: string
+                        default: grafana
+                      servicePort:
+                        description: Upstream Grafana Service port. Defaults to 80.
+                        type: integer
+                        default: 80
+                      podSelector:
+                        description: Selector for Grafana pods. Defaults to stock kube-prometheus-stack chart labels.
+                        type: object
+                        additionalProperties:
+                          type: string
+                        x-kubernetes-preserve-unknown-fields: true
+                      allowedDomains:
+                        description: Email-domain allow-list. Maps to grafana.ini auth.generic_oauth.allowed_domains (comma-joined).
+                        type: array
+                        items:
+                          type: string
+                      roleAttributePath:
+                        description: JMESPath against the ID token to map to a Grafana role (Admin, Editor, Viewer). Example -contains("urn:zitadel:iam:org:project:roles", "observe-admin") && "Admin" || "Viewer"-.
+                        type: string
+                      maxSessionDuration:
+                        description: Grafana session lifetime (auth.login_maximum_lifetime_duration). Defaults to 8h.
+                        type: string
+                        default: "8h"
+                      tokenRotationMinutes:
+                        description: Grafana token rotation interval (auth.token_rotation_interval_minutes). Defaults to 10.
+                        type: integer
+                        default: 10
+                      useRefreshToken:
+                        description: Whether to use OIDC refresh tokens (auth.generic_oauth.use_refresh_token). Defaults to true.
+                        type: boolean
+                        default: true
+                      autoLogin:
+                        description: Auto-redirect to Zitadel on first page load (auth.oauth_auto_login). Defaults to false to avoid surprise redirects.
+                        type: boolean
+                        default: false
+                      orgAttributePath:
+                        description: Optional JMESPath for org assignment (auth.generic_oauth.org_attribute_path).
+                        type: string
+                      orgMapping:
+                        description: Optional org mapping list (auth.generic_oauth.org_mapping, comma-joined).
+                        type: array
+                        items:
+                          type: string
             required:
             - clusterName
             - aws
@@ -878,6 +940,18 @@ spec:
                       url:
                         type: string
                       ready:
+                        type: boolean
+                  grafana:
+                    type: object
+                    properties:
+                      enabled:
+                        type: boolean
+                      url:
+                        type: string
+                      ready:
+                        type: boolean
+                      oidcClientReady:
+                        description: True when the dedicated Grafana Zitadel OIDC Application MR is Ready.
                         type: boolean
         required:
         - spec

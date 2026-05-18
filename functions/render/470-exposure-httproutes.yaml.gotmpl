@@ -1,12 +1,15 @@
 # code: language=yaml
 #
-# HTTPRoute per enabled component. Each route has two rules:
-#   1. matches: /oauth2/* -> backend: oauth2-proxy (sign-in flow, callback)
-#   2. matches: /         -> backend: upstream service (gated by waypoint)
+# HTTPRoute per enabled component. Shape depends on authMode:
+#   - ext_authz (prometheus/alertmanager/opencost): two rules
+#       1. /oauth2/* -> oauth2-proxy (sign-in flow, callback)
+#       2. /         -> sister Service (gated by waypoint ext_authz)
+#   - app_level  (grafana): single rule
+#       1. /         -> sister Service (Grafana enforces its own OIDC auth;
+#                       /login/generic_oauth lives at the app, not oauth2-proxy)
 #
-# Per spec rule precedence in Gateway API, the more-specific match (the
-# /oauth2/ prefix) is evaluated first, so the OIDC redirect flow always
-# reaches oauth2-proxy even though the upstream is also reachable on /.
+# Per Gateway API precedence, the more-specific /oauth2/ prefix is evaluated
+# first when present.
 
 {{- $x := $state.exposure }}
 {{- $proxySvc := printf "%s-oauth2-proxy" $state.namespace }}
@@ -41,6 +44,7 @@ spec:
         hostnames:
         - {{ $comp.host | quote }}
         rules:
+        {{- if eq $comp.authMode "ext_authz" }}
         - matches:
           - path:
               type: PathPrefix
@@ -49,6 +53,7 @@ spec:
           - name: {{ $proxySvc }}
             namespace: {{ $state.namespace }}
             port: 4180
+        {{- end }}
         - matches:
           - path:
               type: PathPrefix

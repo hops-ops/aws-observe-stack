@@ -46,3 +46,9 @@ spec:
     opencost:
       enabled: true
       host: opencost.observe.example.com
+    grafana:
+      enabled: true
+      host: grafana.observe.example.com
+      allowedDomains:
+      - example.com
+      roleAttributePath: 'contains("urn:zitadel:iam:org:project:roles", "observe-admin") && "Admin" || "Viewer"'

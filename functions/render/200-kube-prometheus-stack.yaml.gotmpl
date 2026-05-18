@@ -146,6 +146,68 @@ spec:
     {{- $_ := set $grafanaBase "fullnameOverride" "grafana" }}
     {{- $_ := set $operatorValues "fullnameOverride" "prometheus-operator" }}
     {{- $_ := set $nodeExporterValues "fullnameOverride" "node-exporter" }}
+
+    {{- /* Grafana app-level OIDC (per tasks/observe-stack-grafana-oidc).
+           When spec.exposure.grafana.enabled, layer Helm values for
+           generic_oauth + session knobs onto $grafanaBase. The Zitadel
+           OIDC App composed in 420-* writes client_id + client_secret
+           to <observe-ns>-grafana-oidc-client; we mount that Secret
+           via extraSecretMounts and reference values via $__file{}
+           so the secret never lives in pod env. */}}
+    {{- $g := $state.exposure.grafana }}
+    {{- if $g.enabled }}
+      {{- $grafanaOidcSecret := printf "%s-grafana-oidc-client" $state.namespace }}
+      {{- $grafanaOidcMountPath := "/etc/secrets/grafana-oidc" }}
+      {{- $generic := dict
+        "enabled" true
+        "name" "Zitadel"
+        "allow_sign_up" true
+        "auto_login" $g.autoLogin
+        "client_id" (printf "$__file{%s/attribute.client_id}" $grafanaOidcMountPath)
+        "client_secret" (printf "$__file{%s/attribute.client_secret}" $grafanaOidcMountPath)
+        "scopes" "openid email profile"
+        "auth_url" (printf "%s/oauth/v2/authorize" $state.auth.issuerURL)
+        "token_url" (printf "%s/oauth/v2/token" $state.auth.issuerURL)
+        "api_url" (printf "%s/oidc/v1/userinfo" $state.auth.issuerURL)
+        "use_refresh_token" $g.useRefreshToken
+        "login_attribute_path" "preferred_username"
+        "email_attribute_path" "email"
+        "name_attribute_path" "name"
+      }}
+      {{- if gt (len $g.allowedDomains) 0 }}
+        {{- $_ := set $generic "allowed_domains" (join "," $g.allowedDomains) }}
+      {{- end }}
+      {{- if ne $g.roleAttributePath "" }}
+        {{- $_ := set $generic "role_attribute_path" $g.roleAttributePath }}
+        {{- $_ := set $generic "role_attribute_strict" true }}
+      {{- end }}
+      {{- if ne $g.orgAttributePath "" }}
+        {{- $_ := set $generic "org_attribute_path" $g.orgAttributePath }}
+      {{- end }}
+      {{- if gt (len $g.orgMapping) 0 }}
+        {{- $_ := set $generic "org_mapping" (join "," $g.orgMapping) }}
+      {{- end }}
+      {{- $grafanaIni := dict
+        "server" (dict
+          "domain" $g.host
+          "root_url" (printf "https://%s" $g.host)
+        )
+        "auth.generic_oauth" $generic
+        "auth" (dict
+          "login_maximum_lifetime_duration" $g.maxSessionDuration
+          "token_rotation_interval_minutes" $g.tokenRotationMinutes
+          "oauth_auto_login" $g.autoLogin
+        )
+      }}
+      {{- $_ := set $grafanaBase "grafana.ini" $grafanaIni }}
+      {{- $_ := set $grafanaBase "extraSecretMounts" (list (dict
+        "name" "grafana-oidc"
+        "secretName" $grafanaOidcSecret
+        "mountPath" $grafanaOidcMountPath
+        "readOnly" true
+      )) }}
+    {{- end }}
+
     {{- $grafana := merge $grafanaValues $grafanaBase }}
     {{- /* Build kube-state-metrics values with optional nodeSelector/tolerations */}}
     {{- $ksmBase := dict

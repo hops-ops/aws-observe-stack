@@ -12,7 +12,8 @@
 {{- $x := $state.exposure }}
 {{- if $x.enabled }}
 {{- range $comp := $x.components }}
-{{- if and $comp.enabled (ne $comp.host "") }}
+{{- /* Skip app-level OIDC components (e.g., Grafana): auth happens inside the app, no ext_authz needed. */}}
+{{- if and $comp.enabled (ne $comp.host "") (eq $comp.authMode "ext_authz") }}
 ---
 apiVersion: kubernetes.m.crossplane.io/v1alpha1
 kind: Object

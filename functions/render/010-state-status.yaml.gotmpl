@@ -10,7 +10,7 @@
 # ==============================================================================
 
 {{- $checkReady := dict }}
-{{- range $key := list "kube-prometheus-stack" "loki" "tempo" "k8s-monitoring" "grafana-operator" "grafana-instance" "datasource-prometheus" "datasource-loki" "datasource-tempo" "opencost-pod-identity" "loki-pod-identity" "tempo-pod-identity" "vpa" "goldilocks" "nodepool-observe" "exposure-zitadel-credentials" "exposure-zitadel-providerconfig" "exposure-oidc-app" "exposure-redis-sts" "exposure-oauth2-proxy-deploy" "exposure-waypoint" }}
+{{- range $key := list "kube-prometheus-stack" "loki" "tempo" "k8s-monitoring" "grafana-operator" "grafana-instance" "datasource-prometheus" "datasource-loki" "datasource-tempo" "opencost-pod-identity" "loki-pod-identity" "tempo-pod-identity" "vpa" "goldilocks" "nodepool-observe" "exposure-zitadel-credentials" "exposure-zitadel-providerconfig" "exposure-oidc-app" "exposure-grafana-oidc-app" "exposure-redis-sts" "exposure-oauth2-proxy-deploy" "exposure-waypoint" }}
   {{- $entry := get $observed $key | default dict }}
   {{- $resource := $entry.resource | default dict }}
   {{- $status := $resource.status | default dict }}
@@ -57,6 +57,12 @@
     "redisReady" (get $checkReady "exposure-redis-sts")
     "oidcClientReady" $exposureOidcReady
     "waypointReady" (get $checkReady "exposure-waypoint")
+    "grafanaOidcClientReady" (get $checkReady "exposure-grafana-oidc-app")
+    "grafanaReady" (and
+      (get $checkReady "kube-prometheus-stack")
+      (get $checkReady "exposure-grafana-oidc-app")
+      (get $checkReady "exposure-waypoint")
+    )
   )
 )) }}
 
