@@ -663,7 +663,7 @@ spec:
                     description: Exposure domain (e.g., "observe.ops.com.ai" or "ops.com.ai"). Cookie domain + Certificate dnsName + HTTPRoute host suffix are derived from this. Required when enabled is true.
                     type: string
                   gatewayRef:
-                    description: Gateway API parentRef the per-host HTTPRoutes attach to. Defaults to istio-ingress/platform/http.
+                    description: Gateway API parentRef the per-host HTTPRoutes attach to. Defaults to istio-ingress/platform/[http,https-apex] so OAuth flows that redirect to HTTPS (cookie-secure=true) complete end-to-end.
                     type: object
                     properties:
                       name:
@@ -672,10 +672,14 @@ spec:
                       namespace:
                         type: string
                         default: istio-ingress
-                      sectionName:
-                        description: Listener name (HTTP for port 80, https-apex for the HTTPS apex listener, etc.). Defaults to http.
-                        type: string
-                        default: http
+                      sectionNames:
+                        description: Listener names on the parent Gateway to attach to. Each becomes a separate parentRef entry on the HTTPRoute. Defaults to [http, https-apex] which covers both initial HTTP requests and the post-OIDC callback over HTTPS.
+                        type: array
+                        items:
+                          type: string
+                        default:
+                        - http
+                        - https-apex
                   extensionProviderName:
                     description: Name to register with IstioStack spec.extensionProviders[].name. Convention is <stack-namespace>-oauth2-proxy. Defaults to "<observe-namespace>-oauth2-proxy".
                     type: string

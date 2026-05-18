@@ -65,7 +65,16 @@ spec:
         name: {{ $comp.sisterServiceName }}
         namespace: {{ $state.namespace }}
         labels:
+          # istio.io/use-waypoint routes mesh-internal (ambient) clients via the waypoint.
+          # istio.io/ingress-use-waypoint=true is the additional label that makes Istio
+          # Gateway-API gateways (kind: Gateway, gatewayClassName=istio) also route
+          # through the waypoint when their HTTPRoute backendRef targets this Service.
+          # Without it, the gateway pod HBONE-tunnels direct to the destination pod and
+          # bypasses the waypoint, so AuthorizationPolicy.CUSTOM never fires for north-
+          # south traffic. Available in Istio 1.23+ (1.23.6 / 1.24.3 hardened the WDS
+          # discovery path). See istio/istio#51214.
           istio.io/use-waypoint: {{ $x.waypointName }}
+          istio.io/ingress-use-waypoint: "true"
           app.kubernetes.io/name: {{ printf "exposure-%s" $comp.name }}
           app.kubernetes.io/instance: {{ $state.name }}
           {{- range $k, $v := $state.labels }}

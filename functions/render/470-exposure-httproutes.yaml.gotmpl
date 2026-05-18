@@ -33,9 +33,11 @@ spec:
         labels: {{ $state.labels | toJson }}
       spec:
         parentRefs:
+        {{- range $sn := $x.gatewayRef.sectionNames }}
         - name: {{ $x.gatewayRef.name }}
           namespace: {{ $x.gatewayRef.namespace }}
-          sectionName: {{ $x.gatewayRef.sectionName }}
+          sectionName: {{ $sn }}
+        {{- end }}
         hostnames:
         - {{ $comp.host | quote }}
         rules:

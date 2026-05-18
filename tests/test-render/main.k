@@ -2171,6 +2171,7 @@ _items = [
                         metadata.namespace = "monitoring"
                         metadata.labels = {
                             "istio.io/use-waypoint" = "monitoring-waypoint"
+                            "istio.io/ingress-use-waypoint" = "true"
                         }
                         spec.selector = {
                             "app.kubernetes.io/name" = "prometheus"
@@ -2188,6 +2189,18 @@ _items = [
                         metadata.name = "exposure-prometheus"
                         spec = {
                             hostnames = ["prometheus.observe.example.com"]
+                            parentRefs = [
+                                {
+                                    name = "platform"
+                                    namespace = "istio-ingress"
+                                    sectionName = "http"
+                                }
+                                {
+                                    name = "platform"
+                                    namespace = "istio-ingress"
+                                    sectionName = "https-apex"
+                                }
+                            ]
                             rules = [
                                 {
                                     matches = [{ path = { type = "PathPrefix", value = "/oauth2" } }]

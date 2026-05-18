@@ -286,10 +286,11 @@
 {{- end }}
 
 {{- $exposureGatewayRef := $exposure.gatewayRef | default dict }}
+{{- $exposureGatewayRefSectionNames := $exposureGatewayRef.sectionNames | default (list "http" "https-apex") }}
 {{- $exposureGatewayRef = dict
   "name" ($exposureGatewayRef.name | default "platform")
   "namespace" ($exposureGatewayRef.namespace | default "istio-ingress")
-  "sectionName" ($exposureGatewayRef.sectionName | default "http")
+  "sectionNames" $exposureGatewayRefSectionNames
 }}
 
 {{- $exposureExtProviderName := $exposure.extensionProviderName | default (printf "%s-oauth2-proxy" $namespace) }}
