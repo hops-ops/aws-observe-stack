@@ -1,0 +1,43 @@
+# code: language=yaml
+#
+# Optional cert-manager Certificate for the exposure wildcard. Skip when
+# the Gateway HTTPS listener already serves an existing wildcard that
+# covers spec.exposure.domain (the common case on pat-local where
+# *.ops.com.ai is already provisioned by cloudflare-dnsstack).
+#
+# When enabled, the cert lands in spec.exposure.certificate.secretNamespace
+# (istio-ingress by default) so the platform Gateway can reference it.
+
+{{- $x := $state.exposure }}
+{{- $cert := $x.certificate }}
+{{- if and $x.enabled $cert.enabled }}
+---
+apiVersion: kubernetes.m.crossplane.io/v1alpha1
+kind: Object
+metadata:
+  name: {{ $state.name }}-exposure-certificate
+  annotations:
+    {{ setResourceNameAnnotation "exposure-certificate" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  managementPolicies: {{ $state.managementPolicies | toJson }}
+  forProvider:
+    manifest:
+      apiVersion: cert-manager.io/v1
+      kind: Certificate
+      metadata:
+        name: {{ $cert.secretName }}
+        namespace: {{ $cert.secretNamespace }}
+        labels: {{ $state.labels | toJson }}
+      spec:
+        secretName: {{ $cert.secretName }}
+        issuerRef:
+          name: {{ $cert.issuerRef.name }}
+          kind: {{ $cert.issuerRef.kind }}
+        dnsNames:
+        - {{ printf "*.%s" $x.domain | quote }}
+        - {{ $x.domain | quote }}
+  providerConfigRef:
+    name: {{ $state.kubernetes.providerConfigRef.name }}
+    kind: {{ $state.kubernetes.providerConfigRef.kind }}
+{{- end }}

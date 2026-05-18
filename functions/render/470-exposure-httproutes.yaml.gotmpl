@@ -1,0 +1,63 @@
+# code: language=yaml
+#
+# HTTPRoute per enabled component. Each route has two rules:
+#   1. matches: /oauth2/* -> backend: oauth2-proxy (sign-in flow, callback)
+#   2. matches: /         -> backend: upstream service (gated by waypoint)
+#
+# Per spec rule precedence in Gateway API, the more-specific match (the
+# /oauth2/ prefix) is evaluated first, so the OIDC redirect flow always
+# reaches oauth2-proxy even though the upstream is also reachable on /.
+
+{{- $x := $state.exposure }}
+{{- $proxySvc := printf "%s-oauth2-proxy" $state.namespace }}
+{{- if $x.enabled }}
+{{- range $comp := $x.components }}
+{{- if and $comp.enabled (ne $comp.host "") }}
+---
+apiVersion: kubernetes.m.crossplane.io/v1alpha1
+kind: Object
+metadata:
+  name: {{ $state.name }}-exposure-httproute-{{ $comp.name }}
+  annotations:
+    {{ setResourceNameAnnotation (printf "exposure-httproute-%s" $comp.name) }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  managementPolicies: {{ $state.managementPolicies | toJson }}
+  forProvider:
+    manifest:
+      apiVersion: gateway.networking.k8s.io/v1
+      kind: HTTPRoute
+      metadata:
+        name: {{ printf "exposure-%s" $comp.name }}
+        namespace: {{ $state.namespace }}
+        labels: {{ $state.labels | toJson }}
+      spec:
+        parentRefs:
+        - name: {{ $x.gatewayRef.name }}
+          namespace: {{ $x.gatewayRef.namespace }}
+          sectionName: {{ $x.gatewayRef.sectionName }}
+        hostnames:
+        - {{ $comp.host | quote }}
+        rules:
+        - matches:
+          - path:
+              type: PathPrefix
+              value: /oauth2
+          backendRefs:
+          - name: {{ $proxySvc }}
+            namespace: {{ $state.namespace }}
+            port: 4180
+        - matches:
+          - path:
+              type: PathPrefix
+              value: /
+          backendRefs:
+          - name: {{ $comp.sisterServiceName }}
+            namespace: {{ $state.namespace }}
+            port: {{ $comp.servicePort }}
+  providerConfigRef:
+    name: {{ $state.kubernetes.providerConfigRef.name }}
+    kind: {{ $state.kubernetes.providerConfigRef.kind }}
+{{- end }}
+{{- end }}
+{{- end }}

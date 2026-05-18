@@ -613,6 +613,210 @@ spec:
                   workgroupName:
                     description: "Manual fallback: Athena workgroup name. Required when cloudCosts.enabled is true and cloudCosts.costReportRef.enabled is not true."
                     type: string
+              auth:
+                description: |
+                  AuthStack integration. Identity-only — AuthStack publishes the OIDC issuer URL
+                  and the AWS Secrets Manager path holding the iam-admin PAT. ObserveStack composes
+                  an ExternalSecret + Zitadel ProviderConfig + Zitadel OIDC Application in its own
+                  namespace, and oauth2-proxy / Redis live with it. No data-path coupling to AuthStack.
+                  See specs/platform-public-exposure.
+                type: object
+                properties:
+                  authStackRef:
+                    description: Reference to the AuthStack XR that publishes the OIDC issuer + AWS SM credentials path. Currently informational — operator wires up the actual fields below.
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      namespace:
+                        type: string
+                  issuerURL:
+                    description: Zitadel issuer URL (host portion of status.oidc.issuerURL from AuthStack), e.g., https://auth.ops.com.ai.
+                    type: string
+                  zitadelDomain:
+                    description: Zitadel domain (host only) for the embedded ProviderConfig credentials JSON. Defaults to the host of issuerURL.
+                    type: string
+                  awsSecretsManagerPath:
+                    description: AWS Secrets Manager key holding the iam-admin PAT (AuthStack status.providerConfig.awsSecretsManagerPath). Typical shape "push/<cluster>/zitadel-credentials".
+                    type: string
+                  accessTokenProperty:
+                    description: Property within the AWS SM JSON to extract for the PAT. Defaults to "access_token".
+                    type: string
+                    default: access_token
+                  zitadelProjectId:
+                    description: Zitadel project ID where ObserveStack creates the oauth2-proxy OIDC application. Operator-provided — AuthStack does not compose Zitadel Projects.
+                    type: string
+              exposure:
+                description: |
+                  Public exposure of observe-stack dashboards behind an OIDC-aware oauth2-proxy
+                  bridge per specs/platform-public-exposure. The bridge lives in the observe
+                  namespace, registers as an ext_authz provider on IstioStack, and gates per-
+                  component HTTPRoutes via AuthorizationPolicy.CUSTOM. Grafana app-level OIDC
+                  is a sibling task (observe-stack-grafana-oidc) and not covered here.
+                type: object
+                properties:
+                  enabled:
+                    description: Whether to compose the exposure bridge + per-component HTTPRoutes/policies. Defaults to false.
+                    type: boolean
+                    default: false
+                  domain:
+                    description: Exposure domain (e.g., "observe.ops.com.ai" or "ops.com.ai"). Cookie domain + Certificate dnsName + HTTPRoute host suffix are derived from this. Required when enabled is true.
+                    type: string
+                  gatewayRef:
+                    description: Gateway API parentRef the per-host HTTPRoutes attach to. Defaults to istio-ingress/platform/http.
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        default: platform
+                      namespace:
+                        type: string
+                        default: istio-ingress
+                      sectionName:
+                        description: Listener name (HTTP for port 80, https-apex for the HTTPS apex listener, etc.). Defaults to http.
+                        type: string
+                        default: http
+                  extensionProviderName:
+                    description: Name to register with IstioStack spec.extensionProviders[].name. Convention is <stack-namespace>-oauth2-proxy. Defaults to "<observe-namespace>-oauth2-proxy".
+                    type: string
+                  certificate:
+                    description: Wildcard TLS certificate composition via cert-manager. Skip when the exposure domain is already covered by an existing wildcard certificate at the Gateway.
+                    type: object
+                    properties:
+                      enabled:
+                        description: Whether to compose a cert-manager Certificate resource. Defaults to false (assume the Gateway's wildcard listener already covers exposure.domain).
+                        type: boolean
+                        default: false
+                      issuerRef:
+                        description: cert-manager Issuer / ClusterIssuer reference.
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                            default: cloudflare-cluster-issuer
+                          kind:
+                            type: string
+                            enum:
+                            - Issuer
+                            - ClusterIssuer
+                            default: ClusterIssuer
+                      secretName:
+                        description: K8s Secret name for the issued cert. Defaults to "<observe-namespace>-exposure-tls".
+                        type: string
+                      secretNamespace:
+                        description: Namespace for the issued cert Secret. Defaults to istio-ingress so the platform Gateway HTTPS listener can reference it.
+                        type: string
+                        default: istio-ingress
+                  redis:
+                    description: oauth2-proxy session backend (single-replica Redis with PVC). Sessions are disposable — Pod restart forces re-login, which is acceptable.
+                    type: object
+                    properties:
+                      size:
+                        description: PVC size for the Redis StatefulSet. Defaults to 1Gi.
+                        type: string
+                        default: 1Gi
+                      storageClassName:
+                        description: StorageClass for the Redis PVC. Defaults to the cluster's default.
+                        type: string
+                      image:
+                        description: Redis container image. Defaults to "redis:7-alpine".
+                        type: string
+                        default: redis:7-alpine
+                  oauth2Proxy:
+                    description: oauth2-proxy bridge configuration.
+                    type: object
+                    properties:
+                      image:
+                        description: oauth2-proxy container image. Defaults to "quay.io/oauth2-proxy/oauth2-proxy:v7.7.1".
+                        type: string
+                        default: quay.io/oauth2-proxy/oauth2-proxy:v7.7.1
+                      replicas:
+                        description: oauth2-proxy Deployment replicas. Defaults to 1.
+                        type: integer
+                        default: 1
+                      additionalConfig:
+                        description: Additional oauth2-proxy CLI flags to append (e.g., "--whitelist-domain=*.observe.ops.com.ai"). One flag per list entry.
+                        type: array
+                        items:
+                          type: string
+                      cookieDomain:
+                        description: Cookie domain (e.g., ".observe.ops.com.ai"). Defaults to ".<exposure.domain>".
+                        type: string
+                      cookieSecretRef:
+                        description: |
+                          Reference to a Secret in the observe namespace holding the cookie-signing key.
+                          Operator pre-creates it once -kubectl create secret generic <name> --from-literal=<key>=$(openssl rand -hex 16) -n <observe-ns>-. Required when exposure.enabled is true.
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                          key:
+                            type: string
+                            default: cookie_secret
+                  prometheus:
+                    description: Public exposure for the Prometheus UI. Skips if disabled.
+                    type: object
+                    properties:
+                      enabled:
+                        type: boolean
+                        default: false
+                      host:
+                        description: Hostname for the HTTPRoute (e.g., "prometheus.observe.ops.com.ai").
+                        type: string
+                      serviceName:
+                        description: Upstream service name (kube-prometheus-stack-prometheus). Defaults to "kube-prometheus-stack-prometheus". Kept for backward compatibility; the composition routes through a sister Service named "exposure-prometheus" that mirrors the same pods via podSelector.
+                        type: string
+                        default: kube-prometheus-stack-prometheus
+                      servicePort:
+                        description: Upstream service port. Defaults to 9090.
+                        type: integer
+                        default: 9090
+                      podSelector:
+                        description: Selector for the upstream component's pods. The composition emits a sister Service (exposure-prometheus) with this selector, labeled istio.io/use-waypoint=<observe-ns>-waypoint, so the Waypoint intercepts traffic and the AuthorizationPolicy.CUSTOM fires. Defaults match stock kube-prometheus-stack v77.x.
+                        type: object
+                        additionalProperties:
+                          type: string
+                        x-kubernetes-preserve-unknown-fields: true
+                  alertmanager:
+                    description: Public exposure for the Alertmanager UI.
+                    type: object
+                    properties:
+                      enabled:
+                        type: boolean
+                        default: false
+                      host:
+                        type: string
+                      serviceName:
+                        type: string
+                        default: kube-prometheus-stack-alertmanager
+                      servicePort:
+                        type: integer
+                        default: 9093
+                      podSelector:
+                        type: object
+                        additionalProperties:
+                          type: string
+                        x-kubernetes-preserve-unknown-fields: true
+                  opencost:
+                    description: Public exposure for the OpenCost UI.
+                    type: object
+                    properties:
+                      enabled:
+                        type: boolean
+                        default: false
+                      host:
+                        type: string
+                      serviceName:
+                        type: string
+                        default: opencost
+                      servicePort:
+                        type: integer
+                        default: 9090
+                      podSelector:
+                        type: object
+                        additionalProperties:
+                          type: string
+                        x-kubernetes-preserve-unknown-fields: true
             required:
             - clusterName
             - aws
@@ -623,5 +827,53 @@ spec:
               ready:
                 description: Overall readiness.
                 type: boolean
+              exposure:
+                description: Public exposure status — per-component URLs populated once HTTPRoutes are programmed and the upstream / oauth2-proxy / Redis are Ready.
+                type: object
+                properties:
+                  domain:
+                    type: string
+                  extensionProviderName:
+                    description: Name registered with IstioStack. Operators add a matching entry to IstioStack spec.extensionProviders[] (no auto-discovery in v1).
+                    type: string
+                  cookieDomain:
+                    type: string
+                  oauth2Proxy:
+                    type: object
+                    properties:
+                      ready:
+                        type: boolean
+                      redisReady:
+                        type: boolean
+                      oidcClientReady:
+                        description: True when the Zitadel OIDC Application MR is Ready and the connection Secret has been written.
+                        type: boolean
+                  prometheus:
+                    type: object
+                    properties:
+                      enabled:
+                        type: boolean
+                      url:
+                        type: string
+                      ready:
+                        type: boolean
+                  alertmanager:
+                    type: object
+                    properties:
+                      enabled:
+                        type: boolean
+                      url:
+                        type: string
+                      ready:
+                        type: boolean
+                  opencost:
+                    type: object
+                    properties:
+                      enabled:
+                        type: boolean
+                      url:
+                        type: string
+                      ready:
+                        type: boolean
         required:
         - spec

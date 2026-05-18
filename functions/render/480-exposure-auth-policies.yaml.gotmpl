@@ -1,0 +1,52 @@
+# code: language=yaml
+#
+# AuthorizationPolicy.CUSTOM per enabled component, targetRef on the
+# component's upstream Service. Delegates auth to the IstioStack-registered
+# extensionProvider (default: <observe-ns>-oauth2-proxy). Istio Waypoint
+# enforces; ztunnel correctly reports ZtunnelAccepted=False since CUSTOM
+# is enforced at L7 (waypoint), not at L4 (ztunnel).
+#
+# notPaths excludes /oauth2/* so the OIDC redirect/callback endpoints
+# stay reachable without an existing session.
+
+{{- $x := $state.exposure }}
+{{- if $x.enabled }}
+{{- range $comp := $x.components }}
+{{- if and $comp.enabled (ne $comp.host "") }}
+---
+apiVersion: kubernetes.m.crossplane.io/v1alpha1
+kind: Object
+metadata:
+  name: {{ $state.name }}-exposure-authpolicy-{{ $comp.name }}
+  annotations:
+    {{ setResourceNameAnnotation (printf "exposure-authpolicy-%s" $comp.name) }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  managementPolicies: {{ $state.managementPolicies | toJson }}
+  forProvider:
+    manifest:
+      apiVersion: security.istio.io/v1
+      kind: AuthorizationPolicy
+      metadata:
+        name: {{ printf "exposure-%s" $comp.name }}
+        namespace: {{ $state.namespace }}
+        labels: {{ $state.labels | toJson }}
+      spec:
+        targetRefs:
+        - group: ""
+          kind: Service
+          name: {{ $comp.sisterServiceName }}
+        action: CUSTOM
+        provider:
+          name: {{ $x.extensionProviderName }}
+        rules:
+        - to:
+          - operation:
+              notPaths:
+              - /oauth2/*
+  providerConfigRef:
+    name: {{ $state.kubernetes.providerConfigRef.name }}
+    kind: {{ $state.kubernetes.providerConfigRef.kind }}
+{{- end }}
+{{- end }}
+{{- end }}

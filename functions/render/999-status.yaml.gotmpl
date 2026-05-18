@@ -4,8 +4,27 @@
 #
 
 {{- $xr := getCompositeResource . }}
+{{- $x := $state.exposure }}
 ---
 apiVersion: {{ $xr.apiVersion }}
 kind: {{ $xr.kind }}
 status:
   ready: {{ $state.status.ready }}
+  {{- if $x.enabled }}
+  exposure:
+    domain: {{ $x.domain | quote }}
+    extensionProviderName: {{ $x.extensionProviderName | quote }}
+    cookieDomain: {{ $x.oauth2Proxy.cookieDomain | quote }}
+    oauth2Proxy:
+      ready: {{ $state.observed.exposure.oauth2ProxyReady }}
+      redisReady: {{ $state.observed.exposure.redisReady }}
+      oidcClientReady: {{ $state.observed.exposure.oidcClientReady }}
+    {{- range $comp := $x.components }}
+    {{ $comp.name }}:
+      enabled: {{ $comp.enabled }}
+      {{- if and $comp.enabled (ne $comp.host "") }}
+      url: {{ printf "https://%s/" $comp.host | quote }}
+      ready: {{ and $state.observed.exposure.oauth2ProxyReady $state.observed.exposure.waypointReady }}
+      {{- end }}
+    {{- end }}
+  {{- end }}

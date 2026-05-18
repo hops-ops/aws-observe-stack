@@ -241,6 +241,153 @@
 {{- end }}
 
 # ==============================================================================
+# Auth integration (Zitadel — composed via provider-upjet-zitadel)
+# ==============================================================================
+{{- $auth := $spec.auth | default dict }}
+{{- $authStackRef := $auth.authStackRef | default dict }}
+{{- $authIssuerURL := $auth.issuerURL | default "" }}
+{{- $authAwsSmPath := $auth.awsSecretsManagerPath | default "" }}
+{{- $authAccessTokenProperty := $auth.accessTokenProperty | default "access_token" }}
+{{- $authProjectId := $auth.zitadelProjectId | default "" }}
+
+{{- /* Derive zitadelDomain host from issuerURL when not explicitly set:
+   trim scheme, then trim any path. */}}
+{{- $authZitadelDomain := $auth.zitadelDomain | default "" }}
+{{- if and (eq $authZitadelDomain "") (ne $authIssuerURL "") }}
+  {{- $h := $authIssuerURL }}
+  {{- $h = $h | trimPrefix "https://" | trimPrefix "http://" }}
+  {{- $authZitadelDomain = (splitn "/" 2 $h)._0 }}
+{{- end }}
+
+# ==============================================================================
+# Exposure (public exposure via oauth2-proxy + ext_authz)
+# ==============================================================================
+{{- $exposure := $spec.exposure | default dict }}
+{{- $exposureEnabled := false }}
+{{- if hasKey $exposure "enabled" }}
+  {{- $exposureEnabled = $exposure.enabled }}
+{{- end }}
+{{- $exposureDomain := $exposure.domain | default "" }}
+
+{{- /* Validate when enabled. */}}
+{{- if $exposureEnabled }}
+  {{- if eq $exposureDomain "" }}
+    {{- fail "spec.exposure.domain is required when spec.exposure.enabled is true" }}
+  {{- end }}
+  {{- if eq $authIssuerURL "" }}
+    {{- fail "spec.auth.issuerURL is required when spec.exposure.enabled is true" }}
+  {{- end }}
+  {{- if eq $authAwsSmPath "" }}
+    {{- fail "spec.auth.awsSecretsManagerPath is required when spec.exposure.enabled is true" }}
+  {{- end }}
+  {{- if eq $authProjectId "" }}
+    {{- fail "spec.auth.zitadelProjectId is required when spec.exposure.enabled is true" }}
+  {{- end }}
+{{- end }}
+
+{{- $exposureGatewayRef := $exposure.gatewayRef | default dict }}
+{{- $exposureGatewayRef = dict
+  "name" ($exposureGatewayRef.name | default "platform")
+  "namespace" ($exposureGatewayRef.namespace | default "istio-ingress")
+  "sectionName" ($exposureGatewayRef.sectionName | default "http")
+}}
+
+{{- $exposureExtProviderName := $exposure.extensionProviderName | default (printf "%s-oauth2-proxy" $namespace) }}
+
+{{- $exposureCert := $exposure.certificate | default dict }}
+{{- $exposureCertEnabled := false }}
+{{- if hasKey $exposureCert "enabled" }}
+  {{- $exposureCertEnabled = $exposureCert.enabled }}
+{{- end }}
+{{- $exposureCertIssuerRef := $exposureCert.issuerRef | default dict }}
+{{- $exposureCertIssuerRef = dict
+  "name" ($exposureCertIssuerRef.name | default "cloudflare-cluster-issuer")
+  "kind" ($exposureCertIssuerRef.kind | default "ClusterIssuer")
+}}
+{{- $exposureCertSecretName := $exposureCert.secretName | default (printf "%s-exposure-tls" $namespace) }}
+{{- $exposureCertSecretNamespace := $exposureCert.secretNamespace | default "istio-ingress" }}
+
+{{- $exposureRedis := $exposure.redis | default dict }}
+{{- $exposureRedis = dict
+  "size" ($exposureRedis.size | default "1Gi")
+  "storageClassName" ($exposureRedis.storageClassName | default "")
+  "image" ($exposureRedis.image | default "redis:7-alpine")
+}}
+
+{{- $exposureProxy := $exposure.oauth2Proxy | default dict }}
+{{- $exposureProxyCookieDomain := $exposureProxy.cookieDomain | default (printf ".%s" $exposureDomain) }}
+{{- $exposureProxyCookieRef := $exposureProxy.cookieSecretRef | default dict }}
+{{- $exposureProxyCookieRef = dict
+  "name" ($exposureProxyCookieRef.name | default "")
+  "key" ($exposureProxyCookieRef.key | default "cookie_secret")
+}}
+{{- if and $exposureEnabled (eq $exposureProxyCookieRef.name "") }}
+  {{- fail "spec.exposure.oauth2Proxy.cookieSecretRef.name is required when spec.exposure.enabled is true (operator pre-creates the Secret holding the cookie-signing key)" }}
+{{- end }}
+{{- $exposureProxy = dict
+  "image" ($exposureProxy.image | default "quay.io/oauth2-proxy/oauth2-proxy:v7.7.1")
+  "replicas" ($exposureProxy.replicas | default 1)
+  "additionalConfig" ($exposureProxy.additionalConfig | default list)
+  "cookieDomain" $exposureProxyCookieDomain
+  "cookieSecretRef" $exposureProxyCookieRef
+}}
+
+{{- /* Waypoint name — composed by 445-* and referenced from sister Services + ext_authz provider naming. */}}
+{{- $exposureWaypointName := printf "%s-waypoint" $namespace }}
+
+{{- /* Chart-default pod selectors (kube-prometheus-stack v77.x + opencost chart conventions).
+       Operators override per cluster via spec.exposure.<comp>.podSelector when on a different chart version. */}}
+{{- $defaultPodSelectors := dict
+  "prometheus" (dict
+    "app.kubernetes.io/name" "prometheus"
+    "prometheus" "kube-prometheus-stack-prometheus"
+  )
+  "alertmanager" (dict
+    "app.kubernetes.io/name" "alertmanager"
+    "alertmanager" "kube-prometheus-stack-alertmanager"
+  )
+  "opencost" (dict
+    "app.kubernetes.io/name" "opencost"
+  )
+}}
+
+{{- $exposureComponents := list }}
+{{- range $compName := list "prometheus" "alertmanager" "opencost" }}
+  {{- $comp := get $exposure $compName | default dict }}
+  {{- $compEnabled := false }}
+  {{- if hasKey $comp "enabled" }}
+    {{- $compEnabled = $comp.enabled }}
+  {{- end }}
+  {{- $compHost := $comp.host | default "" }}
+  {{- if and $exposureEnabled $compEnabled (eq $compHost "") }}
+    {{- fail (printf "spec.exposure.%s.host is required when spec.exposure.%s.enabled is true" $compName $compName) }}
+  {{- end }}
+  {{- $compSvcName := $comp.serviceName | default "" }}
+  {{- $compSvcPort := $comp.servicePort | default 0 }}
+  {{- if eq $compName "prometheus" }}
+    {{- $compSvcName = $comp.serviceName | default "kube-prometheus-stack-prometheus" }}
+    {{- $compSvcPort = $comp.servicePort | default 9090 }}
+  {{- else if eq $compName "alertmanager" }}
+    {{- $compSvcName = $comp.serviceName | default "kube-prometheus-stack-alertmanager" }}
+    {{- $compSvcPort = $comp.servicePort | default 9093 }}
+  {{- else if eq $compName "opencost" }}
+    {{- $compSvcName = $comp.serviceName | default "opencost" }}
+    {{- $compSvcPort = $comp.servicePort | default 9090 }}
+  {{- end }}
+  {{- $defaultSel := get $defaultPodSelectors $compName | default dict }}
+  {{- $compPodSelector := $comp.podSelector | default $defaultSel }}
+  {{- $exposureComponents = append $exposureComponents (dict
+    "name" $compName
+    "enabled" $compEnabled
+    "host" $compHost
+    "serviceName" $compSvcName
+    "servicePort" $compSvcPort
+    "podSelector" $compPodSelector
+    "sisterServiceName" (printf "exposure-%s" $compName)
+  ) }}
+{{- end }}
+
+# ==============================================================================
 # Initialize $state
 # ==============================================================================
 {{- $state := dict
@@ -395,6 +542,33 @@
       "databaseName" ($cloudCostsCostReportRef.databaseName | default "")
       "workgroupName" ($cloudCostsCostReportRef.workgroupName | default "")
     )
+  )
+  "auth" (dict
+    "authStackRef" (dict
+      "name" ($authStackRef.name | default "")
+      "namespace" ($authStackRef.namespace | default "")
+    )
+    "issuerURL" $authIssuerURL
+    "zitadelDomain" $authZitadelDomain
+    "awsSecretsManagerPath" $authAwsSmPath
+    "accessTokenProperty" $authAccessTokenProperty
+    "zitadelProjectId" $authProjectId
+  )
+  "exposure" (dict
+    "enabled" $exposureEnabled
+    "domain" $exposureDomain
+    "gatewayRef" $exposureGatewayRef
+    "extensionProviderName" $exposureExtProviderName
+    "waypointName" $exposureWaypointName
+    "certificate" (dict
+      "enabled" $exposureCertEnabled
+      "issuerRef" $exposureCertIssuerRef
+      "secretName" $exposureCertSecretName
+      "secretNamespace" $exposureCertSecretNamespace
+    )
+    "redis" $exposureRedis
+    "oauth2Proxy" $exposureProxy
+    "components" $exposureComponents
   )
   "observed" (dict)
   "status" (dict)

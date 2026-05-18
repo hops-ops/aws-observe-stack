@@ -1,0 +1,89 @@
+# code: language=yaml
+#
+# Waypoint Gateway in the observe namespace + sister Services per enabled
+# component. The Waypoint enforces AuthorizationPolicy.CUSTOM at L7
+# (ambient pattern). HTTPRoutes (470-*) point at the sister Services so
+# traffic traverses the waypoint.
+#
+# Sister Services mirror the upstream pod selector and add
+# istio.io/use-waypoint=<observe-ns>-waypoint so the waypoint intercepts
+# traffic to them. The original Services (kube-prometheus-stack-prometheus,
+# etc.) stay untouched - in-cluster scrape traffic doesn't go through the
+# waypoint, only public exposure traffic does.
+
+{{- $x := $state.exposure }}
+{{- if $x.enabled }}
+---
+apiVersion: kubernetes.m.crossplane.io/v1alpha1
+kind: Object
+metadata:
+  name: {{ $state.name }}-exposure-waypoint
+  annotations:
+    {{ setResourceNameAnnotation "exposure-waypoint" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  managementPolicies: {{ $state.managementPolicies | toJson }}
+  forProvider:
+    manifest:
+      apiVersion: gateway.networking.k8s.io/v1
+      kind: Gateway
+      metadata:
+        name: {{ $x.waypointName }}
+        namespace: {{ $state.namespace }}
+        labels:
+          istio.io/waypoint-for: service
+          {{- range $k, $v := $state.labels }}
+          {{ $k }}: {{ $v | quote }}
+          {{- end }}
+      spec:
+        gatewayClassName: istio-waypoint
+        listeners:
+        - name: mesh
+          port: 15008
+          protocol: HBONE
+  providerConfigRef:
+    name: {{ $state.kubernetes.providerConfigRef.name }}
+    kind: {{ $state.kubernetes.providerConfigRef.kind }}
+
+{{- range $comp := $x.components }}
+{{- if and $comp.enabled (ne $comp.host "") }}
+---
+apiVersion: kubernetes.m.crossplane.io/v1alpha1
+kind: Object
+metadata:
+  name: {{ $state.name }}-exposure-sister-svc-{{ $comp.name }}
+  annotations:
+    {{ setResourceNameAnnotation (printf "exposure-sister-svc-%s" $comp.name) }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  managementPolicies: {{ $state.managementPolicies | toJson }}
+  forProvider:
+    manifest:
+      apiVersion: v1
+      kind: Service
+      metadata:
+        name: {{ $comp.sisterServiceName }}
+        namespace: {{ $state.namespace }}
+        labels:
+          istio.io/use-waypoint: {{ $x.waypointName }}
+          app.kubernetes.io/name: {{ printf "exposure-%s" $comp.name }}
+          app.kubernetes.io/instance: {{ $state.name }}
+          {{- range $k, $v := $state.labels }}
+          {{ $k }}: {{ $v | quote }}
+          {{- end }}
+      spec:
+        type: ClusterIP
+        ports:
+        - name: http
+          port: {{ $comp.servicePort }}
+          targetPort: {{ $comp.servicePort }}
+        selector:
+          {{- range $k, $v := $comp.podSelector }}
+          {{ $k }}: {{ $v | quote }}
+          {{- end }}
+  providerConfigRef:
+    name: {{ $state.kubernetes.providerConfigRef.name }}
+    kind: {{ $state.kubernetes.providerConfigRef.kind }}
+{{- end }}
+{{- end }}
+{{- end }}

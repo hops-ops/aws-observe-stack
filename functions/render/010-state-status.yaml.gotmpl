@@ -10,7 +10,7 @@
 # ==============================================================================
 
 {{- $checkReady := dict }}
-{{- range $key := list "kube-prometheus-stack" "loki" "tempo" "k8s-monitoring" "grafana-operator" "grafana-instance" "datasource-prometheus" "datasource-loki" "datasource-tempo" "opencost-pod-identity" "loki-pod-identity" "tempo-pod-identity" "vpa" "goldilocks" "nodepool-observe" }}
+{{- range $key := list "kube-prometheus-stack" "loki" "tempo" "k8s-monitoring" "grafana-operator" "grafana-instance" "datasource-prometheus" "datasource-loki" "datasource-tempo" "opencost-pod-identity" "loki-pod-identity" "tempo-pod-identity" "vpa" "goldilocks" "nodepool-observe" "exposure-zitadel-credentials" "exposure-zitadel-providerconfig" "exposure-oidc-app" "exposure-redis-sts" "exposure-oauth2-proxy-deploy" "exposure-waypoint" }}
   {{- $entry := get $observed $key | default dict }}
   {{- $resource := $entry.resource | default dict }}
   {{- $status := $resource.status | default dict }}
@@ -26,6 +26,16 @@
 # ==============================================================================
 # Set observed state
 # ==============================================================================
+{{- $exposureOauth2Ready := and
+  (get $checkReady "exposure-redis-sts")
+  (get $checkReady "exposure-oauth2-proxy-deploy")
+}}
+{{- $exposureOidcReady := and
+  (get $checkReady "exposure-zitadel-credentials")
+  (get $checkReady "exposure-zitadel-providerconfig")
+  (get $checkReady "exposure-oidc-app")
+}}
+
 {{- $state = set $state "observed" (merge $state.observed (dict
   "kubePrometheusStack" (dict "ready" (get $checkReady "kube-prometheus-stack"))
   "loki" (dict "ready" (get $checkReady "loki"))
@@ -42,6 +52,12 @@
   "vpa" (dict "ready" (get $checkReady "vpa"))
   "goldilocks" (dict "ready" (get $checkReady "goldilocks"))
   "nodepoolObserve" (dict "ready" (get $checkReady "nodepool-observe"))
+  "exposure" (dict
+    "oauth2ProxyReady" $exposureOauth2Ready
+    "redisReady" (get $checkReady "exposure-redis-sts")
+    "oidcClientReady" $exposureOidcReady
+    "waypointReady" (get $checkReady "exposure-waypoint")
+  )
 )) }}
 
 # ==============================================================================

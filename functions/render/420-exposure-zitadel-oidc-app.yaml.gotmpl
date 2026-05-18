@@ -1,0 +1,69 @@
+# code: language=yaml
+#
+# Zitadel OIDC Application MR — the OIDC client oauth2-proxy authenticates
+# against. The provider writes client_id + client_secret to a K8s Secret
+# named "<observe-ns>-oauth2-proxy-oidc-client"; the oauth2-proxy
+# Deployment in 460-* mounts those as env vars.
+#
+# Redirect URIs cover every per-component host configured under
+# spec.exposure.*, plus standard logout URLs. Wildcards aren't supported
+# in Zitadel redirect URIs as of v3 — list each host explicitly.
+
+{{- $x := $state.exposure }}
+{{- $a := $state.auth }}
+{{- if $x.enabled }}
+{{- $redirects := list }}
+{{- $postLogout := list }}
+{{- range $comp := $x.components }}
+  {{- if and $comp.enabled (ne $comp.host "") }}
+    {{- $redirects = append $redirects (printf "https://%s/oauth2/callback" $comp.host) }}
+    {{- $postLogout = append $postLogout (printf "https://%s/" $comp.host) }}
+  {{- end }}
+{{- end }}
+{{- $oidcAppName := printf "%s-oauth2-proxy" $state.namespace }}
+{{- $oidcSecretName := printf "%s-oidc-client" $oidcAppName }}
+---
+apiVersion: kubernetes.m.crossplane.io/v1alpha1
+kind: Object
+metadata:
+  name: {{ $state.name }}-exposure-oidc-app
+  annotations:
+    {{ setResourceNameAnnotation "exposure-oidc-app" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  managementPolicies: {{ $state.managementPolicies | toJson }}
+  forProvider:
+    manifest:
+      apiVersion: application.zitadel.m.crossplane.io/v1alpha1
+      kind: Oidc
+      metadata:
+        name: {{ $oidcAppName }}
+        namespace: {{ $state.namespace }}
+        labels: {{ $state.labels | toJson }}
+      spec:
+        forProvider:
+          name: {{ $oidcAppName | quote }}
+          projectId: {{ $a.zitadelProjectId | quote }}
+          appType: OIDC_APP_TYPE_WEB
+          authMethodType: OIDC_AUTH_METHOD_TYPE_BASIC
+          grantTypes:
+          - OIDC_GRANT_TYPE_AUTHORIZATION_CODE
+          - OIDC_GRANT_TYPE_REFRESH_TOKEN
+          responseTypes:
+          - OIDC_RESPONSE_TYPE_CODE
+          redirectUris: {{ $redirects | toJson }}
+          postLogoutRedirectUris: {{ $postLogout | toJson }}
+          accessTokenType: OIDC_TOKEN_TYPE_BEARER
+          accessTokenRoleAssertion: true
+          idTokenRoleAssertion: true
+          idTokenUserinfoAssertion: true
+          devMode: false
+        writeConnectionSecretToRef:
+          name: {{ $oidcSecretName }}
+        providerConfigRef:
+          name: zitadel-observe-stack
+          kind: ProviderConfig
+  providerConfigRef:
+    name: {{ $state.kubernetes.providerConfigRef.name }}
+    kind: {{ $state.kubernetes.providerConfigRef.kind }}
+{{- end }}
