@@ -14,10 +14,6 @@
 {{- $clusterName := $spec.clusterName | default $name }}
 {{- $namespace := $spec.namespace | default "monitoring" }}
 {{- $managementPolicies := $spec.managementPolicies | default (list "*") }}
-{{- $prettyNames := false }}
-{{- if hasKey $spec "prettyNames" }}
-  {{- $prettyNames = $spec.prettyNames }}
-{{- end }}
 
 # Labels
 {{- $defaultLabels := dict
@@ -75,6 +71,8 @@
 {{- $nodePoolRequirements := $nodePoolSpec.requirements | default (list
   (dict "key" "kubernetes.io/arch" "operator" "In" "values" (list "amd64" "arm64"))
   (dict "key" "karpenter.sh/capacity-type" "operator" "In" "values" (list "spot" "on-demand"))
+  (dict "key" "eks.amazonaws.com/instance-memory" "operator" "Gt" "values" (list "7999"))
+  (dict "key" "eks.amazonaws.com/instance-cpu" "operator" "Gt" "values" (list "1"))
 ) }}
 {{- $nodePoolDisruption := $nodePoolSpec.disruption | default (dict "consolidationPolicy" "WhenEmptyOrUnderutilized" "consolidateAfter" "60s") }}
 
@@ -88,25 +86,15 @@
   {{- $nodePoolTolerations = list (dict "key" $nodePoolTaintKey "value" $nodePoolTaintValue "effect" "NoSchedule") }}
 {{- end }}
 
-# OpenCost service account name depends on prettyNames
-{{- $opencostServiceAccountName := "k8s-monitoring-opencost" }}
-{{- if $prettyNames }}
-  {{- $opencostServiceAccountName = "opencost" }}
-{{- end }}
+{{- $opencostServiceAccountName := "opencost" }}
 
 # ==============================================================================
 # Per-component configuration (resolved from spec)
 # ==============================================================================
 {{- $kubePrometheusStack := $spec.kubePrometheusStack | default dict }}
 {{- $kubePrometheusStackReleaseName := $kubePrometheusStack.name | default "kube-prometheus-stack" }}
-{{- $kubePrometheusStackFullname := $kubePrometheusStackReleaseName }}
-{{- if $prettyNames }}
-  {{- $kubePrometheusStackFullname = "observe" }}
-{{- end }}
-{{- $kubePrometheusStackGrafanaServiceName := printf "%s-grafana" $kubePrometheusStackFullname }}
-{{- if $prettyNames }}
-  {{- $kubePrometheusStackGrafanaServiceName = "grafana" }}
-{{- end }}
+{{- $kubePrometheusStackFullname := "observe" }}
+{{- $kubePrometheusStackGrafanaServiceName := "grafana" }}
 {{- $loki := $spec.loki | default dict }}
 {{- $tempo := $spec.tempo | default dict }}
 {{- $k8sMonitoring := $spec.k8sMonitoring | default dict }}
@@ -256,7 +244,6 @@
   "clusterName" $clusterName
   "namespace" $namespace
   "managementPolicies" $managementPolicies
-  "prettyNames" $prettyNames
   "labels" $labels
   "helm" (dict
     "providerConfigRef" $helmProviderConfigRef
@@ -308,7 +295,7 @@
       )
     )
   )
-  "podIdentitySuffix" (ternary "" "-pod-identity" $prettyNames)
+  "podIdentitySuffix" ""
   "serviceAccount" (dict
     "name" $opencostServiceAccountName
     "namespace" $namespace

@@ -14,16 +14,10 @@
 {{- $tempo := $state.tempo }}
 {{- $grafOp := $state.grafanaOperator }}
 {{- $k8sPCR := $state.kubernetes.providerConfigRef }}
-{{- $grafanaObjectName := printf "%s-grafana" $state.name }}
-{{- $prometheusDatasourceName := printf "%s-prometheus" $state.name }}
-{{- $lokiDatasourceName := printf "%s-loki" $state.name }}
-{{- $tempoDatasourceName := printf "%s-tempo" $state.name }}
-{{- if $state.prettyNames }}
-  {{- $grafanaObjectName = "grafana" }}
-  {{- $prometheusDatasourceName = "prometheus" }}
-  {{- $lokiDatasourceName = "loki" }}
-  {{- $tempoDatasourceName = "tempo" }}
-{{- end }}
+{{- $grafanaObjectName := "grafana" }}
+{{- $prometheusDatasourceName := "prometheus" }}
+{{- $lokiDatasourceName := "loki" }}
+{{- $tempoDatasourceName := "tempo" }}
 
 # Service URLs derived from component names/namespaces
 {{- $grafanaServiceUrl := printf "http://%s.%s.svc:80" $kps.grafanaServiceName $kps.namespace }}

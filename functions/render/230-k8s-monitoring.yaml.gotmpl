@@ -114,15 +114,13 @@ spec:
       {{- $_ := set $existingOpencost "cloudIntegrationSecret" $state.cloudCosts.secretName }}
       {{- $_ := set $opencostValues "opencost" $existingOpencost }}
     {{- end }}
-    {{- if $state.prettyNames }}
-      {{- $_ := set $opencostValues "fullnameOverride" "opencost" }}
-      {{- $_ := set $alloyMetrics "fullnameOverride" "alloy-metrics" }}
-      {{- $_ := set $alloySingleton "fullnameOverride" "alloy-singleton" }}
-      {{- $_ := set $alloyReceiver "fullnameOverride" "alloy-receiver" }}
-      {{- $_ := set $alloyOperator "fullnameOverride" "alloy-operator" }}
-      {{- $_ := set $alloyLogs "fullnameOverride" "alloy-logs" }}
-      {{- $_ := set $nodeExporterValues "fullnameOverride" "node-exporter" }}
-    {{- end }}
+    {{- $_ := set $opencostValues "fullnameOverride" "opencost" }}
+    {{- $_ := set $alloyMetrics "fullnameOverride" "alloy-metrics" }}
+    {{- $_ := set $alloySingleton "fullnameOverride" "alloy-singleton" }}
+    {{- $_ := set $alloyReceiver "fullnameOverride" "alloy-receiver" }}
+    {{- $_ := set $alloyOperator "fullnameOverride" "alloy-operator" }}
+    {{- $_ := set $alloyLogs "fullnameOverride" "alloy-logs" }}
+    {{- $_ := set $nodeExporterValues "fullnameOverride" "node-exporter" }}
     {{- $defaults := dict
       "cluster" (dict "name" $state.clusterName)
       "destinations" (list

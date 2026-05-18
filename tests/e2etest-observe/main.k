@@ -232,7 +232,6 @@ _items = [
                     metadata.namespace = _namespace
                     spec = {
                         clusterName = _test_name
-                        prettyNames = True
                         aws = {
                             region = "us-east-2"
                         }

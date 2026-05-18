@@ -76,12 +76,12 @@ _items = [
                 {
                     apiVersion = "aws.hops.ops.com.ai/v1alpha1"
                     kind = "PodIdentity"
-                    metadata.name = "observe-opencost-pod-identity"
+                    metadata.name = "observe-opencost"
                     spec = {
                         clusterName = "my-cluster"
                         region = "us-east-1"
                         serviceAccount = {
-                            name = "k8s-monitoring-opencost"
+                            name = "opencost"
                             namespace = "monitoring"
                         }
                     }
@@ -135,7 +135,7 @@ _items = [
                 {
                     apiVersion = "aws.hops.ops.com.ai/v1alpha1"
                     kind = "PodIdentity"
-                    metadata.name = "observe-opencost-pod-identity"
+                    metadata.name = "observe-opencost"
                     spec = {
                         rolePrefix = "prod-"
                         serviceAccount = {
@@ -239,7 +239,7 @@ _items = [
                 {
                     apiVersion = "aws.hops.ops.com.ai/v1alpha1"
                     kind = "PodIdentity"
-                    metadata.name = "observe-opencost-pod-identity"
+                    metadata.name = "observe-opencost"
                     spec = {
                         providerConfigRef = {
                             name = "custom-aws"
@@ -288,7 +288,7 @@ _items = [
                     apiVersion = "aws.hops.ops.com.ai/v1alpha1"
                     kind = "PodIdentity"
                     metadata = {
-                        name = "observe-opencost-pod-identity"
+                        name = "observe-opencost"
                         annotations = {"crossplane.io/composition-resource-name" = "opencost-pod-identity"}
                     }
                     status = {
@@ -305,7 +305,7 @@ _items = [
                         of = {
                             apiVersion = "eks.aws.m.upbound.io/v1beta1"
                             kind = "PodIdentityAssociation"
-                            resourceRef.name = "my-cluster-observe-opencost-pod-identity"
+                            resourceRef.name = "my-cluster-observe-opencost"
                         }
                         by = {
                             apiVersion = "helm.m.crossplane.io/v1beta1"
@@ -593,7 +593,7 @@ _items = [
                 {
                     apiVersion = "aws.hops.ops.com.ai/v1alpha1"
                     kind = "PodIdentity"
-                    metadata.name = "observe-loki-pod-identity"
+                    metadata.name = "observe-loki"
                     spec = {
                         clusterName = "my-cluster"
                         region = "us-east-1"
@@ -678,7 +678,7 @@ _items = [
                 {
                     apiVersion = "aws.hops.ops.com.ai/v1alpha1"
                     kind = "PodIdentity"
-                    metadata.name = "observe-tempo-pod-identity"
+                    metadata.name = "observe-tempo"
                     spec = {
                         clusterName = "my-cluster"
                         region = "us-west-2"
@@ -821,7 +821,7 @@ _items = [
                     apiVersion = "aws.hops.ops.com.ai/v1alpha1"
                     kind = "PodIdentity"
                     metadata = {
-                        name = "observe-loki-pod-identity"
+                        name = "observe-loki"
                         annotations = {"crossplane.io/composition-resource-name" = "loki-pod-identity"}
                     }
                     status = {
@@ -838,7 +838,7 @@ _items = [
                         of = {
                             apiVersion = "eks.aws.m.upbound.io/v1beta1"
                             kind = "PodIdentityAssociation"
-                            resourceRef.name = "my-cluster-observe-loki-pod-identity"
+                            resourceRef.name = "my-cluster-observe-loki"
                         }
                         by = {
                             apiVersion = "helm.m.crossplane.io/v1beta1"
@@ -938,7 +938,7 @@ _items = [
                     spec.forProvider.manifest = {
                         apiVersion = "grafana.integreatly.org/v1beta1"
                         kind = "Grafana"
-                        metadata.name = "observe-grafana"
+                        metadata.name = "grafana"
                     }
                 }
                 {
@@ -948,7 +948,7 @@ _items = [
                     spec.forProvider.manifest = {
                         apiVersion = "grafana.integreatly.org/v1beta1"
                         kind = "GrafanaDatasource"
-                        metadata.name = "observe-prometheus"
+                        metadata.name = "prometheus"
                     }
                 }
                 {
@@ -960,163 +960,6 @@ _items = [
                     apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
                     kind = "Object"
                     metadata.name = "observe-datasource-tempo"
-                }
-            ]
-        }
-    }
-
-    # ==========================================================================
-    # Test 12b: prettyNames shortens target-cluster Grafana object names
-    # ==========================================================================
-    metav1alpha1.CompositionTest {
-        metadata.name = "grafana-target-object-names-pretty-when-enabled"
-        spec = {
-            compositionPath = "apis/observestacks/composition.yaml"
-            xrdPath = "apis/observestacks/definition.yaml"
-            timeoutSeconds = 60
-            validate = False
-            xr = {
-                apiVersion = "aws.hops.ops.com.ai/v1alpha1"
-                kind = "ObserveStack"
-                metadata.name = "pat-local"
-                spec = {
-                    clusterName = "my-cluster"
-                    prettyNames = True
-                    aws = {
-                        region = "us-east-1"
-                    }
-                }
-            }
-            observedResources = [
-                {
-                    apiVersion = "helm.m.crossplane.io/v1beta1"
-                    kind = "Release"
-                    metadata = {
-                        name = "grafana-operator"
-                        annotations = {"crossplane.io/composition-resource-name" = "grafana-operator"}
-                    }
-                    status = {
-                        conditions = [{type = "Ready", status = "True"}, {type = "Synced", status = "True"}]
-                    }
-                }
-                {
-                    apiVersion = "helm.m.crossplane.io/v1beta1"
-                    kind = "Release"
-                    metadata = {
-                        name = "kube-prometheus-stack"
-                        annotations = {"crossplane.io/composition-resource-name" = "kube-prometheus-stack"}
-                    }
-                    status = {
-                        conditions = [{type = "Ready", status = "True"}, {type = "Synced", status = "True"}]
-                    }
-                }
-                {
-                    apiVersion = "helm.m.crossplane.io/v1beta1"
-                    kind = "Release"
-                    metadata = {
-                        name = "loki"
-                        annotations = {"crossplane.io/composition-resource-name" = "loki"}
-                    }
-                    status = {
-                        conditions = [{type = "Ready", status = "True"}, {type = "Synced", status = "True"}]
-                    }
-                }
-                {
-                    apiVersion = "helm.m.crossplane.io/v1beta1"
-                    kind = "Release"
-                    metadata = {
-                        name = "tempo"
-                        annotations = {"crossplane.io/composition-resource-name" = "tempo"}
-                    }
-                    status = {
-                        conditions = [{type = "Ready", status = "True"}, {type = "Synced", status = "True"}]
-                    }
-                }
-                {
-                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
-                    kind = "Object"
-                    metadata = {
-                        name = "pat-local-grafana-instance"
-                        annotations = {"crossplane.io/composition-resource-name" = "grafana-instance"}
-                    }
-                    status = {
-                        conditions = [{type = "Ready", status = "True"}, {type = "Synced", status = "True"}]
-                    }
-                }
-            ]
-            assertResources = [
-                {
-                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
-                    kind = "Object"
-                    metadata.name = "pat-local-grafana-instance"
-                    spec.forProvider.manifest = {
-                        apiVersion = "grafana.integreatly.org/v1beta1"
-                        kind = "Grafana"
-                        metadata.name = "grafana"
-                        spec = {
-                            external = {
-                                url = "http://grafana.monitoring.svc:80"
-                                adminPassword = {
-                                    name = "grafana"
-                                    key = "admin-password"
-                                }
-                                adminUser = {
-                                    name = "grafana"
-                                    key = "admin-user"
-                                }
-                            }
-                        }
-                    }
-                }
-                {
-                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
-                    kind = "Object"
-                    metadata.name = "pat-local-datasource-prometheus"
-                    spec.forProvider.manifest = {
-                        apiVersion = "grafana.integreatly.org/v1beta1"
-                        kind = "GrafanaDatasource"
-                        metadata.name = "prometheus"
-                    }
-                }
-                {
-                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
-                    kind = "Object"
-                    metadata.name = "pat-local-datasource-loki"
-                    spec.forProvider.manifest = {
-                        apiVersion = "grafana.integreatly.org/v1beta1"
-                        kind = "GrafanaDatasource"
-                        metadata.name = "loki"
-                    }
-                }
-                {
-                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
-                    kind = "Object"
-                    metadata.name = "pat-local-datasource-tempo"
-                    spec.forProvider.manifest = {
-                        apiVersion = "grafana.integreatly.org/v1beta1"
-                        kind = "GrafanaDatasource"
-                        metadata.name = "tempo"
-                    }
-                }
-                {
-                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
-                    kind = "Object"
-                    metadata.name = "pat-local-dashboard-opencost-overview"
-                    spec.forProvider.manifest = {
-                        apiVersion = "grafana.integreatly.org/v1beta1"
-                        kind = "GrafanaDashboard"
-                        metadata.name = "opencost-overview"
-                    }
-                }
-                {
-                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
-                    kind = "Object"
-                    metadata.name = "pat-local-dashboard-opencost-namespace"
-                    spec.forProvider.manifest = {
-                        apiVersion = "grafana.integreatly.org/v1beta1"
-                        kind = "GrafanaDashboard"
-                        metadata.name = "opencost-namespace"
-                    }
                 }
             ]
         }
@@ -1149,7 +992,7 @@ _items = [
                     kind = "Release"
                     metadata.name = "k8s-monitoring"
                     spec.forProvider.values.destinations = [
-                        {name = "prometheus", type = "prometheus", url = "http://kube-prometheus-stack-prometheus.monitoring:9090/api/v1/write"}
+                        {name = "prometheus", type = "prometheus", url = "http://observe-prometheus.monitoring:9090/api/v1/write"}
                         {name = "loki", type = "loki", url = "http://loki-gateway.monitoring:80/loki/api/v1/push"}
                         {name = "tempo", type = "otlp", protocol = "grpc", url = "http://tempo.monitoring:4317"}
                     ]
@@ -1268,7 +1111,7 @@ _items = [
                         }
                         recommender = {
                             extraArgs = {
-                                "prometheus-address" = "http://kube-prometheus-stack-prometheus.monitoring.svc:9090"
+                                "prometheus-address" = "http://observe-prometheus.monitoring.svc:9090"
                                 storage = "prometheus"
                             }
                             resources = {
@@ -1819,321 +1662,6 @@ _items = [
     }
 
     # ==========================================================================
-    # Test: prettyNames changes PodIdentity names and Grafana fullnameOverride
-    # ==========================================================================
-    metav1alpha1.CompositionTest {
-        metadata.name = "pretty-names-enabled"
-        spec = {
-            compositionPath = "apis/observestacks/composition.yaml"
-            xrdPath = "apis/observestacks/definition.yaml"
-            timeoutSeconds = 60
-            validate = False
-            xr = {
-                apiVersion = "aws.hops.ops.com.ai/v1alpha1"
-                kind = "ObserveStack"
-                metadata.name = "observe"
-                spec = {
-                    clusterName = "my-cluster"
-                    prettyNames = True
-                    aws = {
-                        region = "us-east-1"
-                    }
-                }
-            }
-            assertResources = [
-                {
-                    apiVersion = "aws.hops.ops.com.ai/v1alpha1"
-                    kind = "PodIdentity"
-                    metadata.name = "observe-opencost"
-                    spec = {
-                        clusterName = "my-cluster"
-                        region = "us-east-1"
-                    }
-                }
-                {
-                    apiVersion = "helm.m.crossplane.io/v1beta1"
-                    kind = "Release"
-                    metadata.name = "kube-prometheus-stack"
-                    spec.forProvider.values = {
-                        cleanPrometheusOperatorObjectNames = True
-                        fullnameOverride = "observe"
-                        alertmanager = {
-                            alertmanagerSpec = {
-                                fullnameOverride = "alertmanager"
-                            }
-                        }
-                        grafana = {
-                            fullnameOverride = "grafana"
-                        }
-                        "kube-state-metrics" = {
-                            fullnameOverride = "kube-state-metrics"
-                        }
-                        nodeExporter = {
-                            enabled = False
-                            fullnameOverride = "node-exporter"
-                        }
-                        prometheus = {
-                            prometheusSpec = {
-                                fullnameOverride = "prometheus"
-                            }
-                        }
-                        prometheusOperator = {
-                            enabled = True
-                            fullnameOverride = "prometheus-operator"
-                        }
-                    }
-                }
-                {
-                    apiVersion = "helm.m.crossplane.io/v1beta1"
-                    kind = "Release"
-                    metadata.name = "k8s-monitoring"
-                    spec.forProvider.values = {
-                        "alloy-logs" = {
-                            enabled = True
-                            fullnameOverride = "alloy-logs"
-                        }
-                        "alloy-metrics" = {
-                            enabled = True
-                            fullnameOverride = "alloy-metrics"
-                        }
-                        "alloy-operator" = {
-                            fullnameOverride = "alloy-operator"
-                        }
-                        "alloy-receiver" = {
-                            enabled = True
-                            fullnameOverride = "alloy-receiver"
-                        }
-                        "alloy-singleton" = {
-                            enabled = True
-                            fullnameOverride = "alloy-singleton"
-                        }
-                        clusterMetrics = {
-                            opencost = {
-                                enabled = True
-                                fullnameOverride = "opencost"
-                            }
-                            "node-exporter" = {
-                                enabled = True
-                                fullnameOverride = "node-exporter"
-                            }
-                        }
-                    }
-                }
-            ]
-        }
-    }
-
-    # ==========================================================================
-    # Test: prettyNames false preserves legacy names
-    # ==========================================================================
-    metav1alpha1.CompositionTest {
-        metadata.name = "pretty-names-disabled-preserves-legacy"
-        spec = {
-            compositionPath = "apis/observestacks/composition.yaml"
-            xrdPath = "apis/observestacks/definition.yaml"
-            timeoutSeconds = 60
-            validate = False
-            xr = {
-                apiVersion = "aws.hops.ops.com.ai/v1alpha1"
-                kind = "ObserveStack"
-                metadata.name = "observe"
-                spec = {
-                    clusterName = "my-cluster"
-                    prettyNames = False
-                    aws = {
-                        region = "us-east-1"
-                    }
-                }
-            }
-            observedResources = [
-                {
-                    apiVersion = "helm.m.crossplane.io/v1beta1"
-                    kind = "Release"
-                    metadata = {
-                        name = "grafana-operator"
-                        annotations = {"crossplane.io/composition-resource-name" = "grafana-operator"}
-                    }
-                    status = {
-                        conditions = [{type = "Ready", status = "True"}, {type = "Synced", status = "True"}]
-                    }
-                }
-                {
-                    apiVersion = "helm.m.crossplane.io/v1beta1"
-                    kind = "Release"
-                    metadata = {
-                        name = "kube-prometheus-stack"
-                        annotations = {"crossplane.io/composition-resource-name" = "kube-prometheus-stack"}
-                    }
-                    status = {
-                        conditions = [{type = "Ready", status = "True"}, {type = "Synced", status = "True"}]
-                    }
-                }
-                {
-                    apiVersion = "helm.m.crossplane.io/v1beta1"
-                    kind = "Release"
-                    metadata = {
-                        name = "loki"
-                        annotations = {"crossplane.io/composition-resource-name" = "loki"}
-                    }
-                    status = {
-                        conditions = [{type = "Ready", status = "True"}, {type = "Synced", status = "True"}]
-                    }
-                }
-                {
-                    apiVersion = "helm.m.crossplane.io/v1beta1"
-                    kind = "Release"
-                    metadata = {
-                        name = "tempo"
-                        annotations = {"crossplane.io/composition-resource-name" = "tempo"}
-                    }
-                    status = {
-                        conditions = [{type = "Ready", status = "True"}, {type = "Synced", status = "True"}]
-                    }
-                }
-                {
-                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
-                    kind = "Object"
-                    metadata = {
-                        name = "observe-grafana-instance"
-                        annotations = {"crossplane.io/composition-resource-name" = "grafana-instance"}
-                    }
-                    status = {
-                        conditions = [{type = "Ready", status = "True"}, {type = "Synced", status = "True"}]
-                    }
-                }
-            ]
-            assertResources = [
-                {
-                    apiVersion = "aws.hops.ops.com.ai/v1alpha1"
-                    kind = "PodIdentity"
-                    metadata.name = "observe-opencost-pod-identity"
-                    spec = {
-                        clusterName = "my-cluster"
-                        region = "us-east-1"
-                    }
-                }
-                {
-                    apiVersion = "helm.m.crossplane.io/v1beta1"
-                    kind = "Release"
-                    metadata.name = "kube-prometheus-stack"
-                    spec.forProvider.values = {
-                        cleanPrometheusOperatorObjectNames = False
-                        fullnameOverride = ""
-                    }
-                }
-                {
-                    apiVersion = "helm.m.crossplane.io/v1beta1"
-                    kind = "Release"
-                    metadata.name = "k8s-monitoring"
-                    spec.forProvider.values = {
-                        destinations = [
-                            {
-                                name = "prometheus"
-                                type = "prometheus"
-                                url = "http://kube-prometheus-stack-prometheus.monitoring:9090/api/v1/write"
-                            }
-                            {
-                                name = "loki"
-                                type = "loki"
-                                url = "http://loki-gateway.monitoring:80/loki/api/v1/push"
-                            }
-                            {
-                                name = "tempo"
-                                type = "otlp"
-                                protocol = "grpc"
-                                url = "http://tempo.monitoring:4317"
-                            }
-                        ]
-                        clusterMetrics = {
-                            opencost = {
-                                opencost = {
-                                    prometheus = {
-                                        external = {
-                                            url = "http://kube-prometheus-stack-prometheus.monitoring:9090"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                {
-                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
-                    kind = "Object"
-                    metadata.name = "observe-grafana-instance"
-                    spec.forProvider.manifest = {
-                        apiVersion = "grafana.integreatly.org/v1beta1"
-                        kind = "Grafana"
-                        metadata.name = "observe-grafana"
-                        spec = {
-                            external = {
-                                url = "http://kube-prometheus-stack-grafana.monitoring.svc:80"
-                                adminPassword = {
-                                    name = "kube-prometheus-stack-grafana"
-                                    key = "admin-password"
-                                }
-                                adminUser = {
-                                    name = "kube-prometheus-stack-grafana"
-                                    key = "admin-user"
-                                }
-                            }
-                        }
-                    }
-                }
-                {
-                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
-                    kind = "Object"
-                    metadata.name = "observe-datasource-prometheus"
-                    spec.forProvider.manifest = {
-                        apiVersion = "grafana.integreatly.org/v1beta1"
-                        kind = "GrafanaDatasource"
-                        metadata.name = "observe-prometheus"
-                    }
-                }
-                {
-                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
-                    kind = "Object"
-                    metadata.name = "observe-datasource-loki"
-                    spec.forProvider.manifest = {
-                        apiVersion = "grafana.integreatly.org/v1beta1"
-                        kind = "GrafanaDatasource"
-                        metadata.name = "observe-loki"
-                    }
-                }
-                {
-                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
-                    kind = "Object"
-                    metadata.name = "observe-datasource-tempo"
-                    spec.forProvider.manifest = {
-                        apiVersion = "grafana.integreatly.org/v1beta1"
-                        kind = "GrafanaDatasource"
-                        metadata.name = "observe-tempo"
-                    }
-                }
-                {
-                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
-                    kind = "Object"
-                    metadata.name = "observe-dashboard-opencost-overview"
-                    spec.forProvider.manifest = {
-                        apiVersion = "grafana.integreatly.org/v1beta1"
-                        kind = "GrafanaDashboard"
-                        metadata.name = "observe-opencost-overview"
-                    }
-                }
-                {
-                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
-                    kind = "Object"
-                    metadata.name = "observe-dashboard-opencost-namespace"
-                    spec.forProvider.manifest = {
-                        apiVersion = "grafana.integreatly.org/v1beta1"
-                        kind = "GrafanaDashboard"
-                        metadata.name = "observe-opencost-namespace"
-                    }
-                }
-            ]
-        }
-    }
-    # ==========================================================================
     # Test: Spot feed enabled wires OpenCost Helm values and adds IAM policy
     # ==========================================================================
     metav1alpha1.CompositionTest {
@@ -2178,7 +1706,7 @@ _items = [
                 {
                     apiVersion = "aws.hops.ops.com.ai/v1alpha1"
                     kind = "PodIdentity"
-                    metadata.name = "observe-opencost-pod-identity"
+                    metadata.name = "observe-opencost"
                     spec.inlinePolicy = [
                         {
                             name = "opencost-billing"
@@ -2215,7 +1743,7 @@ _items = [
                 {
                     apiVersion = "aws.hops.ops.com.ai/v1alpha1"
                     kind = "PodIdentity"
-                    metadata.name = "observe-opencost-pod-identity"
+                    metadata.name = "observe-opencost"
                     spec.inlinePolicy = [
                         {
                             name = "opencost-billing"
@@ -2314,7 +1842,7 @@ _items = [
                 {
                     apiVersion = "aws.hops.ops.com.ai/v1alpha1"
                     kind = "PodIdentity"
-                    metadata.name = "observe-opencost-pod-identity"
+                    metadata.name = "observe-opencost"
                     spec.inlinePolicy = [
                         {
                             name = "opencost-billing"
@@ -2469,7 +1997,7 @@ _items = [
                 {
                     apiVersion = "aws.hops.ops.com.ai/v1alpha1"
                     kind = "PodIdentity"
-                    metadata.name = "observe-opencost-pod-identity"
+                    metadata.name = "observe-opencost"
                     spec.inlinePolicy = [
                         {
                             name = "opencost-billing"
@@ -2506,7 +2034,7 @@ _items = [
                 {
                     apiVersion = "aws.hops.ops.com.ai/v1alpha1"
                     kind = "PodIdentity"
-                    metadata.name = "observe-opencost-pod-identity"
+                    metadata.name = "observe-opencost"
                     spec.inlinePolicy = [
                         {
                             name = "opencost-billing"

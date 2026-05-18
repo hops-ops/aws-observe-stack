@@ -6,12 +6,8 @@
 
 {{- $kps := $state.kubePrometheusStack }}
 {{- $k8sPCR := $state.kubernetes.providerConfigRef }}
-{{- $opencostOverviewDashboardName := printf "%s-opencost-overview" $state.name }}
-{{- $opencostNamespaceDashboardName := printf "%s-opencost-namespace" $state.name }}
-{{- if $state.prettyNames }}
-  {{- $opencostOverviewDashboardName = "opencost-overview" }}
-  {{- $opencostNamespaceDashboardName = "opencost-namespace" }}
-{{- end }}
+{{- $opencostOverviewDashboardName := "opencost-overview" }}
+{{- $opencostNamespaceDashboardName := "opencost-namespace" }}
 
 {{- if and $state.observed.grafanaOperator.ready $state.observed.grafanaInstance.ready }}
 
