@@ -62,9 +62,12 @@ spec:
       "requests" (dict "cpu" "50m" "memory" "64Mi")
       "limits" (dict "cpu" "100m" "memory" "256Mi")
     }}
+    {{- /* KSM caches state for every CRD's CRs. Crossplane-heavy clusters
+         can have 800+ CRDs, requiring much more memory than a vanilla
+         cluster. Guaranteed memory so it isn't evicted under pressure. */}}
     {{- $ksmResources := dict
-      "requests" (dict "cpu" "50m" "memory" "64Mi")
-      "limits" (dict "cpu" "100m" "memory" "256Mi")
+      "requests" (dict "cpu" "100m" "memory" "1Gi")
+      "limits" (dict "memory" "1Gi")
     }}
     {{- /* NodePool scheduling for non-daemonset components */}}
     {{- $promSpec := dict
