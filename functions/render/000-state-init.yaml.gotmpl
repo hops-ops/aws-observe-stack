@@ -68,10 +68,14 @@
 {{- $nodePoolName := "hops-observe" }}
 {{- $nodePoolNodeClassName := $nodePoolSpec.nodeClassName | default "" }}
 {{- $nodePoolLimits := $nodePoolSpec.limits | default (dict "cpu" "40" "memory" "160Gi") }}
+{{- /* Prometheus + alloy-metrics easily push >7 GiB working set on a small cluster.
+   At 8 GiB nodes Karpenter packs them with other workloads and SIGKILL pressure
+   tanks the whole monitoring stack. 16 GiB floor gives prometheus the headroom
+   the chart authors assume in production clusters. */}}
 {{- $nodePoolRequirements := $nodePoolSpec.requirements | default (list
   (dict "key" "kubernetes.io/arch" "operator" "In" "values" (list "amd64" "arm64"))
   (dict "key" "karpenter.sh/capacity-type" "operator" "In" "values" (list "spot" "on-demand"))
-  (dict "key" "eks.amazonaws.com/instance-memory" "operator" "Gt" "values" (list "7999"))
+  (dict "key" "eks.amazonaws.com/instance-memory" "operator" "Gt" "values" (list "15999"))
   (dict "key" "eks.amazonaws.com/instance-cpu" "operator" "Gt" "values" (list "1"))
 ) }}
 {{- $nodePoolDisruption := $nodePoolSpec.disruption | default (dict "consolidationPolicy" "WhenEmptyOrUnderutilized" "consolidateAfter" "60s") }}
