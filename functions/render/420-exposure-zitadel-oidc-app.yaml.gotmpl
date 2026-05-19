@@ -1,0 +1,134 @@
+# code: language=yaml
+#
+# Zitadel OIDC Application MRs.
+#
+# Two clients composed when their respective auth modes are present:
+#
+# 1. oauth2-proxy client (always, when any ext_authz component enabled) —
+#    one client covering all ext_authz-mode components (prometheus,
+#    alertmanager, opencost). Redirect URIs cover /oauth2/callback on each.
+#    Secret: <observe-ns>-oauth2-proxy-oidc-client.
+#
+# 2. Grafana client (only when spec.exposure.grafana.enabled) — separate
+#    client because Grafana's redirect URI is /login/generic_oauth and the
+#    role/claim mapping is different. App-level OIDC integration per
+#    feedback_app_level_oidc. Secret: <observe-ns>-grafana-oidc-client.
+#
+# Wildcards aren't supported in Zitadel redirect URIs as of v3; list each
+# host explicitly.
+
+{{- $x := $state.exposure }}
+{{- $a := $state.auth }}
+{{- if $x.enabled }}
+
+{{- /* Collect ext_authz-mode component hosts for the oauth2-proxy OIDC client. */}}
+{{- $extAuthzRedirects := list }}
+{{- $extAuthzPostLogout := list }}
+{{- range $comp := $x.components }}
+  {{- if and $comp.enabled (ne $comp.host "") (eq $comp.authMode "ext_authz") }}
+    {{- $extAuthzRedirects = append $extAuthzRedirects (printf "https://%s/oauth2/callback" $comp.host) }}
+    {{- $extAuthzPostLogout = append $extAuthzPostLogout (printf "https://%s/" $comp.host) }}
+  {{- end }}
+{{- end }}
+
+{{- if gt (len $extAuthzRedirects) 0 }}
+{{- $oidcAppName := printf "%s-oauth2-proxy" $state.namespace }}
+{{- $oidcSecretName := printf "%s-oidc-client" $oidcAppName }}
+---
+apiVersion: kubernetes.m.crossplane.io/v1alpha1
+kind: Object
+metadata:
+  name: {{ $state.name }}-exposure-oidc-app
+  annotations:
+    {{ setResourceNameAnnotation "exposure-oidc-app" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  managementPolicies: {{ $state.managementPolicies | toJson }}
+  forProvider:
+    manifest:
+      apiVersion: application.zitadel.m.crossplane.io/v1alpha1
+      kind: Oidc
+      metadata:
+        name: {{ $oidcAppName }}
+        namespace: {{ $state.namespace }}
+        labels: {{ $state.labels | toJson }}
+      spec:
+        forProvider:
+          name: {{ $oidcAppName | quote }}
+          projectId: {{ $a.zitadelProjectId | quote }}
+          appType: OIDC_APP_TYPE_WEB
+          authMethodType: OIDC_AUTH_METHOD_TYPE_BASIC
+          grantTypes:
+          - OIDC_GRANT_TYPE_AUTHORIZATION_CODE
+          - OIDC_GRANT_TYPE_REFRESH_TOKEN
+          responseTypes:
+          - OIDC_RESPONSE_TYPE_CODE
+          redirectUris: {{ $extAuthzRedirects | toJson }}
+          postLogoutRedirectUris: {{ $extAuthzPostLogout | toJson }}
+          accessTokenType: OIDC_TOKEN_TYPE_BEARER
+          accessTokenRoleAssertion: true
+          idTokenRoleAssertion: true
+          idTokenUserinfoAssertion: true
+          devMode: false
+        writeConnectionSecretToRef:
+          name: {{ $oidcSecretName }}
+        providerConfigRef:
+          name: zitadel-observe-stack
+          kind: ProviderConfig
+  providerConfigRef:
+    name: {{ $state.kubernetes.providerConfigRef.name }}
+    kind: {{ $state.kubernetes.providerConfigRef.kind }}
+{{- end }}
+
+{{- /* Grafana OIDC client (separate, with /login/generic_oauth redirect). */}}
+{{- if and $x.grafana.enabled (ne $x.grafana.host "") }}
+{{- $grafanaOidcName := printf "%s-grafana" $state.namespace }}
+{{- $grafanaOidcSecretName := printf "%s-oidc-client" $grafanaOidcName }}
+---
+apiVersion: kubernetes.m.crossplane.io/v1alpha1
+kind: Object
+metadata:
+  name: {{ $state.name }}-exposure-grafana-oidc-app
+  annotations:
+    {{ setResourceNameAnnotation "exposure-grafana-oidc-app" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  managementPolicies: {{ $state.managementPolicies | toJson }}
+  forProvider:
+    manifest:
+      apiVersion: application.zitadel.m.crossplane.io/v1alpha1
+      kind: Oidc
+      metadata:
+        name: {{ $grafanaOidcName }}
+        namespace: {{ $state.namespace }}
+        labels: {{ $state.labels | toJson }}
+      spec:
+        forProvider:
+          name: {{ $grafanaOidcName | quote }}
+          projectId: {{ $a.zitadelProjectId | quote }}
+          appType: OIDC_APP_TYPE_WEB
+          authMethodType: OIDC_AUTH_METHOD_TYPE_BASIC
+          grantTypes:
+          - OIDC_GRANT_TYPE_AUTHORIZATION_CODE
+          - OIDC_GRANT_TYPE_REFRESH_TOKEN
+          responseTypes:
+          - OIDC_RESPONSE_TYPE_CODE
+          redirectUris:
+          - {{ printf "https://%s/login/generic_oauth" $x.grafana.host | quote }}
+          postLogoutRedirectUris:
+          - {{ printf "https://%s/" $x.grafana.host | quote }}
+          accessTokenType: OIDC_TOKEN_TYPE_BEARER
+          accessTokenRoleAssertion: true
+          idTokenRoleAssertion: true
+          idTokenUserinfoAssertion: true
+          devMode: false
+        writeConnectionSecretToRef:
+          name: {{ $grafanaOidcSecretName }}
+        providerConfigRef:
+          name: zitadel-observe-stack
+          kind: ProviderConfig
+  providerConfigRef:
+    name: {{ $state.kubernetes.providerConfigRef.name }}
+    kind: {{ $state.kubernetes.providerConfigRef.kind }}
+{{- end }}
+{{- end }}

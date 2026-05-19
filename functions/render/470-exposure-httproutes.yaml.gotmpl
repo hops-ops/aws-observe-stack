@@ -1,0 +1,70 @@
+# code: language=yaml
+#
+# HTTPRoute per enabled component. Shape depends on authMode:
+#   - ext_authz (prometheus/alertmanager/opencost): two rules
+#       1. /oauth2/* -> oauth2-proxy (sign-in flow, callback)
+#       2. /         -> sister Service (gated by waypoint ext_authz)
+#   - app_level  (grafana): single rule
+#       1. /         -> sister Service (Grafana enforces its own OIDC auth;
+#                       /login/generic_oauth lives at the app, not oauth2-proxy)
+#
+# Per Gateway API precedence, the more-specific /oauth2/ prefix is evaluated
+# first when present.
+
+{{- $x := $state.exposure }}
+{{- $proxySvc := printf "%s-oauth2-proxy" $state.namespace }}
+{{- if $x.enabled }}
+{{- range $comp := $x.components }}
+{{- if and $comp.enabled (ne $comp.host "") }}
+---
+apiVersion: kubernetes.m.crossplane.io/v1alpha1
+kind: Object
+metadata:
+  name: {{ $state.name }}-exposure-httproute-{{ $comp.name }}
+  annotations:
+    {{ setResourceNameAnnotation (printf "exposure-httproute-%s" $comp.name) }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  managementPolicies: {{ $state.managementPolicies | toJson }}
+  forProvider:
+    manifest:
+      apiVersion: gateway.networking.k8s.io/v1
+      kind: HTTPRoute
+      metadata:
+        name: {{ printf "exposure-%s" $comp.name }}
+        namespace: {{ $state.namespace }}
+        labels: {{ $state.labels | toJson }}
+      spec:
+        parentRefs:
+        {{- range $sn := $x.gatewayRef.sectionNames }}
+        - name: {{ $x.gatewayRef.name }}
+          namespace: {{ $x.gatewayRef.namespace }}
+          sectionName: {{ $sn }}
+        {{- end }}
+        hostnames:
+        - {{ $comp.host | quote }}
+        rules:
+        {{- if eq $comp.authMode "ext_authz" }}
+        - matches:
+          - path:
+              type: PathPrefix
+              value: /oauth2
+          backendRefs:
+          - name: {{ $proxySvc }}
+            namespace: {{ $state.namespace }}
+            port: 4180
+        {{- end }}
+        - matches:
+          - path:
+              type: PathPrefix
+              value: /
+          backendRefs:
+          - name: {{ $comp.sisterServiceName }}
+            namespace: {{ $state.namespace }}
+            port: {{ $comp.servicePort }}
+  providerConfigRef:
+    name: {{ $state.kubernetes.providerConfigRef.name }}
+    kind: {{ $state.kubernetes.providerConfigRef.kind }}
+{{- end }}
+{{- end }}
+{{- end }}

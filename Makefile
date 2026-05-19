@@ -30,7 +30,8 @@ EXAMPLES := \
     examples/observestacks/cloud-costs.yaml:: \
     examples/observestacks/nodepool.yaml:: \
     examples/observestacks/spot-feed.yaml:: \
-    examples/observestacks/metrics-server.yaml::
+    examples/observestacks/metrics-server.yaml:: \
+    examples/observestacks/exposure.yaml::
 
 # Render all examples (parallel execution, output shown per-job when complete)
 render\:all:

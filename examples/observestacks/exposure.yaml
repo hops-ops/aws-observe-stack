@@ -1,0 +1,54 @@
+# ObserveStack with public exposure enabled.
+#
+# Prerequisites the operator does once per cluster:
+#   1. Create a Zitadel project (UI or another stack) and note the projectId.
+#   2. Push the iam-admin PAT into AWS Secrets Manager at
+#      "push/<cluster>/zitadel-credentials" (AuthStack does this for you).
+#   3. Pre-create the cookie-signing secret in the observe namespace:
+#        kubectl create secret generic observe-oauth2-proxy-cookie \
+#          --from-literal=cookie_secret=$(openssl rand -hex 16) -n monitoring
+#   4. Register `monitoring-oauth2-proxy` as an extensionProvider on IstioStack
+#      (per tasks/istio-stack-extension-providers).
+#
+# Then apply this XR — ObserveStack composes everything else (Zitadel OIDC
+# client, ExternalSecret for the PAT, Redis, oauth2-proxy, Waypoint, sister
+# Services, HTTPRoutes, AuthorizationPolicy.CUSTOM).
+apiVersion: aws.hops.ops.com.ai/v1alpha1
+kind: ObserveStack
+metadata:
+  name: observe
+  namespace: default
+spec:
+  clusterName: my-cluster
+  namespace: monitoring
+  aws:
+    region: us-east-1
+
+  auth:
+    issuerURL: https://auth.example.com
+    awsSecretsManagerPath: push/my-cluster/zitadel-credentials
+    accessTokenProperty: access_token
+    zitadelProjectId: "330000000000000001"
+
+  exposure:
+    enabled: true
+    domain: observe.example.com
+    extensionProviderName: monitoring-oauth2-proxy
+    oauth2Proxy:
+      cookieSecretRef:
+        name: observe-oauth2-proxy-cookie
+    prometheus:
+      enabled: true
+      host: prometheus.observe.example.com
+    alertmanager:
+      enabled: true
+      host: alertmanager.observe.example.com
+    opencost:
+      enabled: true
+      host: opencost.observe.example.com
+    grafana:
+      enabled: true
+      host: grafana.observe.example.com
+      allowedDomains:
+      - example.com
+      roleAttributePath: 'contains("urn:zitadel:iam:org:project:roles", "observe-admin") && "Admin" || "Viewer"'

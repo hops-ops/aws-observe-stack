@@ -1,0 +1,174 @@
+# code: language=yaml
+#
+# oauth2-proxy bridge: Deployment + Service.
+#
+# Modes wired up:
+#   - --provider=oidc                 (Zitadel discovery)
+#   - --session-store-type=redis      (server-side sessions)
+#   - --reverse-proxy=true            (X-Forwarded-For trust behind Gateway)
+#   - --skip-provider-button=true     (single IdP, no consent screen)
+#   - --pass-access-token=true        (forward token upstream as a header)
+#   - --set-xauthrequest=true         (set X-Auth-Request-* headers)
+#
+# Listens on :4180. The IstioStack extensionProvider name registered for
+# this bridge points at <observe-ns>-oauth2-proxy.<observe-ns>.svc.cluster.local:4180
+# (per the typed surface added by tasks/istio-stack-extension-providers).
+#
+# Two HTTPRoutes drive traffic to this Service:
+#   - /oauth2/* on every protected host -> oauth2-proxy
+#     (handles /oauth2/auth, /oauth2/start, /oauth2/callback, /oauth2/sign_out)
+#   - AuthorizationPolicy.CUSTOM on each upstream Service triggers waypoint
+#     ext_authz calls to /oauth2/auth on this Service.
+
+{{- $x := $state.exposure }}
+{{- $p := $x.oauth2Proxy }}
+{{- $a := $state.auth }}
+{{- $name := printf "%s-oauth2-proxy" $state.namespace }}
+{{- $redisSvc := printf "%s-oauth2-proxy-redis.%s.svc.cluster.local" $state.namespace $state.namespace }}
+{{- $oidcSecret := printf "%s-oidc-client" $name }}
+{{- if $x.enabled }}
+{{- /* whitelist-domain entries: every component host + the cookie domain */}}
+{{- $whitelist := list $p.cookieDomain }}
+{{- range $comp := $x.components }}
+  {{- if $comp.enabled }}{{- $whitelist = append $whitelist $comp.host }}{{- end }}
+{{- end }}
+---
+apiVersion: kubernetes.m.crossplane.io/v1alpha1
+kind: Object
+metadata:
+  name: {{ $state.name }}-exposure-oauth2-proxy-svc
+  annotations:
+    {{ setResourceNameAnnotation "exposure-oauth2-proxy-svc" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  managementPolicies: {{ $state.managementPolicies | toJson }}
+  forProvider:
+    manifest:
+      apiVersion: v1
+      kind: Service
+      metadata:
+        name: {{ $name }}
+        namespace: {{ $state.namespace }}
+        labels:
+          app.kubernetes.io/name: oauth2-proxy
+          app.kubernetes.io/instance: {{ $state.name }}
+          {{- range $k, $v := $state.labels }}
+          {{ $k }}: {{ $v | quote }}
+          {{- end }}
+      spec:
+        ports:
+        - name: http
+          port: 4180
+          targetPort: 4180
+        selector:
+          app.kubernetes.io/name: oauth2-proxy
+          app.kubernetes.io/instance: {{ $state.name }}
+  providerConfigRef:
+    name: {{ $state.kubernetes.providerConfigRef.name }}
+    kind: {{ $state.kubernetes.providerConfigRef.kind }}
+---
+apiVersion: kubernetes.m.crossplane.io/v1alpha1
+kind: Object
+metadata:
+  name: {{ $state.name }}-exposure-oauth2-proxy-deploy
+  annotations:
+    {{ setResourceNameAnnotation "exposure-oauth2-proxy-deploy" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  managementPolicies: {{ $state.managementPolicies | toJson }}
+  forProvider:
+    manifest:
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: {{ $name }}
+        namespace: {{ $state.namespace }}
+        labels:
+          app.kubernetes.io/name: oauth2-proxy
+          app.kubernetes.io/instance: {{ $state.name }}
+          {{- range $k, $v := $state.labels }}
+          {{ $k }}: {{ $v | quote }}
+          {{- end }}
+      spec:
+        replicas: {{ $p.replicas }}
+        selector:
+          matchLabels:
+            app.kubernetes.io/name: oauth2-proxy
+            app.kubernetes.io/instance: {{ $state.name }}
+        template:
+          metadata:
+            labels:
+              app.kubernetes.io/name: oauth2-proxy
+              app.kubernetes.io/instance: {{ $state.name }}
+          spec:
+            containers:
+            - name: oauth2-proxy
+              image: {{ $p.image | quote }}
+              imagePullPolicy: IfNotPresent
+              args:
+              - --http-address=0.0.0.0:4180
+              - --provider=oidc
+              - --provider-display-name=Zitadel
+              - --oidc-issuer-url={{ $a.issuerURL }}
+              - --email-domain=*
+              - --skip-provider-button=true
+              - --reverse-proxy=true
+              - --pass-access-token=true
+              - --pass-authorization-header=true
+              - --set-xauthrequest=true
+              - --set-authorization-header=true
+              - --cookie-domain={{ $p.cookieDomain }}
+              - --cookie-secure=true
+              - --cookie-httponly=true
+              - --cookie-samesite=lax
+              - --cookie-refresh=10m
+              - --session-store-type=redis
+              - --redis-connection-url=redis://{{ $redisSvc }}:6379
+              - --upstream=static://200
+              - --silence-ping-logging=true
+              {{- range $w := $whitelist }}
+              - --whitelist-domain={{ $w }}
+              {{- end }}
+              {{- range $f := $p.additionalConfig }}
+              - {{ $f | quote }}
+              {{- end }}
+              env:
+              # The Zitadel upjet provider writes connection details into
+              # keys prefixed with "attribute." (Terraform convention). The
+              # Oidc MR's writeConnectionSecretToRef Secret therefore carries
+              # attribute.client_id / attribute.client_secret rather than the
+              # plain key names.
+              - name: OAUTH2_PROXY_CLIENT_ID
+                valueFrom:
+                  secretKeyRef:
+                    name: {{ $oidcSecret }}
+                    key: attribute.client_id
+              - name: OAUTH2_PROXY_CLIENT_SECRET
+                valueFrom:
+                  secretKeyRef:
+                    name: {{ $oidcSecret }}
+                    key: attribute.client_secret
+              - name: OAUTH2_PROXY_COOKIE_SECRET
+                valueFrom:
+                  secretKeyRef:
+                    name: {{ $p.cookieSecretRef.name }}
+                    key: {{ $p.cookieSecretRef.key }}
+              ports:
+              - name: http
+                containerPort: 4180
+              readinessProbe:
+                httpGet:
+                  path: /ready
+                  port: 4180
+                initialDelaySeconds: 5
+                periodSeconds: 5
+              livenessProbe:
+                httpGet:
+                  path: /ping
+                  port: 4180
+                initialDelaySeconds: 10
+                periodSeconds: 10
+  providerConfigRef:
+    name: {{ $state.kubernetes.providerConfigRef.name }}
+    kind: {{ $state.kubernetes.providerConfigRef.kind }}
+{{- end }}

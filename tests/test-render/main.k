@@ -2044,6 +2044,374 @@ _items = [
             ]
         }
     }
+
+    # ==========================================================================
+    # exposure: enabled composes the full bridge — Zitadel ExternalSecret,
+    # ProviderConfig, OIDC App, Redis, oauth2-proxy, Waypoint, sister Services,
+    # HTTPRoutes, AuthorizationPolicy.CUSTOM.
+    # ==========================================================================
+    metav1alpha1.CompositionTest {
+        metadata.name = "exposure-enabled-composes-full-bridge"
+        spec = {
+            compositionPath = "apis/observestacks/composition.yaml"
+            xrdPath = "apis/observestacks/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = {
+                apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                kind = "ObserveStack"
+                metadata.name = "observe"
+                spec = {
+                    clusterName = "my-cluster"
+                    namespace = "monitoring"
+                    aws.region = "us-east-1"
+                    auth = {
+                        issuerURL = "https://auth.example.com"
+                        awsSecretsManagerPath = "push/my-cluster/zitadel-credentials"
+                        zitadelProjectId = "330000000000000001"
+                    }
+                    exposure = {
+                        enabled = True
+                        domain = "observe.example.com"
+                        extensionProviderName = "monitoring-oauth2-proxy"
+                        oauth2Proxy.cookieSecretRef.name = "observe-oauth2-proxy-cookie"
+                        prometheus = {
+                            enabled = True
+                            host = "prometheus.observe.example.com"
+                        }
+                    }
+                }
+            }
+            assertResources = [
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-exposure-zitadel-credentials"
+                    spec.forProvider.manifest = {
+                        apiVersion = "external-secrets.io/v1"
+                        kind = "ExternalSecret"
+                        metadata.name = "zitadel-credentials"
+                        metadata.namespace = "monitoring"
+                    }
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-exposure-zitadel-providerconfig"
+                    spec.forProvider.manifest = {
+                        apiVersion = "zitadel.m.crossplane.io/v1beta1"
+                        kind = "ProviderConfig"
+                        metadata.name = "zitadel-observe-stack"
+                        metadata.namespace = "monitoring"
+                    }
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-exposure-oidc-app"
+                    spec.forProvider.manifest = {
+                        apiVersion = "application.zitadel.m.crossplane.io/v1alpha1"
+                        kind = "Oidc"
+                        metadata.name = "monitoring-oauth2-proxy"
+                        spec = {
+                            forProvider.projectId = "330000000000000001"
+                            forProvider.appType = "OIDC_APP_TYPE_WEB"
+                            forProvider.redirectUris = ["https://prometheus.observe.example.com/oauth2/callback"]
+                            writeConnectionSecretToRef.name = "monitoring-oauth2-proxy-oidc-client"
+                            providerConfigRef.name = "zitadel-observe-stack"
+                        }
+                    }
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-exposure-redis-sts"
+                    spec.forProvider.manifest = {
+                        apiVersion = "apps/v1"
+                        kind = "StatefulSet"
+                        metadata.name = "monitoring-oauth2-proxy-redis"
+                        metadata.namespace = "monitoring"
+                        spec.replicas = 1
+                    }
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-exposure-oauth2-proxy-svc"
+                    spec.forProvider.manifest = {
+                        apiVersion = "v1"
+                        kind = "Service"
+                        metadata.name = "monitoring-oauth2-proxy"
+                        metadata.namespace = "monitoring"
+                    }
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-exposure-waypoint"
+                    spec.forProvider.manifest = {
+                        apiVersion = "gateway.networking.k8s.io/v1"
+                        kind = "Gateway"
+                        metadata.name = "monitoring-waypoint"
+                        metadata.namespace = "monitoring"
+                        metadata.labels = {
+                            "istio.io/waypoint-for" = "service"
+                        }
+                        spec.gatewayClassName = "istio-waypoint"
+                    }
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-exposure-sister-svc-prometheus"
+                    spec.forProvider.manifest = {
+                        apiVersion = "v1"
+                        kind = "Service"
+                        metadata.name = "exposure-prometheus"
+                        metadata.namespace = "monitoring"
+                        metadata.labels = {
+                            "istio.io/use-waypoint" = "monitoring-waypoint"
+                            "istio.io/ingress-use-waypoint" = "true"
+                        }
+                        spec.selector = {
+                            "app.kubernetes.io/name" = "prometheus"
+                            prometheus = "kube-prometheus-stack-prometheus"
+                        }
+                    }
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-exposure-httproute-prometheus"
+                    spec.forProvider.manifest = {
+                        apiVersion = "gateway.networking.k8s.io/v1"
+                        kind = "HTTPRoute"
+                        metadata.name = "exposure-prometheus"
+                        spec = {
+                            hostnames = ["prometheus.observe.example.com"]
+                            parentRefs = [
+                                {
+                                    name = "platform"
+                                    namespace = "istio-ingress"
+                                    sectionName = "http"
+                                }
+                                {
+                                    name = "platform"
+                                    namespace = "istio-ingress"
+                                    sectionName = "https-apex"
+                                }
+                            ]
+                            rules = [
+                                {
+                                    matches = [{ path = { type = "PathPrefix", value = "/oauth2" } }]
+                                    backendRefs = [{
+                                        name = "monitoring-oauth2-proxy"
+                                        namespace = "monitoring"
+                                        port = 4180
+                                    }]
+                                }
+                                {
+                                    matches = [{ path = { type = "PathPrefix", value = "/" } }]
+                                    backendRefs = [{
+                                        name = "exposure-prometheus"
+                                        namespace = "monitoring"
+                                        port = 9090
+                                    }]
+                                }
+                            ]
+                        }
+                    }
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-exposure-authpolicy-prometheus"
+                    spec.forProvider.manifest = {
+                        apiVersion = "security.istio.io/v1"
+                        kind = "AuthorizationPolicy"
+                        metadata.name = "exposure-prometheus"
+                        spec = {
+                            action = "CUSTOM"
+                            provider.name = "monitoring-oauth2-proxy"
+                            targetRefs = [{
+                                group = ""
+                                kind = "Service"
+                                name = "exposure-prometheus"
+                            }]
+                        }
+                    }
+                }
+                {
+                    apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                    kind = "ObserveStack"
+                    metadata.name = "observe"
+                    status.exposure = {
+                        domain = "observe.example.com"
+                        extensionProviderName = "monitoring-oauth2-proxy"
+                        cookieDomain = ".observe.example.com"
+                        prometheus = {
+                            enabled = True
+                            url = "https://prometheus.observe.example.com/"
+                        }
+                    }
+                }
+            ]
+        }
+    }
+
+    # ==========================================================================
+    # exposure: grafana app-level OIDC composes its own Zitadel client,
+    # writes generic_oauth Helm values into kube-prometheus-stack, mounts
+    # the OIDC client Secret, and exposes via single-rule HTTPRoute with
+    # NO AuthorizationPolicy.CUSTOM (Grafana enforces its own auth).
+    # ==========================================================================
+    metav1alpha1.CompositionTest {
+        metadata.name = "exposure-grafana-app-level-oidc-shape"
+        spec = {
+            compositionPath = "apis/observestacks/composition.yaml"
+            xrdPath = "apis/observestacks/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = {
+                apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                kind = "ObserveStack"
+                metadata.name = "observe"
+                spec = {
+                    clusterName = "my-cluster"
+                    namespace = "monitoring"
+                    aws.region = "us-east-1"
+                    auth = {
+                        issuerURL = "https://auth.example.com"
+                        awsSecretsManagerPath = "push/my-cluster/zitadel-credentials"
+                        zitadelProjectId = "330000000000000001"
+                    }
+                    exposure = {
+                        enabled = True
+                        domain = "observe.example.com"
+                        oauth2Proxy.cookieSecretRef.name = "observe-oauth2-proxy-cookie"
+                        grafana = {
+                            enabled = True
+                            host = "grafana.observe.example.com"
+                            allowedDomains = ["example.com"]
+                            roleAttributePath = "contains(\"urn:zitadel:iam:org:project:roles\", \"observe-admin\") && \"Admin\" || \"Viewer\""
+                        }
+                    }
+                }
+            }
+            assertResources = [
+                # Dedicated Grafana OIDC client (separate from oauth2-proxy)
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-exposure-grafana-oidc-app"
+                    spec.forProvider.manifest = {
+                        apiVersion = "application.zitadel.m.crossplane.io/v1alpha1"
+                        kind = "Oidc"
+                        metadata.name = "monitoring-grafana"
+                        spec = {
+                            forProvider = {
+                                projectId = "330000000000000001"
+                                redirectUris = ["https://grafana.observe.example.com/login/generic_oauth"]
+                                postLogoutRedirectUris = ["https://grafana.observe.example.com/"]
+                            }
+                            writeConnectionSecretToRef.name = "monitoring-grafana-oidc-client"
+                            providerConfigRef.name = "zitadel-observe-stack"
+                        }
+                    }
+                }
+                # Sister Service for grafana (same waypoint labels as ext_authz components)
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-exposure-sister-svc-grafana"
+                    spec.forProvider.manifest = {
+                        apiVersion = "v1"
+                        kind = "Service"
+                        metadata.name = "exposure-grafana"
+                        metadata.labels = {
+                            "istio.io/use-waypoint" = "monitoring-waypoint"
+                            "istio.io/ingress-use-waypoint" = "true"
+                        }
+                        spec.selector = {
+                            "app.kubernetes.io/name" = "grafana"
+                            "app.kubernetes.io/instance" = "kube-prometheus-stack"
+                        }
+                    }
+                }
+                # Single-rule HTTPRoute (no /oauth2/* detour — Grafana speaks OIDC itself)
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-exposure-httproute-grafana"
+                    spec.forProvider.manifest = {
+                        apiVersion = "gateway.networking.k8s.io/v1"
+                        kind = "HTTPRoute"
+                        metadata.name = "exposure-grafana"
+                        spec.rules = [{
+                            matches = [{ path = { type = "PathPrefix", value = "/" } }]
+                            backendRefs = [{
+                                name = "exposure-grafana"
+                                namespace = "monitoring"
+                                port = 80
+                            }]
+                        }]
+                    }
+                }
+                # XR status surface (app_level branch populates oidcClientReady too)
+                {
+                    apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                    kind = "ObserveStack"
+                    metadata.name = "observe"
+                    status.exposure.grafana = {
+                        enabled = True
+                        url = "https://grafana.observe.example.com/"
+                    }
+                }
+            ]
+        }
+    }
+
+    # ==========================================================================
+    # exposure: components default to disabled — no per-component resources
+    # ==========================================================================
+    metav1alpha1.CompositionTest {
+        metadata.name = "exposure-no-components-still-composes-bridge"
+        spec = {
+            compositionPath = "apis/observestacks/composition.yaml"
+            xrdPath = "apis/observestacks/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = {
+                apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                kind = "ObserveStack"
+                metadata.name = "observe"
+                spec = {
+                    clusterName = "my-cluster"
+                    namespace = "monitoring"
+                    aws.region = "us-east-1"
+                    auth = {
+                        issuerURL = "https://auth.example.com"
+                        awsSecretsManagerPath = "push/my-cluster/zitadel-credentials"
+                        zitadelProjectId = "330000000000000001"
+                    }
+                    exposure = {
+                        enabled = True
+                        domain = "observe.example.com"
+                        oauth2Proxy.cookieSecretRef.name = "observe-oauth2-proxy-cookie"
+                    }
+                }
+            }
+            assertResources = [
+                # extensionProviderName defaults to <observe-ns>-oauth2-proxy
+                {
+                    apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                    kind = "ObserveStack"
+                    metadata.name = "observe"
+                    status.exposure.extensionProviderName = "monitoring-oauth2-proxy"
+                }
+            ]
+        }
+    }
 ]
 
 items = _items
