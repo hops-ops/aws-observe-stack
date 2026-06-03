@@ -87,9 +87,10 @@ spec:
 ```
 
 When enabled:
-- A Karpenter NodePool (`<clusterName>-observe`) is created with broad spot + on-demand instance selection
+- A Karpenter NodePool (`<clusterName>-observe`) is created with cheap, flexible Spot selection: c/m/r/t instance categories, generation 4 or newer, Linux, and no architecture pin
 - Non-daemonset pods (Prometheus, Loki, Tempo, Grafana, OpenCost, VPA, Goldilocks) are scheduled to the NodePool via `nodeSelector` and `tolerations`
 - Daemonsets (alloy-metrics, alloy-logs) continue to run on **all** nodes, including the observe NodePool
+- Workloads that require x86 images should set `nodeSelector: {kubernetes.io/arch: amd64}` or equivalent affinity
 
 Custom NodePool settings:
 
@@ -101,6 +102,7 @@ spec:
     limits:
       nodes: 20
     requirements:
+    # Example override for x86-only workloads.
     - key: kubernetes.io/arch
       operator: In
       values: [amd64]

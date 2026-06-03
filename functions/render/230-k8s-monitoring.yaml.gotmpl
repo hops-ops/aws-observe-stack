@@ -48,11 +48,11 @@ spec:
          example is 512Mi but k8s-monitoring-helm#541 shows that's
          optimistic; real clusters with prometheus-operator-objects
          enabled and many ServiceMonitors need 1Gi+. Crossplane-heavy
-         clusters with hundreds of CRDs being scraped need 2Gi to
-         survive WAL replay after a restart without OOM-looping. */}}
+         clusters with hundreds of CRDs being scraped need >2Gi target memory
+         per Goldilocks once steady-state series volume settles. */}}
     {{- $alloyMetricsResources := dict
-      "requests" (dict "cpu" "200m" "memory" "2Gi")
-      "limits" (dict "memory" "2Gi")
+      "requests" (dict "cpu" "200m" "memory" "2560Mi")
+      "limits" (dict "memory" "2560Mi")
     }}
     {{- $alloySingletonResources := dict
       "requests" (dict "cpu" "50m" "memory" "128Mi")
@@ -67,8 +67,8 @@ spec:
       "limits" (dict "cpu" "100m" "memory" "256Mi")
     }}
     {{- $alloyOperatorResources := dict
-      "requests" (dict "cpu" "10m" "memory" "64Mi")
-      "limits" (dict "cpu" "50m" "memory" "128Mi")
+      "requests" (dict "cpu" "63m" "memory" "156Mi")
+      "limits" (dict "cpu" "250m" "memory" "384Mi")
     }}
     {{- $nodeExporterResources := dict
       "requests" (dict "cpu" "50m" "memory" "32Mi")

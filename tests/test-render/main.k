@@ -1233,9 +1233,21 @@ _items = [
                         nodeLogs = {enabled = True}
                         clusterEvents = {enabled = True}
                         "alloy-logs" = {enabled = True}
-                        "alloy-metrics" = {enabled = True}
+                        "alloy-metrics" = {
+                            enabled = True
+                            alloy.resources.requests = {
+                                cpu = "200m"
+                                memory = "2560Mi"
+                            }
+                        }
                         "alloy-receiver" = {enabled = True}
                         "alloy-singleton" = {enabled = True}
+                        "alloy-operator" = {
+                            resources.requests = {
+                                cpu = "63m"
+                                memory = "156Mi"
+                            }
+                        }
                         nodeExporter = {enabled = False}
                     }
                 }
@@ -1377,9 +1389,25 @@ _items = [
                         spec.template.metadata.labels = {
                             "workload-type" = "observe"
                         }
+                        spec.template.spec.nodeClassRef = {
+                            group = "eks.amazonaws.com"
+                            kind = "NodeClass"
+                            name = "hops-default"
+                        }
                         spec.template.spec.taints = [
                             {key = "observe", value = "true", effect = "NoSchedule"}
                         ]
+                        spec.template.spec.requirements = [
+                            {key = "karpenter.sh/capacity-type", operator = "In", values = ["spot"]}
+                            {key = "eks.amazonaws.com/instance-category", operator = "In", values = ["c", "m", "r", "t"]}
+                            {key = "eks.amazonaws.com/instance-generation", operator = "Gte", values = ["4"]}
+                            {key = "kubernetes.io/os", operator = "In", values = ["linux"]}
+                        ]
+                        spec.disruption = {
+                            consolidationPolicy = "WhenEmptyOrUnderutilized"
+                            consolidateAfter = "30s"
+                            budgets = [{nodes = "100%"}]
+                        }
                     }
                 }
                 # Prometheus gets nodeSelector + tolerations
@@ -2132,6 +2160,16 @@ _items = [
                         metadata.name = "monitoring-oauth2-proxy-redis"
                         metadata.namespace = "monitoring"
                         spec.replicas = 1
+                        spec.template.spec.containers = [
+                            {
+                                name = "redis"
+                                image = "redis:7-alpine"
+                                resources = {
+                                    requests = {cpu = "15m", memory = "100Mi"}
+                                    limits = {cpu = "100m", memory = "256Mi"}
+                                }
+                            }
+                        ]
                     }
                 }
                 {
@@ -2144,6 +2182,20 @@ _items = [
                         metadata.name = "monitoring-oauth2-proxy"
                         metadata.namespace = "monitoring"
                     }
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-exposure-oauth2-proxy-deploy"
+                    spec.forProvider.manifest.spec.template.spec.containers = [
+                        {
+                            name = "oauth2-proxy"
+                            resources = {
+                                requests = {cpu = "15m", memory = "100Mi"}
+                                limits = {cpu = "100m", memory = "256Mi"}
+                            }
+                        }
+                    ]
                 }
                 {
                     apiVersion = "kubernetes.m.crossplane.io/v1alpha1"

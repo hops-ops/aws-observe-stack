@@ -122,7 +122,7 @@ spec:
                     type: boolean
                     default: false
                   nodeClassName:
-                    description: Name of the EKS NodeClass to reference. Defaults to the EKS Auto Mode default.
+                    description: Name of the EKS NodeClass to reference. Defaults to "hops-default".
                     type: string
                   limits:
                     description: Karpenter NodePool resource limits. Defaults to cpu/memory-based limits for dynamic scaling. Set nodes to cap node count.
@@ -140,7 +140,7 @@ spec:
                         description: Maximum number of nodes. Optional — omit for pure resource-based scaling.
                         type: integer
                   requirements:
-                    description: Karpenter NodePool scheduling requirements. Defaults to broad spot instance selection.
+                    description: Karpenter NodePool scheduling requirements. Defaults to spot capacity, c/m/r/t instance categories, generation >= 4, linux, and architecture-flexible scheduling.
                     type: array
                     items:
                       type: object
@@ -155,7 +155,9 @@ spec:
                           - Exists
                           - DoesNotExist
                           - Gt
+                          - Gte
                           - Lt
+                          - Lte
                         values:
                           type: array
                           items:
@@ -164,7 +166,7 @@ spec:
                       - key
                       - operator
                   disruption:
-                    description: Karpenter disruption settings.
+                    description: Karpenter disruption settings. Defaults to WhenEmptyOrUnderutilized after 30s with a 100% NodePool disruption budget.
                     type: object
                     properties:
                       consolidationPolicy:
@@ -175,9 +177,33 @@ spec:
                         - WhenEmptyOrUnderutilized
                         default: WhenEmptyOrUnderutilized
                       consolidateAfter:
-                        description: Duration to wait before consolidating. Defaults to 60s.
+                        description: Duration to wait before consolidating. Defaults to 30s.
                         type: string
-                        default: "60s"
+                        default: "30s"
+                      budgets:
+                        description: NodePool disruption budgets. Defaults to nodes=100%.
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            nodes:
+                              description: Number or percentage of nodes that may be disrupted.
+                              type: string
+                            schedule:
+                              description: Optional UTC cron schedule for this budget.
+                              type: string
+                            duration:
+                              description: Duration for a scheduled budget.
+                              type: string
+                            reasons:
+                              description: Disruption reasons this budget applies to.
+                              type: array
+                              items:
+                                type: string
+                                enum:
+                                - Empty
+                                - Underutilized
+                                - Drifted
               aws:
                 description: AWS account and IAM configuration.
                 type: object

@@ -101,6 +101,12 @@ spec:
               app.kubernetes.io/name: oauth2-proxy
               app.kubernetes.io/instance: {{ $state.name }}
           spec:
+            {{- if $state.nodePool.enabled }}
+            nodeSelector:
+              {{- toYaml $state.nodePool.nodeSelector | nindent 14 }}
+            tolerations:
+              {{- toYaml $state.nodePool.tolerations | nindent 14 }}
+            {{- end }}
             containers:
             - name: oauth2-proxy
               image: {{ $p.image | quote }}
@@ -168,6 +174,13 @@ spec:
                   port: 4180
                 initialDelaySeconds: 10
                 periodSeconds: 10
+              resources:
+                requests:
+                  cpu: 15m
+                  memory: 100Mi
+                limits:
+                  cpu: 100m
+                  memory: 256Mi
   providerConfigRef:
     name: {{ $state.kubernetes.providerConfigRef.name }}
     kind: {{ $state.kubernetes.providerConfigRef.kind }}

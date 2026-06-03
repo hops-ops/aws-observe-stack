@@ -63,38 +63,31 @@ render\:all:
 	rm -rf "$$tmpdir"; \
 	exit $$failed
 
-# Validate all examples (parallel execution, output shown per-job when complete)
+# Validate all examples. Run sequentially because concurrent `up composition render`
+# calls share generated schema/function state and can race.
 validate\:all: generate-configuration
-	@tmpdir=$$(mktemp -d); \
-	pids=""; \
+	@set -o pipefail; \
+	failed=0; \
 	for entry in $(EXAMPLES); do \
 		example=$${entry%%::*}; \
 		observed=$${entry#*::}; \
-		outfile="$$tmpdir/$$(echo $$entry | tr '/:' '__')"; \
-		( \
-			if [ -n "$$observed" ]; then \
-				echo "=== Validating $$example with observed-resources $$observed ==="; \
-				up composition render --xrd=$(DEFINITION) $(COMPOSITION) $$example \
-					--observed-resources=$$observed --include-full-xr --quiet | \
-					crossplane beta validate $(XRD_DIR) --error-on-missing-schemas -; \
-			else \
-				echo "=== Validating $$example ==="; \
-				up composition render --xrd=$(DEFINITION) $(COMPOSITION) $$example \
-					--include-full-xr --quiet | \
-					crossplane beta validate $(XRD_DIR) --error-on-missing-schemas -; \
+		if [ -n "$$observed" ]; then \
+			echo "=== Validating $$example with observed-resources $$observed ==="; \
+			if ! up composition render --xrd=$(DEFINITION) $(COMPOSITION) $$example \
+				--observed-resources=$$observed --include-full-xr --quiet | \
+				crossplane beta validate $(XRD_DIR) --error-on-missing-schemas -; then \
+				failed=1; \
 			fi; \
-			echo "" \
-		) > "$$outfile" 2>&1 & \
-		pids="$$pids $$!:$$outfile"; \
+		else \
+			echo "=== Validating $$example ==="; \
+			if ! up composition render --xrd=$(DEFINITION) $(COMPOSITION) $$example \
+				--include-full-xr --quiet | \
+				crossplane beta validate $(XRD_DIR) --error-on-missing-schemas -; then \
+				failed=1; \
+			fi; \
+		fi; \
+		echo ""; \
 	done; \
-	failed=0; \
-	for pair in $$pids; do \
-		pid=$${pair%%:*}; \
-		outfile=$${pair#*:}; \
-		if ! wait $$pid; then failed=1; fi; \
-		cat "$$outfile"; \
-	done; \
-	rm -rf "$$tmpdir"; \
 	exit $$failed
 
 # Shorthand aliases
