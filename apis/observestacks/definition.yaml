@@ -113,6 +113,45 @@ spec:
                     - Immediate
                     - WaitForFirstConsumer
                     default: WaitForFirstConsumer
+              ha:
+                description: Optional easy HA mode. When enabled, HA-capable components get safe replica defaults and the XR renders PodDisruptionBudgets for observe workloads. Loki and Tempo are only auto-scaled when their storage type is s3.
+                type: object
+                properties:
+                  enabled:
+                    description: Whether to enable easy HA mode. Defaults to false.
+                    type: boolean
+                    default: false
+                  replicas:
+                    description: Default replica count for HA-capable stateless/operator-managed components. Defaults to 2.
+                    type: integer
+                    minimum: 2
+                    default: 2
+                  pdb:
+                    description: PodDisruptionBudget defaults used when HA mode is enabled.
+                    type: object
+                    properties:
+                      enabled:
+                        description: Whether to create PodDisruptionBudgets. Defaults to true when HA is enabled.
+                        type: boolean
+                        default: true
+                      minAvailable:
+                        description: Minimum available pods for generated PodDisruptionBudgets. Defaults to 1.
+                        type: integer
+                        minimum: 1
+                        default: 1
+                  components:
+                    description: Per-component HA overrides keyed by component name, for example prometheus, alertmanager, grafana, opencost, loki, tempo, oauth2Proxy, or redis.
+                    type: object
+                    additionalProperties:
+                      type: object
+                      properties:
+                        enabled:
+                          description: Whether HA behavior is enabled for this component. Defaults to spec.ha.enabled.
+                          type: boolean
+                        replicas:
+                          description: Replica count for this component when the component supports XR-managed replicas.
+                          type: integer
+                          minimum: 1
               nodePool:
                 description: Optional dedicated Karpenter NodePool for observe workloads. When enabled, non-daemonset pods are scheduled to a dedicated NodePool via nodeSelector and tolerations. Daemonsets (node-exporter, alloy) continue to run on all nodes.
                 type: object

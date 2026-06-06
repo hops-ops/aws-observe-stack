@@ -73,6 +73,36 @@ spec:
     rolePrefix: prod-
 ```
 
+### Easy HA Mode
+
+Enable HA safety defaults for observe workloads:
+
+```yaml
+spec:
+  ha:
+    enabled: true
+```
+
+When enabled:
+- Prometheus, Alertmanager, Grafana, and oauth2-proxy default to 2 replicas where they are managed by the XR
+- Prometheus, Alertmanager, Loki, and oauth2-proxy get zone topology spread defaults where the chart or XR directly supports them
+- PodDisruptionBudgets are created for Prometheus, Alertmanager, Grafana, OpenCost, Loki, Tempo, and exposure bridge workloads
+- Loki and Tempo stay single-replica on PVC storage; they are only auto-scaled by HA mode when their storage type is already `s3`
+
+Tune defaults globally or per component:
+
+```yaml
+spec:
+  ha:
+    enabled: true
+    replicas: 3
+    components:
+      grafana:
+        replicas: 2
+      loki:
+        enabled: false
+```
+
 ### Dedicated NodePool
 
 Isolate observe workloads on a dedicated Karpenter NodePool (opt-in):
@@ -184,6 +214,7 @@ When enabled:
 3. **Usage** - deletion ordering: Observe deleted before PodIdentity
 4. **StorageClasses** - gp3 EBS classes for Prometheus, Loki, Tempo (when using PVC storage)
 5. **NodePool** *(opt-in)* - dedicated Karpenter NodePool for observe workloads
+6. **PodDisruptionBudgets** *(opt-in via HA mode)* - safe voluntary disruption boundaries for observe workloads
 
 ## Development
 

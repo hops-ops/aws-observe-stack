@@ -1353,6 +1353,163 @@ _items = [
     }
 
     # ==========================================================================
+    # Test: HA mode renders replica defaults and disruption budgets
+    # ==========================================================================
+    metav1alpha1.CompositionTest {
+        metadata.name = "ha-mode-renders-replicas-topology-and-pdbs"
+        spec = {
+            compositionPath = "apis/observestacks/composition.yaml"
+            xrdPath = "apis/observestacks/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = {
+                apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                kind = "ObserveStack"
+                metadata.name = "observe"
+                spec = {
+                    clusterName = "my-cluster"
+                    aws = {
+                        region = "us-east-1"
+                    }
+                    ha = {
+                        enabled = True
+                    }
+                    loki = {
+                        storage = {type = "s3"}
+                    }
+                    tempo = {
+                        storage = {type = "s3"}
+                    }
+                }
+            }
+            assertResources = [
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "kube-prometheus-stack"
+                    spec.forProvider.values.prometheus.prometheusSpec.replicas = 2
+                    spec.forProvider.values.prometheus.prometheusSpec.topologySpreadConstraints = [{
+                        maxSkew = 1
+                        topologyKey = "topology.kubernetes.io/zone"
+                        whenUnsatisfiable = "ScheduleAnyway"
+                        labelSelector.matchLabels = {"app.kubernetes.io/name" = "prometheus"}
+                    }]
+                    spec.forProvider.values.alertmanager.alertmanagerSpec.replicas = 2
+                    spec.forProvider.values.alertmanager.alertmanagerSpec.topologySpreadConstraints = [{
+                        maxSkew = 1
+                        topologyKey = "topology.kubernetes.io/zone"
+                        whenUnsatisfiable = "ScheduleAnyway"
+                        labelSelector.matchLabels = {"app.kubernetes.io/name" = "alertmanager"}
+                    }]
+                    spec.forProvider.values.grafana.replicas = 2
+                }
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "loki"
+                    spec.forProvider.values.singleBinary.replicas = 2
+                    spec.forProvider.values.singleBinary.topologySpreadConstraints = [{
+                        maxSkew = 1
+                        topologyKey = "topology.kubernetes.io/zone"
+                        whenUnsatisfiable = "ScheduleAnyway"
+                        labelSelector.matchLabels = {
+                            "app.kubernetes.io/name" = "loki"
+                            "app.kubernetes.io/component" = "single-binary"
+                        }
+                    }]
+                }
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "tempo"
+                    spec.forProvider.values.replicas = 2
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-pdb-prometheus"
+                    spec.forProvider.manifest = {
+                        apiVersion = "policy/v1"
+                        kind = "PodDisruptionBudget"
+                        metadata.name = "observe-prometheus"
+                        metadata.namespace = "monitoring"
+                        spec.minAvailable = 1
+                        spec.selector.matchLabels = {"app.kubernetes.io/name" = "prometheus"}
+                    }
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-pdb-loki"
+                    spec.forProvider.manifest.spec.selector.matchLabels = {
+                        "app.kubernetes.io/name" = "loki"
+                        "app.kubernetes.io/component" = "single-binary"
+                    }
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-pdb-tempo"
+                    spec.forProvider.manifest.spec.selector.matchLabels = {"app.kubernetes.io/name" = "tempo"}
+                }
+            ]
+        }
+    }
+
+    # ==========================================================================
+    # Test: HA mode keeps Loki and Tempo single-replica on PVC storage
+    # ==========================================================================
+    metav1alpha1.CompositionTest {
+        metadata.name = "ha-mode-keeps-pvc-loki-tempo-single-replica"
+        spec = {
+            compositionPath = "apis/observestacks/composition.yaml"
+            xrdPath = "apis/observestacks/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = {
+                apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                kind = "ObserveStack"
+                metadata.name = "observe"
+                spec = {
+                    clusterName = "my-cluster"
+                    aws = {
+                        region = "us-east-1"
+                    }
+                    ha = {
+                        enabled = True
+                    }
+                }
+            }
+            assertResources = [
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "loki"
+                    spec.forProvider.values.singleBinary.replicas = 1
+                }
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "tempo"
+                    spec.forProvider.values.persistence.enabled = True
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-pdb-loki"
+                    spec.forProvider.manifest.spec.minAvailable = 1
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-pdb-tempo"
+                    spec.forProvider.manifest.spec.minAvailable = 1
+                }
+            ]
+        }
+    }
+
+    # ==========================================================================
     # Test: NodePool enabled renders NodePool object and scheduling constraints
     # ==========================================================================
     metav1alpha1.CompositionTest {

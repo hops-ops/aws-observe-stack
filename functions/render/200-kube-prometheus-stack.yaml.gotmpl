@@ -94,6 +94,27 @@ spec:
     {{- $operatorValues := dict "enabled" true "resources" $operatorResources }}
     {{- $ksmValues := dict "resources" $ksmResources }}
     {{- $nodeExporterValues := dict "enabled" false }}
+    {{- if $state.ha.prometheus.enabled }}
+      {{- $_ := set $promSpec "replicas" $state.ha.prometheus.replicas }}
+      {{- $_ := set $promSpec "topologySpreadConstraints" (list (dict
+        "maxSkew" 1
+        "topologyKey" "topology.kubernetes.io/zone"
+        "whenUnsatisfiable" "ScheduleAnyway"
+        "labelSelector" (dict "matchLabels" (dict "app.kubernetes.io/name" "prometheus"))
+      )) }}
+    {{- end }}
+    {{- if $state.ha.alertmanager.enabled }}
+      {{- $_ := set $alertmanagerSpec "replicas" $state.ha.alertmanager.replicas }}
+      {{- $_ := set $alertmanagerSpec "topologySpreadConstraints" (list (dict
+        "maxSkew" 1
+        "topologyKey" "topology.kubernetes.io/zone"
+        "whenUnsatisfiable" "ScheduleAnyway"
+        "labelSelector" (dict "matchLabels" (dict "app.kubernetes.io/name" "alertmanager"))
+      )) }}
+    {{- end }}
+    {{- if $state.ha.grafana.enabled }}
+      {{- $_ := set $grafanaValues "replicas" $state.ha.grafana.replicas }}
+    {{- end }}
     {{- if $state.nodePool.enabled }}
       {{- $_ := set $promSpec "nodeSelector" $state.nodePool.nodeSelector }}
       {{- $_ := set $promSpec "tolerations" $state.nodePool.tolerations }}

@@ -84,6 +84,15 @@ spec:
       "limits" (dict "cpu" "100m" "memory" "256Mi")
     }}
     {{- $singleBinary := dict "replicas" 1 "resources" $singleBinaryResources }}
+    {{- if and $state.ha.loki.enabled $state.aws.loki.s3.enabled }}
+      {{- $_ := set $singleBinary "replicas" $state.ha.loki.replicas }}
+      {{- $_ := set $singleBinary "topologySpreadConstraints" (list (dict
+        "maxSkew" 1
+        "topologyKey" "topology.kubernetes.io/zone"
+        "whenUnsatisfiable" "ScheduleAnyway"
+        "labelSelector" (dict "matchLabels" (dict "app.kubernetes.io/name" "loki" "app.kubernetes.io/component" "single-binary"))
+      )) }}
+    {{- end }}
     {{- if not $state.aws.loki.s3.enabled }}
     {{- $_ := set $singleBinary "persistence" (dict "enabled" true "storageClass" $state.aws.loki.pvc.storageClass.name "size" $state.aws.loki.pvc.size) }}
     {{- end }}

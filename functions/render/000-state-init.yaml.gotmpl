@@ -205,6 +205,42 @@
 }}
 
 # ==============================================================================
+# HA configuration
+# ==============================================================================
+{{- $haSpec := $spec.ha | default dict }}
+{{- $haEnabled := false }}
+{{- if hasKey $haSpec "enabled" }}
+  {{- $haEnabled = $haSpec.enabled }}
+{{- end }}
+{{- $haReplicas := $haSpec.replicas | default 2 }}
+{{- $haPdbSpec := $haSpec.pdb | default dict }}
+{{- $haPdbEnabled := true }}
+{{- if hasKey $haPdbSpec "enabled" }}
+  {{- $haPdbEnabled = $haPdbSpec.enabled }}
+{{- end }}
+{{- $haPdbMinAvailable := $haPdbSpec.minAvailable | default 1 }}
+{{- $haComponentSpecs := $haSpec.components | default dict }}
+{{- $haComponents := dict }}
+{{- range $componentName := list "prometheus" "alertmanager" "grafana" "opencost" "loki" "tempo" "oauth2Proxy" "redis" }}
+  {{- $compSpec := get $haComponentSpecs $componentName | default dict }}
+  {{- $compEnabled := $haEnabled }}
+  {{- if hasKey $compSpec "enabled" }}
+    {{- $compEnabled = and $haEnabled $compSpec.enabled }}
+  {{- end }}
+  {{- $compReplicas := $compSpec.replicas | default $haReplicas }}
+  {{- if and (eq $componentName "loki") (not $lokiS3Enabled) }}
+    {{- $compReplicas = 1 }}
+  {{- end }}
+  {{- if and (eq $componentName "tempo") (not $tempoS3Enabled) }}
+    {{- $compReplicas = 1 }}
+  {{- end }}
+  {{- if eq $componentName "redis" }}
+    {{- $compReplicas = 1 }}
+  {{- end }}
+  {{- $_ := set $haComponents $componentName (dict "enabled" $compEnabled "replicas" $compReplicas) }}
+{{- end }}
+
+# ==============================================================================
 # Spot feed configuration
 # ==============================================================================
 {{- $spotFeed := $spec.spotFeed | default dict }}
@@ -321,9 +357,17 @@
 {{- if and $exposureEnabled (eq $exposureProxyCookieRef.name "") }}
   {{- fail "spec.exposure.oauth2Proxy.cookieSecretRef.name is required when spec.exposure.enabled is true (operator pre-creates the Secret holding the cookie-signing key)" }}
 {{- end }}
+{{- $haOauth2Proxy := get $haComponents "oauth2Proxy" | default dict }}
+{{- $exposureProxyReplicas := 1 }}
+{{- if and $haEnabled $haOauth2Proxy.enabled }}
+  {{- $exposureProxyReplicas = $haOauth2Proxy.replicas }}
+{{- end }}
+{{- if hasKey $exposureProxy "replicas" }}
+  {{- $exposureProxyReplicas = $exposureProxy.replicas }}
+{{- end }}
 {{- $exposureProxy = dict
   "image" ($exposureProxy.image | default "quay.io/oauth2-proxy/oauth2-proxy:v7.7.1")
-  "replicas" ($exposureProxy.replicas | default 1)
+  "replicas" $exposureProxyReplicas
   "additionalConfig" ($exposureProxy.additionalConfig | default list)
   "cookieDomain" $exposureProxyCookieDomain
   "cookieSecretRef" $exposureProxyCookieRef
@@ -547,6 +591,22 @@
     "taintValue" $nodePoolTaintValue
     "nodeSelector" $nodePoolNodeSelector
     "tolerations" $nodePoolTolerations
+  )
+  "ha" (dict
+    "enabled" $haEnabled
+    "replicas" $haReplicas
+    "pdb" (dict
+      "enabled" $haPdbEnabled
+      "minAvailable" $haPdbMinAvailable
+    )
+    "prometheus" (get $haComponents "prometheus")
+    "alertmanager" (get $haComponents "alertmanager")
+    "grafana" (get $haComponents "grafana")
+    "opencost" (get $haComponents "opencost")
+    "loki" (get $haComponents "loki")
+    "tempo" (get $haComponents "tempo")
+    "oauth2Proxy" (get $haComponents "oauth2Proxy")
+    "redis" (get $haComponents "redis")
   )
   "spotFeed" (dict
     "enabled" $spotFeedEnabled
