@@ -1026,8 +1026,12 @@ spec:
                         items:
                           type: string
                       roleAttributePath:
-                        description: JMESPath against the ID token to map to a Grafana role (Admin, Editor, Viewer). Example -contains("urn:zitadel:iam:org:project:roles", "observe-admin") && "Admin" || "Viewer"-.
+                        description: JMESPath against the OAuth token/userinfo payload to map to a Grafana role (GrafanaAdmin, Admin, Editor, Viewer). Returning GrafanaAdmin also requires allowAssignGrafanaAdmin=true.
                         type: string
+                      allowAssignGrafanaAdmin:
+                        description: Whether Grafana may assign server administrator privileges when roleAttributePath returns GrafanaAdmin. Defaults to false.
+                        type: boolean
+                        default: false
                       maxSessionDuration:
                         description: Grafana session lifetime (auth.login_maximum_lifetime_duration). Defaults to 8h.
                         type: string

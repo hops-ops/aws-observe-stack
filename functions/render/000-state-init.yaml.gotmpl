@@ -523,6 +523,7 @@
   "host" ($exposureGrafana.host | default "")
   "allowedDomains" ($exposureGrafana.allowedDomains | default list)
   "roleAttributePath" ($exposureGrafana.roleAttributePath | default "")
+  "allowAssignGrafanaAdmin" (and (hasKey $exposureGrafana "allowAssignGrafanaAdmin") $exposureGrafana.allowAssignGrafanaAdmin)
   "maxSessionDuration" ($exposureGrafana.maxSessionDuration | default "8h")
   "tokenRotationMinutes" ($exposureGrafana.tokenRotationMinutes | default 10)
   "useRefreshToken" (or (not (hasKey $exposureGrafana "useRefreshToken")) $exposureGrafana.useRefreshToken)

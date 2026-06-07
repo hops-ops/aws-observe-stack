@@ -2787,7 +2787,8 @@ _items = [
                             enabled = True
                             host = "grafana.observe.example.com"
                             allowedDomains = ["example.com"]
-                            roleAttributePath = "contains(\"urn:zitadel:iam:org:project:roles\", \"observe-admin\") && \"Admin\" || \"Viewer\""
+                            roleAttributePath = "\"urn:zitadel:iam:org:project:roles\" && contains(keys(\"urn:zitadel:iam:org:project:roles\"), 'observe-admin') && 'GrafanaAdmin' || 'Viewer'"
+                            allowAssignGrafanaAdmin = True
                         }
                     }
                 }
@@ -2849,6 +2850,21 @@ _items = [
                                 port = 80
                             }]
                         }]
+                    }
+                }
+                # kube-prometheus-stack Grafana generic OAuth role mapping
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "kube-prometheus-stack"
+                    spec.forProvider.values.grafana = {
+                        "grafana.ini" = {
+                            "auth.generic_oauth" = {
+                                role_attribute_path = "\"urn:zitadel:iam:org:project:roles\" && contains(keys(\"urn:zitadel:iam:org:project:roles\"), 'observe-admin') && 'GrafanaAdmin' || 'Viewer'"
+                                role_attribute_strict = True
+                                allow_assign_grafana_admin = True
+                            }
+                        }
                     }
                 }
                 # XR status surface (app_level branch populates oidcClientReady too)

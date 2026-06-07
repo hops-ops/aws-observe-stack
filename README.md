@@ -88,7 +88,7 @@ When enabled:
 - PodDisruptionBudgets are created for Prometheus, Alertmanager, Grafana, OpenCost, Loki, Tempo, and exposure bridge workloads
 - Loki and Tempo stay single-replica on PVC storage; they are only auto-scaled by HA mode when their storage type is already `s3`
 
-Grafana HA requires the `psql-stack` configuration on the control plane and a working `psql` StorageClass in the target cluster.
+Grafana HA requires the `psql-stack` configuration on the control plane and a working `psql` StorageClass in the target cluster. For Zitadel-backed Grafana admin access, set `spec.exposure.grafana.roleAttributePath` to return `GrafanaAdmin` and enable `spec.exposure.grafana.allowAssignGrafanaAdmin`.
 
 Tune defaults globally or per component:
 

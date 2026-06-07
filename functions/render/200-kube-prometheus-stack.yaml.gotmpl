@@ -227,6 +227,9 @@ spec:
         {{- $_ := set $generic "role_attribute_path" $g.roleAttributePath }}
         {{- $_ := set $generic "role_attribute_strict" true }}
       {{- end }}
+      {{- if $g.allowAssignGrafanaAdmin }}
+        {{- $_ := set $generic "allow_assign_grafana_admin" true }}
+      {{- end }}
       {{- if ne $g.orgAttributePath "" }}
         {{- $_ := set $generic "org_attribute_path" $g.orgAttributePath }}
       {{- end }}
