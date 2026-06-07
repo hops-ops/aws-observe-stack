@@ -1,0 +1,74 @@
+# code: language=yaml
+#
+# Embedded PSQLCluster for Grafana HA.
+#
+# Grafana can only run multiple replicas safely with a shared application
+# database. The PSQLCluster targets the kube-prometheus-stack namespace so the
+# CNPG app Secret lands where Grafana can mount it directly.
+#
+
+{{- $db := $state.grafana.database }}
+{{- $emb := $db.embedded }}
+
+{{- if $db.enabled }}
+---
+apiVersion: hops.ops.com.ai/v1alpha1
+kind: PSQLCluster
+metadata:
+  name: {{ $emb.psqlClusterName }}
+  namespace: {{ $emb.xrNamespace }}
+  annotations:
+    {{ setResourceNameAnnotation "grafana-psql-cluster" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  clusterName: {{ $state.clusterName }}
+  targetNamespace: {{ $emb.targetNamespace }}
+  labels: {{ $state.labels | toJson }}
+  managementPolicies: {{ $state.managementPolicies | toJson }}
+  kubernetesProviderConfigRef:
+    name: {{ $state.kubernetes.providerConfigRef.name }}
+    kind: {{ $state.kubernetes.providerConfigRef.kind }}
+  instances: {{ $emb.instances }}
+  storage:
+    size: {{ $emb.storage.size | quote }}
+    class: {{ $emb.storage.class | quote }}
+  postgresql:
+    {{- toYaml $emb.postgresql | nindent 4 }}
+  app:
+    role: {{ $emb.app.role | quote }}
+    database: {{ $emb.app.database | quote }}
+    {{- if ne $emb.app.secretName (printf "%s-app" $emb.psqlClusterName) }}
+    secretName: {{ $emb.app.secretName | quote }}
+    {{- end }}
+  ha:
+    {{- toYaml $emb.ha | nindent 4 }}
+  monitoring:
+    {{- toYaml $emb.monitoring | nindent 4 }}
+  {{- if $emb.cnpg }}
+  cnpg:
+    {{- toYaml $emb.cnpg | nindent 4 }}
+  {{- end }}
+
+{{- if and $state.observed.grafanaPsql.ready $state.observed.kubePrometheusStack.ready }}
+---
+apiVersion: protection.crossplane.io/v1beta1
+kind: Usage
+metadata:
+  name: {{ $state.name }}-delete-kube-prometheus-stack-before-grafana-psql-cluster
+  annotations:
+    {{ setResourceNameAnnotation "usage-kps-grafana-psql-cluster" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  replayDeletion: true
+  of:
+    apiVersion: hops.ops.com.ai/v1alpha1
+    kind: PSQLCluster
+    resourceRef:
+      name: {{ $emb.psqlClusterName }}
+  by:
+    apiVersion: helm.m.crossplane.io/v1beta1
+    kind: Release
+    resourceRef:
+      name: {{ $state.kubePrometheusStack.name }}
+{{- end }}
+{{- end }}

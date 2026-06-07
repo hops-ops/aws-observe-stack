@@ -114,7 +114,7 @@ spec:
                     - WaitForFirstConsumer
                     default: WaitForFirstConsumer
               ha:
-                description: Optional easy HA mode. When enabled, HA-capable components get safe replica defaults and the XR renders PodDisruptionBudgets for observe workloads. Grafana stays single-replica by default because the chart uses local state unless the operator configures shared storage/database behavior. Loki and Tempo are only auto-scaled when their storage type is s3.
+                description: Optional easy HA mode. When enabled, HA-capable components get safe replica defaults and the XR renders PodDisruptionBudgets for observe workloads. Grafana HA composes a PSQLCluster-backed shared database before scaling. Loki and Tempo are only auto-scaled when their storage type is s3.
                 type: object
                 properties:
                   enabled:
@@ -146,7 +146,7 @@ spec:
                       type: object
                       properties:
                         enabled:
-                          description: Whether HA behavior is enabled for this component. Defaults to spec.ha.enabled for most components; grafana defaults false unless explicitly enabled.
+                          description: Whether HA behavior is enabled for this component. Defaults to spec.ha.enabled.
                           type: boolean
                         replicas:
                           description: Replica count for this component when the component supports XR-managed replicas.
@@ -533,6 +533,108 @@ spec:
                     description: Helm values that replace all defaults for this component.
                     type: object
                     x-kubernetes-preserve-unknown-fields: true
+              grafana:
+                description: Grafana application settings for the kube-prometheus-stack Grafana deployment.
+                type: object
+                properties:
+                  database:
+                    description: Shared Grafana application database. Defaults on when Grafana HA is enabled.
+                    type: object
+                    properties:
+                      enabled:
+                        description: Whether to compose and wire a shared database for Grafana. Defaults to spec.ha.components.grafana.enabled.
+                        type: boolean
+                      sslMode:
+                        description: Grafana Postgres ssl_mode. Defaults to disable for in-cluster CNPG service traffic.
+                        type: string
+                        default: disable
+                      embedded:
+                        description: Embedded PSQLCluster settings for the Grafana application database.
+                        type: object
+                        properties:
+                          name:
+                            description: PSQLCluster name. Defaults to {observe-name}-grafana-pg.
+                            type: string
+                          instances:
+                            description: Base Postgres instance count when embedded HA is disabled. Defaults to 1.
+                            type: integer
+                            default: 1
+                          storage:
+                            description: Postgres data PVC sizing for the embedded PSQLCluster.
+                            type: object
+                            properties:
+                              size:
+                                description: PVC size. Defaults to 10Gi.
+                                type: string
+                                default: 10Gi
+                              class:
+                                description: StorageClass name. Defaults to psql.
+                                type: string
+                                default: psql
+                          postgresql:
+                            description: Postgres version and parameters for the embedded PSQLCluster.
+                            type: object
+                            properties:
+                              version:
+                                description: Postgres major version. Defaults to 17.
+                                type: string
+                                default: "17"
+                              parameters:
+                                description: postgres.conf parameters.
+                                type: object
+                                additionalProperties:
+                                  type: string
+                                x-kubernetes-preserve-unknown-fields: true
+                          app:
+                            description: Grafana database role and database name.
+                            type: object
+                            properties:
+                              role:
+                                description: Postgres role. Defaults to grafana.
+                                type: string
+                                default: grafana
+                              database:
+                                description: Postgres database. Defaults to grafana.
+                                type: string
+                                default: grafana
+                              secretName:
+                                description: Optional BYO app Secret name with username and password keys. Omit to let CNPG generate {cluster-name}-app.
+                                type: string
+                          ha:
+                            description: HA settings for the embedded PSQLCluster. Defaults on when Grafana HA is enabled.
+                            type: object
+                            properties:
+                              enabled:
+                                description: Whether the embedded PSQLCluster should run with HA instances.
+                                type: boolean
+                              replicas:
+                                description: Embedded PSQLCluster HA replica count. Defaults to 3.
+                                type: integer
+                                default: 3
+                              topologySpreadByZone:
+                                description: Whether embedded Postgres pods should prefer zone spread. Defaults to true.
+                                type: boolean
+                                default: true
+                          monitoring:
+                            description: Monitoring settings for the embedded PSQLCluster.
+                            type: object
+                            properties:
+                              enabled:
+                                description: Whether the embedded PSQLCluster should enable CNPG PodMonitor output. Defaults to true.
+                                type: boolean
+                                default: true
+                          cnpg:
+                            description: Escape hatch for embedded PSQLCluster CNPG settings.
+                            type: object
+                            properties:
+                              values:
+                                description: Values merged with generated CNPG Cluster spec.
+                                type: object
+                                x-kubernetes-preserve-unknown-fields: true
+                              overrideAllValues:
+                                description: Values that replace the generated CNPG Cluster spec.
+                                type: object
+                                x-kubernetes-preserve-unknown-fields: true
               vpa:
                 description: Configuration for the Vertical Pod Autoscaler component.
                 type: object

@@ -82,11 +82,13 @@ spec:
 ```
 
 When enabled:
-- Prometheus, Alertmanager, and oauth2-proxy default to 2 replicas where they are managed by the XR
+- Prometheus, Alertmanager, Grafana, and oauth2-proxy default to 2 replicas where they are managed by the XR
+- Grafana HA composes an embedded `PSQLCluster` named `{observe-name}-grafana-pg` and switches Grafana to Postgres before scaling replicas
 - Prometheus, Alertmanager, Loki, and oauth2-proxy get zone topology spread defaults where the chart or XR directly supports them
-- PodDisruptionBudgets are created for Prometheus, Alertmanager, OpenCost, Loki, Tempo, and exposure bridge workloads
-- Grafana stays single-replica by default because kube-prometheus-stack uses local state unless you configure shared storage/database behavior
+- PodDisruptionBudgets are created for Prometheus, Alertmanager, Grafana, OpenCost, Loki, Tempo, and exposure bridge workloads
 - Loki and Tempo stay single-replica on PVC storage; they are only auto-scaled by HA mode when their storage type is already `s3`
+
+Grafana HA requires the `psql-stack` configuration on the control plane and a working `psql` StorageClass in the target cluster.
 
 Tune defaults globally or per component:
 

@@ -224,9 +224,6 @@
 {{- range $componentName := list "prometheus" "alertmanager" "grafana" "opencost" "loki" "tempo" "oauth2Proxy" "redis" }}
   {{- $compSpec := get $haComponentSpecs $componentName | default dict }}
   {{- $compEnabled := $haEnabled }}
-  {{- if eq $componentName "grafana" }}
-    {{- $compEnabled = false }}
-  {{- end }}
   {{- if hasKey $compSpec "enabled" }}
     {{- $compEnabled = and $haEnabled $compSpec.enabled }}
   {{- end }}
@@ -242,6 +239,73 @@
   {{- end }}
   {{- $_ := set $haComponents $componentName (dict "enabled" $compEnabled "replicas" $compReplicas) }}
 {{- end }}
+
+# ==============================================================================
+# Grafana application database
+# ==============================================================================
+{{- $grafanaSpec := $spec.grafana | default dict }}
+{{- $grafanaDatabaseSpec := $grafanaSpec.database | default dict }}
+{{- $grafanaHa := get $haComponents "grafana" | default dict }}
+{{- $grafanaDatabaseEnabled := $grafanaHa.enabled }}
+{{- if hasKey $grafanaDatabaseSpec "enabled" }}
+  {{- $grafanaDatabaseEnabled = $grafanaDatabaseSpec.enabled }}
+{{- end }}
+{{- if and $grafanaHa.enabled (not $grafanaDatabaseEnabled) }}
+  {{- fail "spec.ha.components.grafana.enabled requires spec.grafana.database.enabled; Grafana HA needs a shared database" }}
+{{- end }}
+{{- $grafanaDatabaseEmbedded := $grafanaDatabaseSpec.embedded | default dict }}
+{{- $grafanaDatabaseTargetNamespace := $kubePrometheusStack.namespace | default $namespace }}
+{{- $grafanaPsqlName := $grafanaDatabaseEmbedded.name | default (printf "%s-grafana-pg" $name) }}
+{{- $grafanaPsqlXrNamespace := $metadata.namespace | default "default" }}
+{{- $grafanaPsqlHost := printf "%s-rw.%s.svc.cluster.local" $grafanaPsqlName $grafanaDatabaseTargetNamespace }}
+{{- $grafanaPsqlStorage := $grafanaDatabaseEmbedded.storage | default dict }}
+{{- $grafanaPsqlStorage = dict
+  "size" ($grafanaPsqlStorage.size | default "10Gi")
+  "class" ($grafanaPsqlStorage.class | default "psql")
+}}
+{{- $grafanaPsqlPostgres := $grafanaDatabaseEmbedded.postgresql | default dict }}
+{{- if not $grafanaPsqlPostgres.version }}{{- $grafanaPsqlPostgres = set $grafanaPsqlPostgres "version" "17" }}{{- end }}
+{{- $grafanaPsqlAppSpec := $grafanaDatabaseEmbedded.app | default dict }}
+{{- $grafanaPsqlApp := dict
+  "role" ($grafanaPsqlAppSpec.role | default "grafana")
+  "database" ($grafanaPsqlAppSpec.database | default "grafana")
+  "secretName" ($grafanaPsqlAppSpec.secretName | default (printf "%s-app" $grafanaPsqlName))
+}}
+{{- $grafanaPsqlInstances := $grafanaDatabaseEmbedded.instances | default 1 }}
+{{- $grafanaPsqlHaSpec := $grafanaDatabaseEmbedded.ha | default dict }}
+{{- $grafanaPsqlHaEnabled := $grafanaHa.enabled }}
+{{- if hasKey $grafanaPsqlHaSpec "enabled" }}
+  {{- $grafanaPsqlHaEnabled = $grafanaPsqlHaSpec.enabled }}
+{{- end }}
+{{- $grafanaPsqlHa := dict
+  "enabled" $grafanaPsqlHaEnabled
+  "replicas" ($grafanaPsqlHaSpec.replicas | default 3)
+  "topologySpreadByZone" (or (not (hasKey $grafanaPsqlHaSpec "topologySpreadByZone")) $grafanaPsqlHaSpec.topologySpreadByZone)
+}}
+{{- $grafanaPsqlMonitoringSpec := $grafanaDatabaseEmbedded.monitoring | default dict }}
+{{- $grafanaPsqlMonitoring := dict
+  "enabled" (or (not (hasKey $grafanaPsqlMonitoringSpec "enabled")) $grafanaPsqlMonitoringSpec.enabled)
+}}
+{{- $grafanaDatabase := dict
+  "enabled" $grafanaDatabaseEnabled
+  "mode" "embedded"
+  "sslMode" ($grafanaDatabaseSpec.sslMode | default ($grafanaDatabaseEmbedded.sslMode | default "disable"))
+  "mountPath" "/etc/secrets/grafana-db"
+  "embedded" (dict
+    "psqlClusterName" $grafanaPsqlName
+    "xrNamespace" $grafanaPsqlXrNamespace
+    "targetNamespace" $grafanaDatabaseTargetNamespace
+    "host" $grafanaPsqlHost
+    "port" 5432
+    "instances" $grafanaPsqlInstances
+    "storage" $grafanaPsqlStorage
+    "postgresql" $grafanaPsqlPostgres
+    "app" $grafanaPsqlApp
+    "ha" $grafanaPsqlHa
+    "monitoring" $grafanaPsqlMonitoring
+    "cnpg" ($grafanaDatabaseEmbedded.cnpg | default dict)
+  )
+}}
 
 # ==============================================================================
 # Spot feed configuration
@@ -610,6 +674,9 @@
     "tempo" (get $haComponents "tempo")
     "oauth2Proxy" (get $haComponents "oauth2Proxy")
     "redis" (get $haComponents "redis")
+  )
+  "grafana" (dict
+    "database" $grafanaDatabase
   )
   "spotFeed" (dict
     "enabled" $spotFeedEnabled

@@ -19,6 +19,7 @@
   "loki-bucket" "loki-bucket-pab" "loki-bucket-encryption" "loki-bucket-lifecycle" "loki-storage-key"
   "tempo-bucket" "tempo-bucket-pab" "tempo-bucket-encryption" "tempo-bucket-lifecycle" "tempo-storage-key"
   "vpa" "goldilocks" "metrics-server" "nodepool-observe" "cloud-integration-secret"
+  "grafana-psql-cluster" "usage-kps-grafana-psql-cluster"
   "pdb-prometheus" "pdb-alertmanager" "pdb-grafana" "pdb-opencost" "pdb-loki" "pdb-tempo" "pdb-oauth2-proxy" "pdb-oauth2-proxy-redis"
   "exposure-zitadel-credentials" "exposure-zitadel-providerconfig" "exposure-oidc-app" "exposure-grafana-oidc-app"
   "exposure-redis-svc" "exposure-redis-sts" "exposure-oauth2-proxy-svc" "exposure-oauth2-proxy-deploy" "exposure-waypoint" "exposure-certificate"
@@ -59,6 +60,7 @@
 {{- $lokiStorageKeyAtProvider := ((($lokiStorageKeyEntry.resource | default dict).status | default dict).atProvider | default dict) }}
 {{- $tempoStorageKeyEntry := get $observed "tempo-storage-key" | default dict }}
 {{- $tempoStorageKeyAtProvider := ((($tempoStorageKeyEntry.resource | default dict).status | default dict).atProvider | default dict) }}
+{{- $grafanaPsqlExists := hasKey $observed "grafana-psql-cluster" }}
 
 {{- $state = set $state "observed" (merge $state.observed (dict
   "kubePrometheusStack" (dict "ready" (get $checkReady "kube-prometheus-stack"))
@@ -67,6 +69,7 @@
   "k8sMonitoring" (dict "ready" (get $checkReady "k8s-monitoring"))
   "grafanaOperator" (dict "ready" (get $checkReady "grafana-operator"))
   "grafanaInstance" (dict "ready" (get $checkReady "grafana-instance"))
+  "grafanaPsql" (dict "exists" $grafanaPsqlExists "ready" (get $checkReady "grafana-psql-cluster"))
   "datasourcePrometheus" (dict "ready" (get $checkReady "datasource-prometheus"))
   "datasourceLoki" (dict "ready" (get $checkReady "datasource-loki"))
   "datasourceTempo" (dict "ready" (get $checkReady "datasource-tempo"))
@@ -148,11 +151,17 @@
 {{- if $state.cloudCosts.enabled }}
   {{- $requiredReady = append $requiredReady (get $checkReady "cloud-integration-secret") }}
 {{- end }}
+{{- if $state.grafana.database.enabled }}
+  {{- $requiredReady = append $requiredReady (get $checkReady "grafana-psql-cluster") }}
+  {{- if and (get $checkReady "grafana-psql-cluster") (get $checkReady "kube-prometheus-stack") }}
+    {{- $requiredReady = append $requiredReady (get $checkReady "usage-kps-grafana-psql-cluster") }}
+  {{- end }}
+{{- end }}
 {{- if and $state.ha.enabled $state.ha.pdb.enabled }}
   {{- range $pdb := list
     (dict "name" "pdb-prometheus" "enabled" $state.ha.prometheus.enabled)
     (dict "name" "pdb-alertmanager" "enabled" $state.ha.alertmanager.enabled)
-    (dict "name" "pdb-grafana" "enabled" $state.ha.grafana.enabled)
+    (dict "name" "pdb-grafana" "enabled" (and $state.ha.grafana.enabled $state.observed.grafanaPsql.exists))
     (dict "name" "pdb-opencost" "enabled" $state.ha.opencost.enabled)
     (dict "name" "pdb-loki" "enabled" $state.ha.loki.enabled)
     (dict "name" "pdb-tempo" "enabled" $state.ha.tempo.enabled)

@@ -1585,6 +1585,28 @@ _items = [
                     spec.forProvider.values.grafana.replicas = 1
                 }
                 {
+                    apiVersion = "hops.ops.com.ai/v1alpha1"
+                    kind = "PSQLCluster"
+                    metadata.name = "observe-grafana-pg"
+                    metadata.namespace = "default"
+                    spec.clusterName = "my-cluster"
+                    spec.targetNamespace = "monitoring"
+                    spec.storage = {
+                        size = "10Gi"
+                        class = "psql"
+                    }
+                    spec.app = {
+                        role = "grafana"
+                        database = "grafana"
+                    }
+                    spec.ha = {
+                        enabled = True
+                        replicas = 3
+                        topologySpreadByZone = True
+                    }
+                    spec.monitoring.enabled = True
+                }
+                {
                     apiVersion = "helm.m.crossplane.io/v1beta1"
                     kind = "Release"
                     metadata.name = "loki"
@@ -1632,6 +1654,88 @@ _items = [
                     kind = "Object"
                     metadata.name = "observe-pdb-tempo"
                     spec.forProvider.manifest.spec.selector.matchLabels = {"app.kubernetes.io/name" = "tempo"}
+                }
+            ]
+        }
+    }
+
+    # ==========================================================================
+    # Test: Grafana HA switches to Postgres when PSQLCluster exists
+    # ==========================================================================
+    metav1alpha1.CompositionTest {
+        metadata.name = "grafana-ha-uses-psql-existence-before-scaling"
+        spec = {
+            compositionPath = "apis/observestacks/composition.yaml"
+            xrdPath = "apis/observestacks/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = {
+                apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                kind = "ObserveStack"
+                metadata.name = "observe"
+                spec = {
+                    clusterName = "my-cluster"
+                    aws = {
+                        region = "us-east-1"
+                    }
+                    ha = {
+                        enabled = True
+                    }
+                }
+            }
+            observedResources = [
+                {
+                    apiVersion = "hops.ops.com.ai/v1alpha1"
+                    kind = "PSQLCluster"
+                    metadata = {
+                        name = "observe-grafana-pg"
+                        annotations = {"crossplane.io/composition-resource-name" = "grafana-psql-cluster"}
+                    }
+                    status = {
+                        conditions = [{type = "Ready", status = "False"}, {type = "Synced", status = "True"}]
+                    }
+                }
+            ]
+            assertResources = [
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "kube-prometheus-stack"
+                    spec.forProvider.values.grafana = {
+                        replicas = 2
+                        "grafana.ini" = {
+                            database = {
+                                type = "postgres"
+                                host = "observe-grafana-pg-rw.monitoring.svc.cluster.local:5432"
+                                name = "grafana"
+                                user = "$__file{/etc/secrets/grafana-db/username}"
+                                password = "$__file{/etc/secrets/grafana-db/password}"
+                                ssl_mode = "disable"
+                            }
+                            security = {
+                                secret_key = "$__file{/etc/secrets/grafana-db/password}"
+                            }
+                        }
+                        extraSecretMounts = [{
+                            name = "grafana-db"
+                            secretName = "observe-grafana-pg-app"
+                            mountPath = "/etc/secrets/grafana-db"
+                            readOnly = True
+                        }]
+                    }
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-pdb-grafana"
+                    spec.forProvider.manifest = {
+                        apiVersion = "policy/v1"
+                        kind = "PodDisruptionBudget"
+                        metadata.name = "grafana"
+                        metadata.namespace = "monitoring"
+                        spec.minAvailable = 1
+                        spec.selector.matchLabels = {"app.kubernetes.io/name" = "grafana"}
+                    }
                 }
             ]
         }

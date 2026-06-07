@@ -92,6 +92,8 @@ spec:
       "replicas" 1
       "resources" $grafanaResources
     }}
+    {{- $grafanaDb := $state.grafana.database }}
+    {{- $grafanaDbConfigured := and $grafanaDb.enabled $state.observed.grafanaPsql.exists }}
     {{- $operatorValues := dict "enabled" true "resources" $operatorResources }}
     {{- $ksmValues := dict "resources" $ksmResources }}
     {{- $nodeExporterValues := dict "enabled" false }}
@@ -113,7 +115,7 @@ spec:
         "labelSelector" (dict "matchLabels" (dict "app.kubernetes.io/name" "alertmanager"))
       )) }}
     {{- end }}
-    {{- if $state.ha.grafana.enabled }}
+    {{- if and $state.ha.grafana.enabled $grafanaDbConfigured }}
       {{- $_ := set $grafanaValues "replicas" $state.ha.grafana.replicas }}
     {{- end }}
     {{- if $state.nodePool.enabled }}
@@ -169,6 +171,28 @@ spec:
     {{- $_ := set $operatorValues "fullnameOverride" "prometheus-operator" }}
     {{- $_ := set $nodeExporterValues "fullnameOverride" "node-exporter" }}
 
+    {{- $grafanaIni := dict }}
+    {{- $grafanaExtraSecretMounts := list }}
+    {{- if $grafanaDbConfigured }}
+      {{- $_ := set $grafanaIni "database" (dict
+        "type" "postgres"
+        "host" (printf "%s:%v" $grafanaDb.embedded.host $grafanaDb.embedded.port)
+        "name" $grafanaDb.embedded.app.database
+        "user" (printf "$__file{%s/username}" $grafanaDb.mountPath)
+        "password" (printf "$__file{%s/password}" $grafanaDb.mountPath)
+        "ssl_mode" $grafanaDb.sslMode
+      ) }}
+      {{- $_ := set $grafanaIni "security" (dict
+        "secret_key" (printf "$__file{%s/password}" $grafanaDb.mountPath)
+      ) }}
+      {{- $grafanaExtraSecretMounts = append $grafanaExtraSecretMounts (dict
+        "name" "grafana-db"
+        "secretName" $grafanaDb.embedded.app.secretName
+        "mountPath" $grafanaDb.mountPath
+        "readOnly" true
+      ) }}
+    {{- end }}
+
     {{- /* Grafana app-level OIDC (per tasks/observe-stack-grafana-oidc).
            When spec.exposure.grafana.enabled, layer Helm values for
            generic_oauth + session knobs onto $grafanaBase. The Zitadel
@@ -209,25 +233,28 @@ spec:
       {{- if gt (len $g.orgMapping) 0 }}
         {{- $_ := set $generic "org_mapping" (join "," $g.orgMapping) }}
       {{- end }}
-      {{- $grafanaIni := dict
-        "server" (dict
-          "domain" $g.host
-          "root_url" (printf "https://%s" $g.host)
-        )
-        "auth.generic_oauth" $generic
-        "auth" (dict
-          "login_maximum_lifetime_duration" $g.maxSessionDuration
-          "token_rotation_interval_minutes" $g.tokenRotationMinutes
-          "oauth_auto_login" $g.autoLogin
-        )
-      }}
-      {{- $_ := set $grafanaBase "grafana.ini" $grafanaIni }}
-      {{- $_ := set $grafanaBase "extraSecretMounts" (list (dict
+      {{- $_ := set $grafanaIni "server" (dict
+        "domain" $g.host
+        "root_url" (printf "https://%s" $g.host)
+      ) }}
+      {{- $_ := set $grafanaIni "auth.generic_oauth" $generic }}
+      {{- $_ := set $grafanaIni "auth" (dict
+        "login_maximum_lifetime_duration" $g.maxSessionDuration
+        "token_rotation_interval_minutes" $g.tokenRotationMinutes
+        "oauth_auto_login" $g.autoLogin
+      ) }}
+      {{- $grafanaExtraSecretMounts = append $grafanaExtraSecretMounts (dict
         "name" "grafana-oidc"
         "secretName" $grafanaOidcSecret
         "mountPath" $grafanaOidcMountPath
         "readOnly" true
-      )) }}
+      ) }}
+    {{- end }}
+    {{- if $grafanaIni }}
+      {{- $_ := set $grafanaBase "grafana.ini" $grafanaIni }}
+    {{- end }}
+    {{- if gt (len $grafanaExtraSecretMounts) 0 }}
+      {{- $_ := set $grafanaBase "extraSecretMounts" $grafanaExtraSecretMounts }}
     {{- end }}
 
     {{- $grafana := merge $grafanaValues $grafanaBase }}
