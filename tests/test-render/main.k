@@ -1610,6 +1610,7 @@ _items = [
                     apiVersion = "helm.m.crossplane.io/v1beta1"
                     kind = "Release"
                     metadata.name = "loki"
+                    spec.forProvider.values.loki.commonConfig.replication_factor = 2
                     spec.forProvider.values.singleBinary.replicas = 2
                     spec.forProvider.values.singleBinary.topologySpreadConstraints = [{
                         maxSkew = 1
@@ -1770,6 +1771,7 @@ _items = [
                     apiVersion = "helm.m.crossplane.io/v1beta1"
                     kind = "Release"
                     metadata.name = "loki"
+                    spec.forProvider.values.loki.commonConfig.replication_factor = 1
                     spec.forProvider.values.singleBinary.replicas = 1
                 }
                 {

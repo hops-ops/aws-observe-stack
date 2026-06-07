@@ -85,6 +85,9 @@ spec:
     }}
     {{- $singleBinary := dict "replicas" 1 "resources" $singleBinaryResources }}
     {{- if and $state.ha.loki.enabled $state.aws.loki.s3.enabled }}
+      {{- $commonConfig := get $lokiConfig "commonConfig" | default dict }}
+      {{- $_ := set $commonConfig "replication_factor" $state.ha.loki.replicas }}
+      {{- $_ := set $lokiConfig "commonConfig" $commonConfig }}
       {{- $_ := set $singleBinary "replicas" $state.ha.loki.replicas }}
       {{- $_ := set $singleBinary "topologySpreadConstraints" (list (dict
         "maxSkew" 1
