@@ -344,7 +344,7 @@
 {{- $exposureRedis = dict
   "size" ($exposureRedis.size | default "1Gi")
   "storageClassName" ($exposureRedis.storageClassName | default "")
-  "image" ($exposureRedis.image | default "redis:7-alpine")
+  "image" ($exposureRedis.image | default "mirror.gcr.io/redis:7-alpine")
 }}
 
 {{- $exposureProxy := $exposure.oauth2Proxy | default dict }}

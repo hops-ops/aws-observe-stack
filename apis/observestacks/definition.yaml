@@ -788,9 +788,9 @@ spec:
                         description: StorageClass for the Redis PVC. Defaults to the cluster's default.
                         type: string
                       image:
-                        description: Redis container image. Defaults to "redis:7-alpine".
+                        description: Redis container image. Defaults to "mirror.gcr.io/redis:7-alpine".
                         type: string
-                        default: redis:7-alpine
+                        default: mirror.gcr.io/redis:7-alpine
                   oauth2Proxy:
                     description: oauth2-proxy bridge configuration.
                     type: object

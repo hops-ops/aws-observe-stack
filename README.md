@@ -22,7 +22,7 @@ spec:
     region: us-east-1
 ```
 
-Default storage is pvc-backed (`storage.type: pvc`) for both Loki and Tempo with auto-created `gp3` StorageClasses (`loki`, `tempo`).
+Default storage is pvc-backed (`storage.type: pvc`) for both Loki and Tempo with auto-created `gp3` StorageClasses (`loki`, `tempo`). When `storage.type: s3` is enabled, the stack creates a component bucket, lifecycle policy, default SSE-KMS bucket encryption with a dedicated KMS key, and the PodIdentity S3/KMS permissions required by the workload.
 
 You can set global StorageClass behavior and override per component:
 
@@ -57,13 +57,11 @@ spec:
   loki:
     storage:
       type: s3
-      s3:
-        retentionDays: 30
+      retentionDays: 30
   tempo:
     storage:
       type: s3
-      s3:
-        retentionDays: 14
+      retentionDays: 14
   k8sMonitoring:
     values:
       opencost:

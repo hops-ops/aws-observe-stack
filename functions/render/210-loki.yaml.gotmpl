@@ -96,9 +96,22 @@ spec:
     {{- if not $state.aws.loki.s3.enabled }}
     {{- $_ := set $singleBinary "persistence" (dict "enabled" true "storageClass" $state.aws.loki.pvc.storageClass.name "size" $state.aws.loki.pvc.size) }}
     {{- end }}
-    {{- $gatewayValues := dict "enabled" true "resources" $gatewayResources }}
+    {{- $gatewayValues := dict
+      "enabled" true
+      "resources" $gatewayResources
+      "image" (dict "registry" "quay.io" "repository" "nginx/nginx-unprivileged" "tag" "1.29-alpine")
+    }}
     {{- $resultsCache := dict "resources" $cacheResources }}
     {{- $chunksCache := dict "resources" $cacheResources }}
+    {{- $memcachedValues := dict
+      "image" (dict "repository" "mirror.gcr.io/memcached" "tag" "1.6.39-alpine")
+    }}
+    {{- $memcachedExporterValues := dict
+      "image" (dict "repository" "quay.io/prometheus/memcached-exporter" "tag" "v0.15.4")
+    }}
+    {{- $sidecarValues := dict
+      "image" (dict "registry" "ghcr.io" "repository" "kiwigrid/k8s-sidecar" "tag" "1.30.9")
+    }}
     {{- if $state.nodePool.enabled }}
       {{- $_ := set $singleBinary "nodeSelector" $state.nodePool.nodeSelector }}
       {{- $_ := set $singleBinary "tolerations" $state.nodePool.tolerations }}
@@ -121,7 +134,14 @@ spec:
       "write" (dict "replicas" 0)
       "backend" (dict "replicas" 0)
       "gateway" $gatewayValues
-      "lokiCanary" (dict "tolerations" $tolerateAll "resources" $canaryResources)
+      "lokiCanary" (dict
+        "tolerations" $tolerateAll
+        "resources" $canaryResources
+        "image" (dict "registry" "mirror.gcr.io" "repository" "grafana/loki-canary")
+      )
+      "memcached" $memcachedValues
+      "memcachedExporter" $memcachedExporterValues
+      "sidecar" $sidecarValues
     }}
     {{- $merged := mustMergeOverwrite $defaults ($loki.values | default dict) }}
     values:

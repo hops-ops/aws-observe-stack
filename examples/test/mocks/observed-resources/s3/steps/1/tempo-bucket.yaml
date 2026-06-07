@@ -1,0 +1,15 @@
+apiVersion: s3.aws.m.upbound.io/v1beta1
+kind: Bucket
+metadata:
+  name: observe-tempo-bucket
+  annotations:
+    crossplane.io/composition-resource-name: tempo-bucket
+    gotemplating.fn.crossplane.io/composition-resource-name: tempo-bucket
+status:
+  conditions:
+    - type: Ready
+      status: "True"
+    - type: Synced
+      status: "True"
+  atProvider:
+    id: observe-tempo-storage

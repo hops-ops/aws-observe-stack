@@ -559,6 +559,32 @@ _items = [
                     }
                 }
             }
+            observedResources = [
+                {
+                    apiVersion = "s3.aws.m.upbound.io/v1beta1"
+                    kind = "Bucket"
+                    metadata = {
+                        name = "observe-loki-bucket"
+                        annotations = {"crossplane.io/composition-resource-name" = "loki-bucket"}
+                    }
+                    status = {
+                        conditions = [{type = "Ready", status = "True"}, {type = "Synced", status = "True"}]
+                        atProvider = {id = "observe-loki-storage"}
+                    }
+                }
+                {
+                    apiVersion = "kms.aws.m.upbound.io/v1beta1"
+                    kind = "Key"
+                    metadata = {
+                        name = "observe-loki-storage"
+                        annotations = {"crossplane.io/composition-resource-name" = "loki-storage-key"}
+                    }
+                    status = {
+                        conditions = [{type = "Ready", status = "True"}, {type = "Synced", status = "True"}]
+                        atProvider = {id = "12345678-1234-1234-1234-123456789012"}
+                    }
+                }
+            ]
             assertResources = [
                 {
                     apiVersion = "s3.aws.m.upbound.io/v1beta1"
@@ -589,6 +615,31 @@ _items = [
                         status = "Enabled"
                         expiration = [{days = 37}]
                     }]
+                }
+                {
+                    apiVersion = "kms.aws.m.upbound.io/v1beta1"
+                    kind = "Key"
+                    metadata.name = "observe-loki-storage"
+                    spec.forProvider = {
+                        enableKeyRotation = True
+                        region = "us-east-1"
+                    }
+                }
+                {
+                    apiVersion = "s3.aws.m.upbound.io/v1beta1"
+                    kind = "BucketServerSideEncryptionConfiguration"
+                    metadata.name = "observe-loki-bucket-encryption"
+                    spec.forProvider = {
+                        bucketRef = {name = "observe-loki-bucket"}
+                        region = "us-east-1"
+                        rule = [{
+                            applyServerSideEncryptionByDefault = {
+                                kmsMasterKeyIdRef = {name = "observe-loki-storage"}
+                                sseAlgorithm = "aws:kms"
+                            }
+                            bucketKeyEnabled = True
+                        }]
+                    }
                 }
                 {
                     apiVersion = "aws.hops.ops.com.ai/v1alpha1"
@@ -650,6 +701,32 @@ _items = [
                     }
                 }
             }
+            observedResources = [
+                {
+                    apiVersion = "s3.aws.m.upbound.io/v1beta1"
+                    kind = "Bucket"
+                    metadata = {
+                        name = "observe-tempo-bucket"
+                        annotations = {"crossplane.io/composition-resource-name" = "tempo-bucket"}
+                    }
+                    status = {
+                        conditions = [{type = "Ready", status = "True"}, {type = "Synced", status = "True"}]
+                        atProvider = {id = "observe-tempo-storage"}
+                    }
+                }
+                {
+                    apiVersion = "kms.aws.m.upbound.io/v1beta1"
+                    kind = "Key"
+                    metadata = {
+                        name = "observe-tempo-storage"
+                        annotations = {"crossplane.io/composition-resource-name" = "tempo-storage-key"}
+                    }
+                    status = {
+                        conditions = [{type = "Ready", status = "True"}, {type = "Synced", status = "True"}]
+                        atProvider = {id = "12345678-1234-1234-1234-123456789012"}
+                    }
+                }
+            ]
             assertResources = [
                 {
                     apiVersion = "s3.aws.m.upbound.io/v1beta1"
@@ -674,6 +751,31 @@ _items = [
                         status = "Enabled"
                         expiration = [{days = 21}]
                     }]
+                }
+                {
+                    apiVersion = "kms.aws.m.upbound.io/v1beta1"
+                    kind = "Key"
+                    metadata.name = "observe-tempo-storage"
+                    spec.forProvider = {
+                        enableKeyRotation = True
+                        region = "us-west-2"
+                    }
+                }
+                {
+                    apiVersion = "s3.aws.m.upbound.io/v1beta1"
+                    kind = "BucketServerSideEncryptionConfiguration"
+                    metadata.name = "observe-tempo-bucket-encryption"
+                    spec.forProvider = {
+                        bucketRef = {name = "observe-tempo-bucket"}
+                        region = "us-west-2"
+                        rule = [{
+                            applyServerSideEncryptionByDefault = {
+                                kmsMasterKeyIdRef = {name = "observe-tempo-storage"}
+                                sseAlgorithm = "aws:kms"
+                            }
+                            bucketKeyEnabled = True
+                        }]
+                    }
                 }
                 {
                     apiVersion = "aws.hops.ops.com.ai/v1alpha1"
@@ -2320,7 +2422,7 @@ _items = [
                         spec.template.spec.containers = [
                             {
                                 name = "redis"
-                                image = "redis:7-alpine"
+                                image = "mirror.gcr.io/redis:7-alpine"
                                 resources = {
                                     requests = {cpu = "15m", memory = "100Mi"}
                                     limits = {cpu = "100m", memory = "256Mi"}

@@ -10,7 +10,22 @@
 # ==============================================================================
 
 {{- $checkReady := dict }}
-{{- range $key := list "kube-prometheus-stack" "loki" "tempo" "k8s-monitoring" "grafana-operator" "grafana-instance" "datasource-prometheus" "datasource-loki" "datasource-tempo" "opencost-pod-identity" "loki-pod-identity" "tempo-pod-identity" "vpa" "goldilocks" "nodepool-observe" "exposure-zitadel-credentials" "exposure-zitadel-providerconfig" "exposure-oidc-app" "exposure-grafana-oidc-app" "exposure-redis-sts" "exposure-oauth2-proxy-deploy" "exposure-waypoint" }}
+{{- range $key := list
+  "kube-prometheus-stack" "loki" "tempo" "k8s-monitoring" "grafana-operator"
+  "grafana-instance" "datasource-prometheus" "datasource-loki" "datasource-tempo"
+  "dashboard-opencost-overview" "dashboard-opencost-namespace"
+  "opencost-pod-identity" "loki-pod-identity" "tempo-pod-identity"
+  "prometheus-storageclass" "loki-storageclass" "tempo-storageclass"
+  "loki-bucket" "loki-bucket-pab" "loki-bucket-encryption" "loki-bucket-lifecycle" "loki-storage-key"
+  "tempo-bucket" "tempo-bucket-pab" "tempo-bucket-encryption" "tempo-bucket-lifecycle" "tempo-storage-key"
+  "vpa" "goldilocks" "metrics-server" "nodepool-observe" "cloud-integration-secret"
+  "pdb-prometheus" "pdb-alertmanager" "pdb-grafana" "pdb-opencost" "pdb-loki" "pdb-tempo" "pdb-oauth2-proxy" "pdb-oauth2-proxy-redis"
+  "exposure-zitadel-credentials" "exposure-zitadel-providerconfig" "exposure-oidc-app" "exposure-grafana-oidc-app"
+  "exposure-redis-svc" "exposure-redis-sts" "exposure-oauth2-proxy-svc" "exposure-oauth2-proxy-deploy" "exposure-waypoint" "exposure-certificate"
+  "exposure-sister-svc-prometheus" "exposure-sister-svc-alertmanager" "exposure-sister-svc-opencost" "exposure-sister-svc-grafana"
+  "exposure-httproute-prometheus" "exposure-httproute-alertmanager" "exposure-httproute-opencost" "exposure-httproute-grafana"
+  "exposure-authpolicy-prometheus" "exposure-authpolicy-alertmanager" "exposure-authpolicy-opencost"
+}}
   {{- $entry := get $observed $key | default dict }}
   {{- $resource := $entry.resource | default dict }}
   {{- $status := $resource.status | default dict }}
@@ -36,6 +51,15 @@
   (get $checkReady "exposure-oidc-app")
 }}
 
+{{- $lokiBucketEntry := get $observed "loki-bucket" | default dict }}
+{{- $lokiBucketAtProvider := ((($lokiBucketEntry.resource | default dict).status | default dict).atProvider | default dict) }}
+{{- $tempoBucketEntry := get $observed "tempo-bucket" | default dict }}
+{{- $tempoBucketAtProvider := ((($tempoBucketEntry.resource | default dict).status | default dict).atProvider | default dict) }}
+{{- $lokiStorageKeyEntry := get $observed "loki-storage-key" | default dict }}
+{{- $lokiStorageKeyAtProvider := ((($lokiStorageKeyEntry.resource | default dict).status | default dict).atProvider | default dict) }}
+{{- $tempoStorageKeyEntry := get $observed "tempo-storage-key" | default dict }}
+{{- $tempoStorageKeyAtProvider := ((($tempoStorageKeyEntry.resource | default dict).status | default dict).atProvider | default dict) }}
+
 {{- $state = set $state "observed" (merge $state.observed (dict
   "kubePrometheusStack" (dict "ready" (get $checkReady "kube-prometheus-stack"))
   "loki" (dict "ready" (get $checkReady "loki"))
@@ -49,6 +73,10 @@
   "opencostPodIdentity" (dict "ready" (get $checkReady "opencost-pod-identity"))
   "lokiPodIdentity" (dict "ready" (get $checkReady "loki-pod-identity"))
   "tempoPodIdentity" (dict "ready" (get $checkReady "tempo-pod-identity"))
+  "lokiBucket" (dict "ready" (get $checkReady "loki-bucket") "id" ($lokiBucketAtProvider.id | default ""))
+  "tempoBucket" (dict "ready" (get $checkReady "tempo-bucket") "id" ($tempoBucketAtProvider.id | default ""))
+  "lokiStorageKey" (dict "ready" (get $checkReady "loki-storage-key") "id" ($lokiStorageKeyAtProvider.id | default ""))
+  "tempoStorageKey" (dict "ready" (get $checkReady "tempo-storage-key") "id" ($tempoStorageKeyAtProvider.id | default ""))
   "vpa" (dict "ready" (get $checkReady "vpa"))
   "goldilocks" (dict "ready" (get $checkReady "goldilocks"))
   "nodepoolObserve" (dict "ready" (get $checkReady "nodepool-observe"))
@@ -67,8 +95,116 @@
 )) }}
 
 # ==============================================================================
-# Compute status (readiness determined by function-auto-ready)
+# Compute status
 # ==============================================================================
+{{- $requiredReady := list
+  (get $checkReady "kube-prometheus-stack")
+  (get $checkReady "loki")
+  (get $checkReady "tempo")
+  (get $checkReady "k8s-monitoring")
+  (get $checkReady "grafana-operator")
+  (get $checkReady "grafana-instance")
+  (get $checkReady "datasource-prometheus")
+  (get $checkReady "datasource-loki")
+  (get $checkReady "datasource-tempo")
+  (get $checkReady "dashboard-opencost-overview")
+  (get $checkReady "dashboard-opencost-namespace")
+  (get $checkReady "opencost-pod-identity")
+  (get $checkReady "vpa")
+  (get $checkReady "goldilocks")
+}}
+
+{{- if $state.aws.prometheus.pvc.storageClass.create }}
+  {{- $requiredReady = append $requiredReady (get $checkReady "prometheus-storageclass") }}
+{{- end }}
+{{- if $state.aws.loki.s3.enabled }}
+  {{- $requiredReady = append $requiredReady (get $checkReady "loki-storage-key") }}
+  {{- $requiredReady = append $requiredReady (get $checkReady "loki-bucket") }}
+  {{- $requiredReady = append $requiredReady (get $checkReady "loki-bucket-pab") }}
+  {{- $requiredReady = append $requiredReady (get $checkReady "loki-bucket-encryption") }}
+  {{- $requiredReady = append $requiredReady (get $checkReady "loki-bucket-lifecycle") }}
+  {{- $requiredReady = append $requiredReady (get $checkReady "loki-pod-identity") }}
+{{- else if $state.aws.loki.pvc.storageClass.create }}
+  {{- $requiredReady = append $requiredReady (get $checkReady "loki-storageclass") }}
+{{- end }}
+{{- if $state.aws.tempo.s3.enabled }}
+  {{- $requiredReady = append $requiredReady (get $checkReady "tempo-storage-key") }}
+  {{- $requiredReady = append $requiredReady (get $checkReady "tempo-bucket") }}
+  {{- $requiredReady = append $requiredReady (get $checkReady "tempo-bucket-pab") }}
+  {{- $requiredReady = append $requiredReady (get $checkReady "tempo-bucket-encryption") }}
+  {{- $requiredReady = append $requiredReady (get $checkReady "tempo-bucket-lifecycle") }}
+  {{- $requiredReady = append $requiredReady (get $checkReady "tempo-pod-identity") }}
+{{- else if $state.aws.tempo.pvc.storageClass.create }}
+  {{- $requiredReady = append $requiredReady (get $checkReady "tempo-storageclass") }}
+{{- end }}
+{{- if $state.metricsServer.enabled }}
+  {{- $requiredReady = append $requiredReady (get $checkReady "metrics-server") }}
+{{- end }}
+{{- if $state.nodePool.enabled }}
+  {{- $requiredReady = append $requiredReady (get $checkReady "nodepool-observe") }}
+{{- end }}
+{{- if $state.cloudCosts.enabled }}
+  {{- $requiredReady = append $requiredReady (get $checkReady "cloud-integration-secret") }}
+{{- end }}
+{{- if and $state.ha.enabled $state.ha.pdb.enabled }}
+  {{- range $pdb := list
+    (dict "name" "pdb-prometheus" "enabled" $state.ha.prometheus.enabled)
+    (dict "name" "pdb-alertmanager" "enabled" $state.ha.alertmanager.enabled)
+    (dict "name" "pdb-grafana" "enabled" $state.ha.grafana.enabled)
+    (dict "name" "pdb-opencost" "enabled" $state.ha.opencost.enabled)
+    (dict "name" "pdb-loki" "enabled" $state.ha.loki.enabled)
+    (dict "name" "pdb-tempo" "enabled" $state.ha.tempo.enabled)
+  }}
+    {{- if $pdb.enabled }}
+      {{- $requiredReady = append $requiredReady (get $checkReady $pdb.name) }}
+    {{- end }}
+  {{- end }}
+  {{- if $state.exposure.enabled }}
+    {{- if $state.ha.oauth2Proxy.enabled }}
+      {{- $requiredReady = append $requiredReady (get $checkReady "pdb-oauth2-proxy") }}
+    {{- end }}
+    {{- if $state.ha.redis.enabled }}
+      {{- $requiredReady = append $requiredReady (get $checkReady "pdb-oauth2-proxy-redis") }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+{{- if $state.exposure.enabled }}
+  {{- $requiredReady = append $requiredReady (get $checkReady "exposure-zitadel-credentials") }}
+  {{- $requiredReady = append $requiredReady (get $checkReady "exposure-zitadel-providerconfig") }}
+  {{- $requiredReady = append $requiredReady (get $checkReady "exposure-redis-svc") }}
+  {{- $requiredReady = append $requiredReady (get $checkReady "exposure-redis-sts") }}
+  {{- $requiredReady = append $requiredReady (get $checkReady "exposure-oauth2-proxy-svc") }}
+  {{- $requiredReady = append $requiredReady (get $checkReady "exposure-oauth2-proxy-deploy") }}
+  {{- $requiredReady = append $requiredReady (get $checkReady "exposure-waypoint") }}
+  {{- if $state.exposure.certificate.enabled }}
+    {{- $requiredReady = append $requiredReady (get $checkReady "exposure-certificate") }}
+  {{- end }}
+  {{- $hasExtAuthzExposure := false }}
+  {{- range $comp := $state.exposure.components }}
+    {{- if and $comp.enabled (ne $comp.host "") }}
+      {{- $requiredReady = append $requiredReady (get $checkReady (printf "exposure-sister-svc-%s" $comp.name)) }}
+      {{- $requiredReady = append $requiredReady (get $checkReady (printf "exposure-httproute-%s" $comp.name)) }}
+      {{- if eq $comp.authMode "ext_authz" }}
+        {{- $hasExtAuthzExposure = true }}
+        {{- $requiredReady = append $requiredReady (get $checkReady (printf "exposure-authpolicy-%s" $comp.name)) }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+  {{- if $hasExtAuthzExposure }}
+    {{- $requiredReady = append $requiredReady (get $checkReady "exposure-oidc-app") }}
+  {{- end }}
+  {{- if and $state.exposure.grafana.enabled (ne $state.exposure.grafana.host "") }}
+    {{- $requiredReady = append $requiredReady (get $checkReady "exposure-grafana-oidc-app") }}
+  {{- end }}
+{{- end }}
+
+{{- $ready := true }}
+{{- range $required := $requiredReady }}
+  {{- if not $required }}
+    {{- $ready = false }}
+  {{- end }}
+{{- end }}
+
 {{- $state = set $state "status" (dict
-  "ready" false
+  "ready" $ready
 ) }}
