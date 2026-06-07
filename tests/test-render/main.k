@@ -581,7 +581,10 @@ _items = [
                     }
                     status = {
                         conditions = [{type = "Ready", status = "True"}, {type = "Synced", status = "True"}]
-                        atProvider = {id = "12345678-1234-1234-1234-123456789012"}
+                        atProvider = {
+                            id = "12345678-1234-1234-1234-123456789012"
+                            arn = "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012"
+                        }
                     }
                 }
             ]
@@ -652,6 +655,35 @@ _items = [
                             name = "loki"
                             namespace = "monitoring"
                         }
+                        inlinePolicy = [{
+                            name = "loki-s3-storage"
+                            policy = """{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": ["s3:GetBucketLocation", "s3:ListBucket", "s3:ListBucketMultipartUploads"],
+      "Resource": "arn:aws:s3:::observe-loki-storage"
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject", "s3:AbortMultipartUpload", "s3:ListMultipartUploadParts"],
+      "Resource": "arn:aws:s3:::observe-loki-storage/*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["kms:Decrypt", "kms:Encrypt", "kms:GenerateDataKey", "kms:DescribeKey"],
+      "Resource": "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012",
+      "Condition": {
+        "StringEquals": {
+          "kms:ViaService": "s3.us-east-1.amazonaws.com"
+        }
+      }
+    }
+  ]
+}
+"""
+                        }]
                     }
                 }
                 {
@@ -723,7 +755,10 @@ _items = [
                     }
                     status = {
                         conditions = [{type = "Ready", status = "True"}, {type = "Synced", status = "True"}]
-                        atProvider = {id = "12345678-1234-1234-1234-123456789012"}
+                        atProvider = {
+                            id = "12345678-1234-1234-1234-123456789012"
+                            arn = "arn:aws:kms:us-west-2:123456789012:key/12345678-1234-1234-1234-123456789012"
+                        }
                     }
                 }
             ]
@@ -788,6 +823,35 @@ _items = [
                             name = "tempo"
                             namespace = "monitoring"
                         }
+                        inlinePolicy = [{
+                            name = "tempo-s3-storage"
+                            policy = """{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": ["s3:GetBucketLocation", "s3:ListBucket", "s3:ListBucketMultipartUploads"],
+      "Resource": "arn:aws:s3:::observe-tempo-storage"
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject", "s3:AbortMultipartUpload", "s3:ListMultipartUploadParts"],
+      "Resource": "arn:aws:s3:::observe-tempo-storage/*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["kms:Decrypt", "kms:Encrypt", "kms:GenerateDataKey", "kms:DescribeKey"],
+      "Resource": "arn:aws:kms:us-west-2:123456789012:key/12345678-1234-1234-1234-123456789012",
+      "Condition": {
+        "StringEquals": {
+          "kms:ViaService": "s3.us-west-2.amazonaws.com"
+        }
+      }
+    }
+  ]
+}
+"""
+                        }]
                     }
                 }
                 {
@@ -917,6 +981,21 @@ _items = [
                     }
                     status = {
                         conditions = [{type = "Ready", status = "True"}, {type = "Synced", status = "True"}]
+                    }
+                }
+                {
+                    apiVersion = "kms.aws.m.upbound.io/v1beta1"
+                    kind = "Key"
+                    metadata = {
+                        name = "observe-loki-storage"
+                        annotations = {"crossplane.io/composition-resource-name" = "loki-storage-key"}
+                    }
+                    status = {
+                        conditions = [{type = "Ready", status = "True"}, {type = "Synced", status = "True"}]
+                        atProvider = {
+                            id = "12345678-1234-1234-1234-123456789012"
+                            arn = "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012"
+                        }
                     }
                 }
                 {

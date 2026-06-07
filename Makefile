@@ -34,34 +34,27 @@ EXAMPLES := \
     examples/observestacks/metrics-server.yaml:: \
     examples/observestacks/exposure.yaml::
 
-# Render all examples (parallel execution, output shown per-job when complete)
+# Render all examples. Run sequentially because concurrent `up composition render`
+# calls share generated schema/function state and can race.
 render\:all:
-	@tmpdir=$$(mktemp -d); \
-	pids=""; \
+	@set -o pipefail; \
+	failed=0; \
 	for entry in $(EXAMPLES); do \
 		example=$${entry%%::*}; \
 		observed=$${entry#*::}; \
-		outfile="$$tmpdir/$$(echo $$entry | tr '/:' '__')"; \
-		( \
-			if [ -n "$$observed" ]; then \
-				echo "=== Rendering $$example with observed-resources $$observed ==="; \
-				up composition render --xrd=$(DEFINITION) $(COMPOSITION) $$example --observed-resources=$$observed; \
-			else \
-				echo "=== Rendering $$example ==="; \
-				up composition render --xrd=$(DEFINITION) $(COMPOSITION) $$example; \
+		if [ -n "$$observed" ]; then \
+			echo "=== Rendering $$example with observed-resources $$observed ==="; \
+			if ! up composition render --xrd=$(DEFINITION) $(COMPOSITION) $$example --observed-resources=$$observed; then \
+				failed=1; \
 			fi; \
-			echo "" \
-		) > "$$outfile" 2>&1 & \
-		pids="$$pids $$!:$$outfile"; \
+		else \
+			echo "=== Rendering $$example ==="; \
+			if ! up composition render --xrd=$(DEFINITION) $(COMPOSITION) $$example; then \
+				failed=1; \
+			fi; \
+		fi; \
+		echo ""; \
 	done; \
-	failed=0; \
-	for pair in $$pids; do \
-		pid=$${pair%%:*}; \
-		outfile=$${pair#*:}; \
-		if ! wait $$pid; then failed=1; fi; \
-		cat "$$outfile"; \
-	done; \
-	rm -rf "$$tmpdir"; \
 	exit $$failed
 
 # Validate all examples. Run sequentially because concurrent `up composition render`

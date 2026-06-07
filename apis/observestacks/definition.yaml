@@ -243,6 +243,8 @@ spec:
                                 - Empty
                                 - Underutilized
                                 - Drifted
+                          required:
+                          - nodes
               aws:
                 description: AWS account and IAM configuration.
                 type: object

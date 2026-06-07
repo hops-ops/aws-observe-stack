@@ -10,6 +10,7 @@
 {{- $lifecycleDays := add $retentionDays 7 }}
 {{- $tempoBucketExists := ne $state.observed.tempoBucket.id "" }}
 {{- $tempoStorageKeyExists := ne $state.observed.tempoStorageKey.id "" }}
+{{- $tempoStorageKeyArn := $state.observed.tempoStorageKey.arn | default "" }}
 
 # ==============================================================================
 # KMS key for Tempo storage encryption
@@ -147,6 +148,7 @@ spec:
 # ==============================================================================
 # PodIdentity for Tempo service account with S3 permissions
 # ==============================================================================
+{{- if $tempoStorageKeyArn }}
 ---
 apiVersion: aws.hops.ops.com.ai/v1alpha1
 kind: PodIdentity
@@ -190,7 +192,7 @@ spec:
             {
               "Effect": "Allow",
               "Action": ["kms:Decrypt", "kms:Encrypt", "kms:GenerateDataKey", "kms:DescribeKey"],
-              "Resource": "*",
+              "Resource": "{{ $tempoStorageKeyArn }}",
               "Condition": {
                 "StringEquals": {
                   "kms:ViaService": "s3.{{ $state.aws.region }}.amazonaws.com"
@@ -226,6 +228,7 @@ spec:
     kind: Release
     resourceRef:
       name: {{ $state.tempo.name }}
+{{- end }}
 {{- end }}
 
 {{- end }}
