@@ -89,6 +89,7 @@ spec:
     {{- $alertmanagerSpec := dict "resources" $alertmanagerResources }}
     {{- $grafanaValues := dict
       "enabled" true
+      "replicas" 1
       "resources" $grafanaResources
     }}
     {{- $operatorValues := dict "enabled" true "resources" $operatorResources }}

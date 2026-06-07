@@ -1582,7 +1582,7 @@ _items = [
                         whenUnsatisfiable = "ScheduleAnyway"
                         labelSelector.matchLabels = {"app.kubernetes.io/name" = "alertmanager"}
                     }]
-                    spec.forProvider.values.grafana.replicas = 2
+                    spec.forProvider.values.grafana.replicas = 1
                 }
                 {
                     apiVersion = "helm.m.crossplane.io/v1beta1"

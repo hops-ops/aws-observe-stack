@@ -114,7 +114,7 @@ spec:
                     - WaitForFirstConsumer
                     default: WaitForFirstConsumer
               ha:
-                description: Optional easy HA mode. When enabled, HA-capable components get safe replica defaults and the XR renders PodDisruptionBudgets for observe workloads. Loki and Tempo are only auto-scaled when their storage type is s3.
+                description: Optional easy HA mode. When enabled, HA-capable components get safe replica defaults and the XR renders PodDisruptionBudgets for observe workloads. Grafana stays single-replica by default because the chart uses local state unless the operator configures shared storage/database behavior. Loki and Tempo are only auto-scaled when their storage type is s3.
                 type: object
                 properties:
                   enabled:
@@ -146,7 +146,7 @@ spec:
                       type: object
                       properties:
                         enabled:
-                          description: Whether HA behavior is enabled for this component. Defaults to spec.ha.enabled.
+                          description: Whether HA behavior is enabled for this component. Defaults to spec.ha.enabled for most components; grafana defaults false unless explicitly enabled.
                           type: boolean
                         replicas:
                           description: Replica count for this component when the component supports XR-managed replicas.

@@ -224,6 +224,9 @@
 {{- range $componentName := list "prometheus" "alertmanager" "grafana" "opencost" "loki" "tempo" "oauth2Proxy" "redis" }}
   {{- $compSpec := get $haComponentSpecs $componentName | default dict }}
   {{- $compEnabled := $haEnabled }}
+  {{- if eq $componentName "grafana" }}
+    {{- $compEnabled = false }}
+  {{- end }}
   {{- if hasKey $compSpec "enabled" }}
     {{- $compEnabled = and $haEnabled $compSpec.enabled }}
   {{- end }}
