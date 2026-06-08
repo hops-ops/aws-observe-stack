@@ -80,6 +80,9 @@ spec:
       )
       "service" (dict "type" "ClusterIP")
     }}
+    {{- if and $state.ha.tempo.enabled $state.aws.tempo.s3.enabled }}
+      {{- $_ := set $defaults "replicas" $state.ha.tempo.replicas }}
+    {{- end }}
     {{- if not $state.aws.tempo.s3.enabled }}
     {{- $_ := set $defaults "persistence" (dict
       "enabled" true

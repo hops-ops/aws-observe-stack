@@ -66,19 +66,15 @@
   {{- $nodePoolEnabled = $nodePoolSpec.enabled }}
 {{- end }}
 {{- $nodePoolName := "hops-observe" }}
-{{- $nodePoolNodeClassName := $nodePoolSpec.nodeClassName | default "" }}
+{{- $nodePoolNodeClassName := $nodePoolSpec.nodeClassName | default "hops-default" }}
 {{- $nodePoolLimits := $nodePoolSpec.limits | default (dict "cpu" "40" "memory" "160Gi") }}
-{{- /* Prometheus + alloy-metrics easily push >7 GiB working set on a small cluster.
-   At 8 GiB nodes Karpenter packs them with other workloads and SIGKILL pressure
-   tanks the whole monitoring stack. 16 GiB floor gives prometheus the headroom
-   the chart authors assume in production clusters. */}}
 {{- $nodePoolRequirements := $nodePoolSpec.requirements | default (list
-  (dict "key" "kubernetes.io/arch" "operator" "In" "values" (list "amd64" "arm64"))
-  (dict "key" "karpenter.sh/capacity-type" "operator" "In" "values" (list "spot" "on-demand"))
-  (dict "key" "eks.amazonaws.com/instance-memory" "operator" "Gt" "values" (list "15999"))
-  (dict "key" "eks.amazonaws.com/instance-cpu" "operator" "Gt" "values" (list "1"))
+  (dict "key" "karpenter.sh/capacity-type" "operator" "In" "values" (list "spot"))
+  (dict "key" "eks.amazonaws.com/instance-category" "operator" "In" "values" (list "c" "m" "r" "t"))
+  (dict "key" "eks.amazonaws.com/instance-generation" "operator" "Gte" "values" (list "4"))
+  (dict "key" "kubernetes.io/os" "operator" "In" "values" (list "linux"))
 ) }}
-{{- $nodePoolDisruption := $nodePoolSpec.disruption | default (dict "consolidationPolicy" "WhenEmptyOrUnderutilized" "consolidateAfter" "60s") }}
+{{- $nodePoolDisruption := $nodePoolSpec.disruption | default (dict "consolidationPolicy" "WhenEmptyOrUnderutilized" "consolidateAfter" "30s" "budgets" (list (dict "nodes" "100%"))) }}
 
 # NodePool scheduling — applied to non-daemonset Helm values when enabled
 {{- $nodePoolTaintKey := "observe" }}
@@ -209,6 +205,109 @@
 }}
 
 # ==============================================================================
+# HA configuration
+# ==============================================================================
+{{- $haSpec := $spec.ha | default dict }}
+{{- $haEnabled := false }}
+{{- if hasKey $haSpec "enabled" }}
+  {{- $haEnabled = $haSpec.enabled }}
+{{- end }}
+{{- $haReplicas := $haSpec.replicas | default 2 }}
+{{- $haPdbSpec := $haSpec.pdb | default dict }}
+{{- $haPdbEnabled := true }}
+{{- if hasKey $haPdbSpec "enabled" }}
+  {{- $haPdbEnabled = $haPdbSpec.enabled }}
+{{- end }}
+{{- $haPdbMinAvailable := $haPdbSpec.minAvailable | default 1 }}
+{{- $haComponentSpecs := $haSpec.components | default dict }}
+{{- $haComponents := dict }}
+{{- range $componentName := list "prometheus" "alertmanager" "grafana" "opencost" "loki" "tempo" "oauth2Proxy" "redis" }}
+  {{- $compSpec := get $haComponentSpecs $componentName | default dict }}
+  {{- $compEnabled := $haEnabled }}
+  {{- if hasKey $compSpec "enabled" }}
+    {{- $compEnabled = and $haEnabled $compSpec.enabled }}
+  {{- end }}
+  {{- $compReplicas := $compSpec.replicas | default $haReplicas }}
+  {{- if and (eq $componentName "loki") (not $lokiS3Enabled) }}
+    {{- $compReplicas = 1 }}
+  {{- end }}
+  {{- if and (eq $componentName "tempo") (not $tempoS3Enabled) }}
+    {{- $compReplicas = 1 }}
+  {{- end }}
+  {{- if eq $componentName "redis" }}
+    {{- $compReplicas = 1 }}
+  {{- end }}
+  {{- $_ := set $haComponents $componentName (dict "enabled" $compEnabled "replicas" $compReplicas) }}
+{{- end }}
+
+# ==============================================================================
+# Grafana application database
+# ==============================================================================
+{{- $grafanaSpec := $spec.grafana | default dict }}
+{{- $grafanaDatabaseSpec := $grafanaSpec.database | default dict }}
+{{- $grafanaHa := get $haComponents "grafana" | default dict }}
+{{- $grafanaDatabaseEnabled := $grafanaHa.enabled }}
+{{- if hasKey $grafanaDatabaseSpec "enabled" }}
+  {{- $grafanaDatabaseEnabled = $grafanaDatabaseSpec.enabled }}
+{{- end }}
+{{- if and $grafanaHa.enabled (not $grafanaDatabaseEnabled) }}
+  {{- fail "spec.ha.components.grafana.enabled requires spec.grafana.database.enabled; Grafana HA needs a shared database" }}
+{{- end }}
+{{- $grafanaDatabaseEmbedded := $grafanaDatabaseSpec.embedded | default dict }}
+{{- $grafanaDatabaseTargetNamespace := $kubePrometheusStack.namespace | default $namespace }}
+{{- $grafanaPsqlName := $grafanaDatabaseEmbedded.name | default (printf "%s-grafana-pg" $name) }}
+{{- $grafanaPsqlXrNamespace := $metadata.namespace | default "default" }}
+{{- $grafanaPsqlHost := printf "%s-rw.%s.svc.cluster.local" $grafanaPsqlName $grafanaDatabaseTargetNamespace }}
+{{- $grafanaPsqlStorage := $grafanaDatabaseEmbedded.storage | default dict }}
+{{- $grafanaPsqlStorage = dict
+  "size" ($grafanaPsqlStorage.size | default "10Gi")
+  "class" ($grafanaPsqlStorage.class | default "psql")
+}}
+{{- $grafanaPsqlPostgres := $grafanaDatabaseEmbedded.postgresql | default dict }}
+{{- if not $grafanaPsqlPostgres.version }}{{- $grafanaPsqlPostgres = set $grafanaPsqlPostgres "version" "17" }}{{- end }}
+{{- $grafanaPsqlAppSpec := $grafanaDatabaseEmbedded.app | default dict }}
+{{- $grafanaPsqlApp := dict
+  "role" ($grafanaPsqlAppSpec.role | default "grafana")
+  "database" ($grafanaPsqlAppSpec.database | default "grafana")
+  "secretName" ($grafanaPsqlAppSpec.secretName | default (printf "%s-app" $grafanaPsqlName))
+}}
+{{- $grafanaPsqlInstances := $grafanaDatabaseEmbedded.instances | default 1 }}
+{{- $grafanaPsqlHaSpec := $grafanaDatabaseEmbedded.ha | default dict }}
+{{- $grafanaPsqlHaEnabled := $grafanaHa.enabled }}
+{{- if hasKey $grafanaPsqlHaSpec "enabled" }}
+  {{- $grafanaPsqlHaEnabled = $grafanaPsqlHaSpec.enabled }}
+{{- end }}
+{{- $grafanaPsqlHa := dict
+  "enabled" $grafanaPsqlHaEnabled
+  "replicas" ($grafanaPsqlHaSpec.replicas | default 3)
+  "topologySpreadByZone" (or (not (hasKey $grafanaPsqlHaSpec "topologySpreadByZone")) $grafanaPsqlHaSpec.topologySpreadByZone)
+}}
+{{- $grafanaPsqlMonitoringSpec := $grafanaDatabaseEmbedded.monitoring | default dict }}
+{{- $grafanaPsqlMonitoring := dict
+  "enabled" (or (not (hasKey $grafanaPsqlMonitoringSpec "enabled")) $grafanaPsqlMonitoringSpec.enabled)
+}}
+{{- $grafanaDatabase := dict
+  "enabled" $grafanaDatabaseEnabled
+  "mode" "embedded"
+  "sslMode" ($grafanaDatabaseSpec.sslMode | default ($grafanaDatabaseEmbedded.sslMode | default "disable"))
+  "mountPath" "/etc/secrets/grafana-db"
+  "embedded" (dict
+    "psqlClusterName" $grafanaPsqlName
+    "xrNamespace" $grafanaPsqlXrNamespace
+    "targetNamespace" $grafanaDatabaseTargetNamespace
+    "host" $grafanaPsqlHost
+    "port" 5432
+    "instances" $grafanaPsqlInstances
+    "storage" $grafanaPsqlStorage
+    "postgresql" $grafanaPsqlPostgres
+    "app" $grafanaPsqlApp
+    "ha" $grafanaPsqlHa
+    "monitoring" $grafanaPsqlMonitoring
+    "cnpg" ($grafanaDatabaseEmbedded.cnpg | default dict)
+  )
+}}
+
+# ==============================================================================
 # Spot feed configuration
 # ==============================================================================
 {{- $spotFeed := $spec.spotFeed | default dict }}
@@ -312,7 +411,7 @@
 {{- $exposureRedis = dict
   "size" ($exposureRedis.size | default "1Gi")
   "storageClassName" ($exposureRedis.storageClassName | default "")
-  "image" ($exposureRedis.image | default "redis:7-alpine")
+  "image" ($exposureRedis.image | default "mirror.gcr.io/redis:7-alpine")
 }}
 
 {{- $exposureProxy := $exposure.oauth2Proxy | default dict }}
@@ -325,9 +424,17 @@
 {{- if and $exposureEnabled (eq $exposureProxyCookieRef.name "") }}
   {{- fail "spec.exposure.oauth2Proxy.cookieSecretRef.name is required when spec.exposure.enabled is true (operator pre-creates the Secret holding the cookie-signing key)" }}
 {{- end }}
+{{- $haOauth2Proxy := get $haComponents "oauth2Proxy" | default dict }}
+{{- $exposureProxyReplicas := 1 }}
+{{- if and $haEnabled $haOauth2Proxy.enabled }}
+  {{- $exposureProxyReplicas = $haOauth2Proxy.replicas }}
+{{- end }}
+{{- if hasKey $exposureProxy "replicas" }}
+  {{- $exposureProxyReplicas = $exposureProxy.replicas }}
+{{- end }}
 {{- $exposureProxy = dict
   "image" ($exposureProxy.image | default "quay.io/oauth2-proxy/oauth2-proxy:v7.7.1")
-  "replicas" ($exposureProxy.replicas | default 1)
+  "replicas" $exposureProxyReplicas
   "additionalConfig" ($exposureProxy.additionalConfig | default list)
   "cookieDomain" $exposureProxyCookieDomain
   "cookieSecretRef" $exposureProxyCookieRef
@@ -416,6 +523,7 @@
   "host" ($exposureGrafana.host | default "")
   "allowedDomains" ($exposureGrafana.allowedDomains | default list)
   "roleAttributePath" ($exposureGrafana.roleAttributePath | default "")
+  "allowAssignGrafanaAdmin" (and (hasKey $exposureGrafana "allowAssignGrafanaAdmin") $exposureGrafana.allowAssignGrafanaAdmin)
   "maxSessionDuration" ($exposureGrafana.maxSessionDuration | default "8h")
   "tokenRotationMinutes" ($exposureGrafana.tokenRotationMinutes | default 10)
   "useRefreshToken" (or (not (hasKey $exposureGrafana "useRefreshToken")) $exposureGrafana.useRefreshToken)
@@ -551,6 +659,25 @@
     "taintValue" $nodePoolTaintValue
     "nodeSelector" $nodePoolNodeSelector
     "tolerations" $nodePoolTolerations
+  )
+  "ha" (dict
+    "enabled" $haEnabled
+    "replicas" $haReplicas
+    "pdb" (dict
+      "enabled" $haPdbEnabled
+      "minAvailable" $haPdbMinAvailable
+    )
+    "prometheus" (get $haComponents "prometheus")
+    "alertmanager" (get $haComponents "alertmanager")
+    "grafana" (get $haComponents "grafana")
+    "opencost" (get $haComponents "opencost")
+    "loki" (get $haComponents "loki")
+    "tempo" (get $haComponents "tempo")
+    "oauth2Proxy" (get $haComponents "oauth2Proxy")
+    "redis" (get $haComponents "redis")
+  )
+  "grafana" (dict
+    "database" $grafanaDatabase
   )
   "spotFeed" (dict
     "enabled" $spotFeedEnabled

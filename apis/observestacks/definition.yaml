@@ -113,6 +113,45 @@ spec:
                     - Immediate
                     - WaitForFirstConsumer
                     default: WaitForFirstConsumer
+              ha:
+                description: Optional easy HA mode. When enabled, HA-capable components get safe replica defaults and the XR renders PodDisruptionBudgets for observe workloads. Grafana HA composes a PSQLCluster-backed shared database before scaling. Loki and Tempo are only auto-scaled when their storage type is s3.
+                type: object
+                properties:
+                  enabled:
+                    description: Whether to enable easy HA mode. Defaults to false.
+                    type: boolean
+                    default: false
+                  replicas:
+                    description: Default replica count for HA-capable stateless/operator-managed components. Defaults to 2.
+                    type: integer
+                    minimum: 2
+                    default: 2
+                  pdb:
+                    description: PodDisruptionBudget defaults used when HA mode is enabled.
+                    type: object
+                    properties:
+                      enabled:
+                        description: Whether to create PodDisruptionBudgets. Defaults to true when HA is enabled.
+                        type: boolean
+                        default: true
+                      minAvailable:
+                        description: Minimum available pods for generated PodDisruptionBudgets. Defaults to 1.
+                        type: integer
+                        minimum: 1
+                        default: 1
+                  components:
+                    description: Per-component HA overrides keyed by component name, for example prometheus, alertmanager, grafana, opencost, loki, tempo, oauth2Proxy, or redis.
+                    type: object
+                    additionalProperties:
+                      type: object
+                      properties:
+                        enabled:
+                          description: Whether HA behavior is enabled for this component. Defaults to spec.ha.enabled.
+                          type: boolean
+                        replicas:
+                          description: Replica count for this component when the component supports XR-managed replicas.
+                          type: integer
+                          minimum: 1
               nodePool:
                 description: Optional dedicated Karpenter NodePool for observe workloads. When enabled, non-daemonset pods are scheduled to a dedicated NodePool via nodeSelector and tolerations. Daemonsets (node-exporter, alloy) continue to run on all nodes.
                 type: object
@@ -122,7 +161,7 @@ spec:
                     type: boolean
                     default: false
                   nodeClassName:
-                    description: Name of the EKS NodeClass to reference. Defaults to the EKS Auto Mode default.
+                    description: Name of the EKS NodeClass to reference. Defaults to "hops-default".
                     type: string
                   limits:
                     description: Karpenter NodePool resource limits. Defaults to cpu/memory-based limits for dynamic scaling. Set nodes to cap node count.
@@ -140,7 +179,7 @@ spec:
                         description: Maximum number of nodes. Optional — omit for pure resource-based scaling.
                         type: integer
                   requirements:
-                    description: Karpenter NodePool scheduling requirements. Defaults to broad spot instance selection.
+                    description: Karpenter NodePool scheduling requirements. Defaults to spot capacity, c/m/r/t instance categories, generation >= 4, linux, and architecture-flexible scheduling.
                     type: array
                     items:
                       type: object
@@ -155,7 +194,9 @@ spec:
                           - Exists
                           - DoesNotExist
                           - Gt
+                          - Gte
                           - Lt
+                          - Lte
                         values:
                           type: array
                           items:
@@ -164,7 +205,7 @@ spec:
                       - key
                       - operator
                   disruption:
-                    description: Karpenter disruption settings.
+                    description: Karpenter disruption settings. Defaults to WhenEmptyOrUnderutilized after 30s with a 100% NodePool disruption budget.
                     type: object
                     properties:
                       consolidationPolicy:
@@ -175,9 +216,35 @@ spec:
                         - WhenEmptyOrUnderutilized
                         default: WhenEmptyOrUnderutilized
                       consolidateAfter:
-                        description: Duration to wait before consolidating. Defaults to 60s.
+                        description: Duration to wait before consolidating. Defaults to 30s.
                         type: string
-                        default: "60s"
+                        default: "30s"
+                      budgets:
+                        description: NodePool disruption budgets. Defaults to nodes=100%.
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            nodes:
+                              description: Number or percentage of nodes that may be disrupted.
+                              type: string
+                            schedule:
+                              description: Optional UTC cron schedule for this budget.
+                              type: string
+                            duration:
+                              description: Duration for a scheduled budget.
+                              type: string
+                            reasons:
+                              description: Disruption reasons this budget applies to.
+                              type: array
+                              items:
+                                type: string
+                                enum:
+                                - Empty
+                                - Underutilized
+                                - Drifted
+                          required:
+                          - nodes
               aws:
                 description: AWS account and IAM configuration.
                 type: object
@@ -466,6 +533,108 @@ spec:
                     description: Helm values that replace all defaults for this component.
                     type: object
                     x-kubernetes-preserve-unknown-fields: true
+              grafana:
+                description: Grafana application settings for the kube-prometheus-stack Grafana deployment.
+                type: object
+                properties:
+                  database:
+                    description: Shared Grafana application database. Defaults on when Grafana HA is enabled.
+                    type: object
+                    properties:
+                      enabled:
+                        description: Whether to compose and wire a shared database for Grafana. Defaults to spec.ha.components.grafana.enabled.
+                        type: boolean
+                      sslMode:
+                        description: Grafana Postgres ssl_mode. Defaults to disable for in-cluster CNPG service traffic.
+                        type: string
+                        default: disable
+                      embedded:
+                        description: Embedded PSQLCluster settings for the Grafana application database.
+                        type: object
+                        properties:
+                          name:
+                            description: PSQLCluster name. Defaults to {observe-name}-grafana-pg.
+                            type: string
+                          instances:
+                            description: Base Postgres instance count when embedded HA is disabled. Defaults to 1.
+                            type: integer
+                            default: 1
+                          storage:
+                            description: Postgres data PVC sizing for the embedded PSQLCluster.
+                            type: object
+                            properties:
+                              size:
+                                description: PVC size. Defaults to 10Gi.
+                                type: string
+                                default: 10Gi
+                              class:
+                                description: StorageClass name. Defaults to psql.
+                                type: string
+                                default: psql
+                          postgresql:
+                            description: Postgres version and parameters for the embedded PSQLCluster.
+                            type: object
+                            properties:
+                              version:
+                                description: Postgres major version. Defaults to 17.
+                                type: string
+                                default: "17"
+                              parameters:
+                                description: postgres.conf parameters.
+                                type: object
+                                additionalProperties:
+                                  type: string
+                                x-kubernetes-preserve-unknown-fields: true
+                          app:
+                            description: Grafana database role and database name.
+                            type: object
+                            properties:
+                              role:
+                                description: Postgres role. Defaults to grafana.
+                                type: string
+                                default: grafana
+                              database:
+                                description: Postgres database. Defaults to grafana.
+                                type: string
+                                default: grafana
+                              secretName:
+                                description: Optional BYO app Secret name with username and password keys. Omit to let CNPG generate {cluster-name}-app.
+                                type: string
+                          ha:
+                            description: HA settings for the embedded PSQLCluster. Defaults on when Grafana HA is enabled.
+                            type: object
+                            properties:
+                              enabled:
+                                description: Whether the embedded PSQLCluster should run with HA instances.
+                                type: boolean
+                              replicas:
+                                description: Embedded PSQLCluster HA replica count. Defaults to 3.
+                                type: integer
+                                default: 3
+                              topologySpreadByZone:
+                                description: Whether embedded Postgres pods should prefer zone spread. Defaults to true.
+                                type: boolean
+                                default: true
+                          monitoring:
+                            description: Monitoring settings for the embedded PSQLCluster.
+                            type: object
+                            properties:
+                              enabled:
+                                description: Whether the embedded PSQLCluster should enable CNPG PodMonitor output. Defaults to true.
+                                type: boolean
+                                default: true
+                          cnpg:
+                            description: Escape hatch for embedded PSQLCluster CNPG settings.
+                            type: object
+                            properties:
+                              values:
+                                description: Values merged with generated CNPG Cluster spec.
+                                type: object
+                                x-kubernetes-preserve-unknown-fields: true
+                              overrideAllValues:
+                                description: Values that replace the generated CNPG Cluster spec.
+                                type: object
+                                x-kubernetes-preserve-unknown-fields: true
               vpa:
                 description: Configuration for the Vertical Pod Autoscaler component.
                 type: object
@@ -723,9 +892,9 @@ spec:
                         description: StorageClass for the Redis PVC. Defaults to the cluster's default.
                         type: string
                       image:
-                        description: Redis container image. Defaults to "redis:7-alpine".
+                        description: Redis container image. Defaults to "mirror.gcr.io/redis:7-alpine".
                         type: string
-                        default: redis:7-alpine
+                        default: mirror.gcr.io/redis:7-alpine
                   oauth2Proxy:
                     description: oauth2-proxy bridge configuration.
                     type: object
@@ -830,6 +999,9 @@ spec:
                       under spec.kubePrometheusStack.values.grafana — no AuthorizationPolicy.CUSTOM
                       gate, Grafana enforces auth itself.
                     type: object
+                    x-kubernetes-validations:
+                    - rule: "self.enabled != true || (has(self.host) && self.host != '')"
+                      message: exposure.grafana.host is required when exposure.grafana.enabled is true.
                     properties:
                       enabled:
                         type: boolean
@@ -857,8 +1029,12 @@ spec:
                         items:
                           type: string
                       roleAttributePath:
-                        description: JMESPath against the ID token to map to a Grafana role (Admin, Editor, Viewer). Example -contains("urn:zitadel:iam:org:project:roles", "observe-admin") && "Admin" || "Viewer"-.
+                        description: JMESPath against the OAuth token/userinfo payload to map to a Grafana role (GrafanaAdmin, Admin, Editor, Viewer). Returning GrafanaAdmin also requires allowAssignGrafanaAdmin=true.
                         type: string
+                      allowAssignGrafanaAdmin:
+                        description: Whether Grafana may assign server administrator privileges when roleAttributePath returns GrafanaAdmin. Defaults to false.
+                        type: boolean
+                        default: false
                       maxSessionDuration:
                         description: Grafana session lifetime (auth.login_maximum_lifetime_duration). Defaults to 8h.
                         type: string

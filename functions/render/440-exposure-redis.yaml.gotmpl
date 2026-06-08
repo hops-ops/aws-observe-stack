@@ -85,6 +85,12 @@ spec:
               app.kubernetes.io/name: oauth2-proxy-redis
               app.kubernetes.io/instance: {{ $state.name }}
           spec:
+            {{- if $state.nodePool.enabled }}
+            nodeSelector:
+              {{- toYaml $state.nodePool.nodeSelector | nindent 14 }}
+            tolerations:
+              {{- toYaml $state.nodePool.tolerations | nindent 14 }}
+            {{- end }}
             containers:
             - name: redis
               image: {{ $r.image | quote }}
@@ -106,6 +112,13 @@ spec:
                   port: 6379
                 initialDelaySeconds: 15
                 periodSeconds: 10
+              resources:
+                requests:
+                  cpu: 15m
+                  memory: 100Mi
+                limits:
+                  cpu: 100m
+                  memory: 256Mi
         volumeClaimTemplates:
         - metadata:
             name: data

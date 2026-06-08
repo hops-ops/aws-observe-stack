@@ -559,6 +559,35 @@ _items = [
                     }
                 }
             }
+            observedResources = [
+                {
+                    apiVersion = "s3.aws.m.upbound.io/v1beta1"
+                    kind = "Bucket"
+                    metadata = {
+                        name = "observe-loki-bucket"
+                        annotations = {"crossplane.io/composition-resource-name" = "loki-bucket"}
+                    }
+                    status = {
+                        conditions = [{type = "Ready", status = "True"}, {type = "Synced", status = "True"}]
+                        atProvider = {id = "observe-loki-storage"}
+                    }
+                }
+                {
+                    apiVersion = "kms.aws.m.upbound.io/v1beta1"
+                    kind = "Key"
+                    metadata = {
+                        name = "observe-loki-storage"
+                        annotations = {"crossplane.io/composition-resource-name" = "loki-storage-key"}
+                    }
+                    status = {
+                        conditions = [{type = "Ready", status = "True"}, {type = "Synced", status = "True"}]
+                        atProvider = {
+                            id = "12345678-1234-1234-1234-123456789012"
+                            arn = "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012"
+                        }
+                    }
+                }
+            ]
             assertResources = [
                 {
                     apiVersion = "s3.aws.m.upbound.io/v1beta1"
@@ -591,6 +620,31 @@ _items = [
                     }]
                 }
                 {
+                    apiVersion = "kms.aws.m.upbound.io/v1beta1"
+                    kind = "Key"
+                    metadata.name = "observe-loki-storage"
+                    spec.forProvider = {
+                        enableKeyRotation = True
+                        region = "us-east-1"
+                    }
+                }
+                {
+                    apiVersion = "s3.aws.m.upbound.io/v1beta1"
+                    kind = "BucketServerSideEncryptionConfiguration"
+                    metadata.name = "observe-loki-bucket-encryption"
+                    spec.forProvider = {
+                        bucketRef = {name = "observe-loki-bucket"}
+                        region = "us-east-1"
+                        rule = [{
+                            applyServerSideEncryptionByDefault = {
+                                kmsMasterKeyIdRef = {name = "observe-loki-storage"}
+                                sseAlgorithm = "aws:kms"
+                            }
+                            bucketKeyEnabled = True
+                        }]
+                    }
+                }
+                {
                     apiVersion = "aws.hops.ops.com.ai/v1alpha1"
                     kind = "PodIdentity"
                     metadata.name = "observe-loki"
@@ -601,6 +655,35 @@ _items = [
                             name = "loki"
                             namespace = "monitoring"
                         }
+                        inlinePolicy = [{
+                            name = "loki-s3-storage"
+                            policy = """{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": ["s3:GetBucketLocation", "s3:ListBucket", "s3:ListBucketMultipartUploads"],
+      "Resource": "arn:aws:s3:::observe-loki-storage"
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject", "s3:AbortMultipartUpload", "s3:ListMultipartUploadParts"],
+      "Resource": "arn:aws:s3:::observe-loki-storage/*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["kms:Decrypt", "kms:Encrypt", "kms:GenerateDataKey", "kms:DescribeKey"],
+      "Resource": "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012",
+      "Condition": {
+        "StringEquals": {
+          "kms:ViaService": "s3.us-east-1.amazonaws.com"
+        }
+      }
+    }
+  ]
+}
+"""
+                        }]
                     }
                 }
                 {
@@ -650,6 +733,35 @@ _items = [
                     }
                 }
             }
+            observedResources = [
+                {
+                    apiVersion = "s3.aws.m.upbound.io/v1beta1"
+                    kind = "Bucket"
+                    metadata = {
+                        name = "observe-tempo-bucket"
+                        annotations = {"crossplane.io/composition-resource-name" = "tempo-bucket"}
+                    }
+                    status = {
+                        conditions = [{type = "Ready", status = "True"}, {type = "Synced", status = "True"}]
+                        atProvider = {id = "observe-tempo-storage"}
+                    }
+                }
+                {
+                    apiVersion = "kms.aws.m.upbound.io/v1beta1"
+                    kind = "Key"
+                    metadata = {
+                        name = "observe-tempo-storage"
+                        annotations = {"crossplane.io/composition-resource-name" = "tempo-storage-key"}
+                    }
+                    status = {
+                        conditions = [{type = "Ready", status = "True"}, {type = "Synced", status = "True"}]
+                        atProvider = {
+                            id = "12345678-1234-1234-1234-123456789012"
+                            arn = "arn:aws:kms:us-west-2:123456789012:key/12345678-1234-1234-1234-123456789012"
+                        }
+                    }
+                }
+            ]
             assertResources = [
                 {
                     apiVersion = "s3.aws.m.upbound.io/v1beta1"
@@ -676,6 +788,31 @@ _items = [
                     }]
                 }
                 {
+                    apiVersion = "kms.aws.m.upbound.io/v1beta1"
+                    kind = "Key"
+                    metadata.name = "observe-tempo-storage"
+                    spec.forProvider = {
+                        enableKeyRotation = True
+                        region = "us-west-2"
+                    }
+                }
+                {
+                    apiVersion = "s3.aws.m.upbound.io/v1beta1"
+                    kind = "BucketServerSideEncryptionConfiguration"
+                    metadata.name = "observe-tempo-bucket-encryption"
+                    spec.forProvider = {
+                        bucketRef = {name = "observe-tempo-bucket"}
+                        region = "us-west-2"
+                        rule = [{
+                            applyServerSideEncryptionByDefault = {
+                                kmsMasterKeyIdRef = {name = "observe-tempo-storage"}
+                                sseAlgorithm = "aws:kms"
+                            }
+                            bucketKeyEnabled = True
+                        }]
+                    }
+                }
+                {
                     apiVersion = "aws.hops.ops.com.ai/v1alpha1"
                     kind = "PodIdentity"
                     metadata.name = "observe-tempo"
@@ -686,6 +823,35 @@ _items = [
                             name = "tempo"
                             namespace = "monitoring"
                         }
+                        inlinePolicy = [{
+                            name = "tempo-s3-storage"
+                            policy = """{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": ["s3:GetBucketLocation", "s3:ListBucket", "s3:ListBucketMultipartUploads"],
+      "Resource": "arn:aws:s3:::observe-tempo-storage"
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject", "s3:AbortMultipartUpload", "s3:ListMultipartUploadParts"],
+      "Resource": "arn:aws:s3:::observe-tempo-storage/*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["kms:Decrypt", "kms:Encrypt", "kms:GenerateDataKey", "kms:DescribeKey"],
+      "Resource": "arn:aws:kms:us-west-2:123456789012:key/12345678-1234-1234-1234-123456789012",
+      "Condition": {
+        "StringEquals": {
+          "kms:ViaService": "s3.us-west-2.amazonaws.com"
+        }
+      }
+    }
+  ]
+}
+"""
+                        }]
                     }
                 }
                 {
@@ -815,6 +981,21 @@ _items = [
                     }
                     status = {
                         conditions = [{type = "Ready", status = "True"}, {type = "Synced", status = "True"}]
+                    }
+                }
+                {
+                    apiVersion = "kms.aws.m.upbound.io/v1beta1"
+                    kind = "Key"
+                    metadata = {
+                        name = "observe-loki-storage"
+                        annotations = {"crossplane.io/composition-resource-name" = "loki-storage-key"}
+                    }
+                    status = {
+                        conditions = [{type = "Ready", status = "True"}, {type = "Synced", status = "True"}]
+                        atProvider = {
+                            id = "12345678-1234-1234-1234-123456789012"
+                            arn = "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012"
+                        }
                     }
                 }
                 {
@@ -1233,9 +1414,21 @@ _items = [
                         nodeLogs = {enabled = True}
                         clusterEvents = {enabled = True}
                         "alloy-logs" = {enabled = True}
-                        "alloy-metrics" = {enabled = True}
+                        "alloy-metrics" = {
+                            enabled = True
+                            alloy.resources.requests = {
+                                cpu = "200m"
+                                memory = "2560Mi"
+                            }
+                        }
                         "alloy-receiver" = {enabled = True}
                         "alloy-singleton" = {enabled = True}
+                        "alloy-operator" = {
+                            resources.requests = {
+                                cpu = "63m"
+                                memory = "156Mi"
+                            }
+                        }
                         nodeExporter = {enabled = False}
                     }
                 }
@@ -1341,6 +1534,341 @@ _items = [
     }
 
     # ==========================================================================
+    # Test: HA mode renders replica defaults and disruption budgets
+    # ==========================================================================
+    metav1alpha1.CompositionTest {
+        metadata.name = "ha-mode-renders-replicas-topology-and-pdbs"
+        spec = {
+            compositionPath = "apis/observestacks/composition.yaml"
+            xrdPath = "apis/observestacks/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = {
+                apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                kind = "ObserveStack"
+                metadata.name = "observe"
+                spec = {
+                    clusterName = "my-cluster"
+                    aws = {
+                        region = "us-east-1"
+                    }
+                    ha = {
+                        enabled = True
+                    }
+                    loki = {
+                        storage = {type = "s3"}
+                    }
+                    tempo = {
+                        storage = {type = "s3"}
+                    }
+                }
+            }
+            assertResources = [
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "kube-prometheus-stack"
+                    spec.forProvider.values.prometheus.prometheusSpec.replicas = 2
+                    spec.forProvider.values.prometheus.prometheusSpec.topologySpreadConstraints = [{
+                        maxSkew = 1
+                        topologyKey = "topology.kubernetes.io/zone"
+                        whenUnsatisfiable = "ScheduleAnyway"
+                        labelSelector.matchLabels = {"app.kubernetes.io/name" = "prometheus"}
+                    }]
+                    spec.forProvider.values.alertmanager.alertmanagerSpec.replicas = 2
+                    spec.forProvider.values.alertmanager.alertmanagerSpec.topologySpreadConstraints = [{
+                        maxSkew = 1
+                        topologyKey = "topology.kubernetes.io/zone"
+                        whenUnsatisfiable = "ScheduleAnyway"
+                        labelSelector.matchLabels = {"app.kubernetes.io/name" = "alertmanager"}
+                    }]
+                    spec.forProvider.values.grafana.replicas = 1
+                }
+                {
+                    apiVersion = "hops.ops.com.ai/v1alpha1"
+                    kind = "PSQLCluster"
+                    metadata.name = "observe-grafana-pg"
+                    metadata.namespace = "default"
+                    spec.clusterName = "my-cluster"
+                    spec.targetNamespace = "monitoring"
+                    spec.storage = {
+                        size = "10Gi"
+                        class = "psql"
+                    }
+                    spec.app = {
+                        role = "grafana"
+                        database = "grafana"
+                    }
+                    spec.ha = {
+                        enabled = True
+                        replicas = 3
+                        topologySpreadByZone = True
+                    }
+                    spec.monitoring.enabled = True
+                }
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "loki"
+                    spec.forProvider.values.loki.commonConfig.replication_factor = 2
+                    spec.forProvider.values.singleBinary.replicas = 2
+                    spec.forProvider.values.singleBinary.topologySpreadConstraints = [{
+                        maxSkew = 1
+                        topologyKey = "topology.kubernetes.io/zone"
+                        whenUnsatisfiable = "ScheduleAnyway"
+                        labelSelector.matchLabels = {
+                            "app.kubernetes.io/name" = "loki"
+                            "app.kubernetes.io/component" = "single-binary"
+                        }
+                    }]
+                }
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "tempo"
+                    spec.forProvider.values.replicas = 2
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-pdb-prometheus"
+                    spec.forProvider.manifest = {
+                        apiVersion = "policy/v1"
+                        kind = "PodDisruptionBudget"
+                        metadata.name = "observe-prometheus"
+                        metadata.namespace = "monitoring"
+                        spec.minAvailable = 1
+                        spec.selector.matchLabels = {"app.kubernetes.io/name" = "prometheus"}
+                    }
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-pdb-loki"
+                    spec.forProvider.manifest.spec.selector.matchLabels = {
+                        "app.kubernetes.io/name" = "loki"
+                        "app.kubernetes.io/component" = "single-binary"
+                    }
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-pdb-tempo"
+                    spec.forProvider.manifest.spec.selector.matchLabels = {"app.kubernetes.io/name" = "tempo"}
+                }
+            ]
+        }
+    }
+
+    # ==========================================================================
+    # Test: Grafana HA waits for PSQLCluster readiness before switching to Postgres
+    # ==========================================================================
+    metav1alpha1.CompositionTest {
+        metadata.name = "grafana-ha-waits-for-psql-readiness-before-scaling"
+        spec = {
+            compositionPath = "apis/observestacks/composition.yaml"
+            xrdPath = "apis/observestacks/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = {
+                apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                kind = "ObserveStack"
+                metadata.name = "observe"
+                spec = {
+                    clusterName = "my-cluster"
+                    aws = {
+                        region = "us-east-1"
+                    }
+                    ha = {
+                        enabled = True
+                    }
+                }
+            }
+            observedResources = [
+                {
+                    apiVersion = "hops.ops.com.ai/v1alpha1"
+                    kind = "PSQLCluster"
+                    metadata = {
+                        name = "observe-grafana-pg"
+                        annotations = {"crossplane.io/composition-resource-name" = "grafana-psql-cluster"}
+                    }
+                    status = {
+                        conditions = [{type = "Ready", status = "False"}, {type = "Synced", status = "True"}]
+                    }
+                }
+            ]
+            assertResources = [
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "kube-prometheus-stack"
+                    spec.forProvider.values.grafana.replicas = 1
+                }
+            ]
+        }
+    }
+
+    # ==========================================================================
+    # Test: Grafana HA keeps Postgres when observed release already uses it
+    # ==========================================================================
+    metav1alpha1.CompositionTest {
+        metadata.name = "grafana-ha-keeps-activated-psql-during-readiness-flap"
+        spec = {
+            compositionPath = "apis/observestacks/composition.yaml"
+            xrdPath = "apis/observestacks/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = {
+                apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                kind = "ObserveStack"
+                metadata.name = "observe"
+                spec = {
+                    clusterName = "my-cluster"
+                    aws = {
+                        region = "us-east-1"
+                    }
+                    ha = {
+                        enabled = True
+                    }
+                }
+            }
+            observedResources = [
+                {
+                    apiVersion = "hops.ops.com.ai/v1alpha1"
+                    kind = "PSQLCluster"
+                    metadata = {
+                        name = "observe-grafana-pg"
+                        annotations = {"crossplane.io/composition-resource-name" = "grafana-psql-cluster"}
+                    }
+                    status = {
+                        conditions = [{type = "Ready", status = "False"}, {type = "Synced", status = "True"}]
+                    }
+                }
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata = {
+                        name = "kube-prometheus-stack"
+                        annotations = {"crossplane.io/composition-resource-name" = "kube-prometheus-stack"}
+                    }
+                    spec = {
+                        forProvider = {
+                            values = {
+                                grafana = {
+                                    "grafana.ini" = {
+                                        database = {
+                                            type = "postgres"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    status = {
+                        conditions = [{type = "Ready", status = "True"}, {type = "Synced", status = "True"}]
+                    }
+                }
+            ]
+            assertResources = [
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "kube-prometheus-stack"
+                    spec.forProvider.values.grafana = {
+                        replicas = 2
+                        "grafana.ini" = {
+                            database = {
+                                type = "postgres"
+                                host = "observe-grafana-pg-rw.monitoring.svc.cluster.local:5432"
+                                name = "grafana"
+                                user = "$__file{/etc/secrets/grafana-db/username}"
+                                password = "$__file{/etc/secrets/grafana-db/password}"
+                                ssl_mode = "disable"
+                            }
+                            security = {
+                                secret_key = "$__file{/etc/secrets/grafana-db/password}"
+                            }
+                        }
+                        extraSecretMounts = [{
+                            name = "grafana-db"
+                            secretName = "observe-grafana-pg-app"
+                            mountPath = "/etc/secrets/grafana-db"
+                            readOnly = True
+                        }]
+                    }
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-pdb-grafana"
+                    spec.forProvider.manifest = {
+                        apiVersion = "policy/v1"
+                        kind = "PodDisruptionBudget"
+                        metadata.name = "grafana"
+                        metadata.namespace = "monitoring"
+                        spec.minAvailable = 1
+                        spec.selector.matchLabels = {"app.kubernetes.io/name" = "grafana"}
+                    }
+                }
+            ]
+        }
+    }
+
+    # ==========================================================================
+    # Test: HA mode keeps Loki and Tempo single-replica on PVC storage
+    # ==========================================================================
+    metav1alpha1.CompositionTest {
+        metadata.name = "ha-mode-keeps-pvc-loki-tempo-single-replica"
+        spec = {
+            compositionPath = "apis/observestacks/composition.yaml"
+            xrdPath = "apis/observestacks/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = {
+                apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                kind = "ObserveStack"
+                metadata.name = "observe"
+                spec = {
+                    clusterName = "my-cluster"
+                    aws = {
+                        region = "us-east-1"
+                    }
+                    ha = {
+                        enabled = True
+                    }
+                }
+            }
+            assertResources = [
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "loki"
+                    spec.forProvider.values.loki.commonConfig.replication_factor = 1
+                    spec.forProvider.values.singleBinary.replicas = 1
+                }
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "tempo"
+                    spec.forProvider.values.persistence.enabled = True
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-pdb-loki"
+                    spec.forProvider.manifest.spec.minAvailable = 1
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-pdb-tempo"
+                    spec.forProvider.manifest.spec.minAvailable = 1
+                }
+            ]
+        }
+    }
+
+    # ==========================================================================
     # Test: NodePool enabled renders NodePool object and scheduling constraints
     # ==========================================================================
     metav1alpha1.CompositionTest {
@@ -1377,9 +1905,25 @@ _items = [
                         spec.template.metadata.labels = {
                             "workload-type" = "observe"
                         }
+                        spec.template.spec.nodeClassRef = {
+                            group = "eks.amazonaws.com"
+                            kind = "NodeClass"
+                            name = "hops-default"
+                        }
                         spec.template.spec.taints = [
                             {key = "observe", value = "true", effect = "NoSchedule"}
                         ]
+                        spec.template.spec.requirements = [
+                            {key = "karpenter.sh/capacity-type", operator = "In", values = ["spot"]}
+                            {key = "eks.amazonaws.com/instance-category", operator = "In", values = ["c", "m", "r", "t"]}
+                            {key = "eks.amazonaws.com/instance-generation", operator = "Gte", values = ["4"]}
+                            {key = "kubernetes.io/os", operator = "In", values = ["linux"]}
+                        ]
+                        spec.disruption = {
+                            consolidationPolicy = "WhenEmptyOrUnderutilized"
+                            consolidateAfter = "30s"
+                            budgets = [{nodes = "100%"}]
+                        }
                     }
                 }
                 # Prometheus gets nodeSelector + tolerations
@@ -2132,6 +2676,16 @@ _items = [
                         metadata.name = "monitoring-oauth2-proxy-redis"
                         metadata.namespace = "monitoring"
                         spec.replicas = 1
+                        spec.template.spec.containers = [
+                            {
+                                name = "redis"
+                                image = "mirror.gcr.io/redis:7-alpine"
+                                resources = {
+                                    requests = {cpu = "15m", memory = "100Mi"}
+                                    limits = {cpu = "100m", memory = "256Mi"}
+                                }
+                            }
+                        ]
                     }
                 }
                 {
@@ -2144,6 +2698,20 @@ _items = [
                         metadata.name = "monitoring-oauth2-proxy"
                         metadata.namespace = "monitoring"
                     }
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-exposure-oauth2-proxy-deploy"
+                    spec.forProvider.manifest.spec.template.spec.containers = [
+                        {
+                            name = "oauth2-proxy"
+                            resources = {
+                                requests = {cpu = "15m", memory = "100Mi"}
+                                limits = {cpu = "100m", memory = "256Mi"}
+                            }
+                        }
+                    ]
                 }
                 {
                     apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
@@ -2293,7 +2861,8 @@ _items = [
                             enabled = True
                             host = "grafana.observe.example.com"
                             allowedDomains = ["example.com"]
-                            roleAttributePath = "contains(\"urn:zitadel:iam:org:project:roles\", \"observe-admin\") && \"Admin\" || \"Viewer\""
+                            roleAttributePath = "\"urn:zitadel:iam:org:project:roles\" && contains(keys(\"urn:zitadel:iam:org:project:roles\"), 'observe-admin') && 'GrafanaAdmin' || 'Viewer'"
+                            allowAssignGrafanaAdmin = True
                         }
                     }
                 }
@@ -2355,6 +2924,21 @@ _items = [
                                 port = 80
                             }]
                         }]
+                    }
+                }
+                # kube-prometheus-stack Grafana generic OAuth role mapping
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "kube-prometheus-stack"
+                    spec.forProvider.values.grafana = {
+                        "grafana.ini" = {
+                            "auth.generic_oauth" = {
+                                role_attribute_path = "\"urn:zitadel:iam:org:project:roles\" && contains(keys(\"urn:zitadel:iam:org:project:roles\"), 'observe-admin') && 'GrafanaAdmin' || 'Viewer'"
+                                role_attribute_strict = True
+                                allow_assign_grafana_admin = True
+                            }
+                        }
                     }
                 }
                 # XR status surface (app_level branch populates oidcClientReady too)

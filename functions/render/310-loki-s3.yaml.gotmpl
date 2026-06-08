@@ -8,6 +8,32 @@
 {{- $bucketName := $state.aws.loki.s3.bucketName }}
 {{- $retentionDays := $state.aws.loki.retentionDays }}
 {{- $lifecycleDays := add $retentionDays 7 }}
+{{- $lokiBucketExists := ne $state.observed.lokiBucket.id "" }}
+{{- $lokiStorageKeyExists := ne $state.observed.lokiStorageKey.id "" }}
+{{- $lokiStorageKeyArn := $state.observed.lokiStorageKey.arn | default "" }}
+
+# ==============================================================================
+# KMS key for Loki storage encryption
+# ==============================================================================
+---
+apiVersion: kms.aws.m.upbound.io/v1beta1
+kind: Key
+metadata:
+  name: {{ $state.name }}-loki-storage
+  annotations:
+    {{ setResourceNameAnnotation "loki-storage-key" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  managementPolicies: {{ $state.managementPolicies | toJson }}
+  forProvider:
+    deletionWindowInDays: 7
+    description: KMS key for Loki object storage in {{ $state.clusterName }}
+    enableKeyRotation: true
+    region: {{ $state.aws.region }}
+    tags: {{ merge (dict "Name" (printf "%s-loki-storage" $state.name)) $state.aws.tags | toJson }}
+  providerConfigRef:
+    name: {{ $state.aws.providerConfigRef.name }}
+    kind: {{ $state.aws.providerConfigRef.kind }}
 
 # ==============================================================================
 # S3 Bucket for Loki storage
@@ -31,6 +57,7 @@ spec:
     name: {{ $state.aws.providerConfigRef.name }}
     kind: {{ $state.aws.providerConfigRef.kind }}
 
+{{- if $lokiBucketExists }}
 # ==============================================================================
 # Block all public access
 # ==============================================================================
@@ -56,6 +83,39 @@ spec:
     name: {{ $state.aws.providerConfigRef.name }}
     kind: {{ $state.aws.providerConfigRef.kind }}
 
+{{- end }}
+
+{{- if and $lokiBucketExists $lokiStorageKeyExists }}
+# ==============================================================================
+# Default bucket encryption: SSE-KMS with the Loki storage key
+# ==============================================================================
+---
+apiVersion: s3.aws.m.upbound.io/v1beta1
+kind: BucketServerSideEncryptionConfiguration
+metadata:
+  name: {{ $state.name }}-loki-bucket-encryption
+  annotations:
+    {{ setResourceNameAnnotation "loki-bucket-encryption" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  managementPolicies: {{ $state.managementPolicies | toJson }}
+  forProvider:
+    region: {{ $state.aws.region }}
+    bucketRef:
+      name: {{ $state.name }}-loki-bucket
+    rule:
+    - applyServerSideEncryptionByDefault:
+        kmsMasterKeyIdRef:
+          name: {{ $state.name }}-loki-storage
+        sseAlgorithm: aws:kms
+      bucketKeyEnabled: true
+  providerConfigRef:
+    name: {{ $state.aws.providerConfigRef.name }}
+    kind: {{ $state.aws.providerConfigRef.kind }}
+
+{{- end }}
+
+{{- if $lokiBucketExists }}
 # ==============================================================================
 # Lifecycle: expire objects after retentionDays + 7
 # ==============================================================================
@@ -76,15 +136,19 @@ spec:
     rule:
     - id: expire-old-data
       status: Enabled
+      filter:
+      - prefix: ""
       expiration:
       - days: {{ $lifecycleDays }}
   providerConfigRef:
     name: {{ $state.aws.providerConfigRef.name }}
     kind: {{ $state.aws.providerConfigRef.kind }}
+{{- end }}
 
 # ==============================================================================
 # PodIdentity for Loki service account with S3 permissions
 # ==============================================================================
+{{- if $lokiStorageKeyArn }}
 ---
 apiVersion: aws.hops.ops.com.ai/v1alpha1
 kind: PodIdentity
@@ -117,13 +181,23 @@ spec:
           "Statement": [
             {
               "Effect": "Allow",
-              "Action": ["s3:ListBucket"],
+              "Action": ["s3:GetBucketLocation", "s3:ListBucket", "s3:ListBucketMultipartUploads"],
               "Resource": "arn:aws:s3:::{{ $bucketName }}"
             },
             {
               "Effect": "Allow",
-              "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"],
+              "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject", "s3:AbortMultipartUpload", "s3:ListMultipartUploadParts"],
               "Resource": "arn:aws:s3:::{{ $bucketName }}/*"
+            },
+            {
+              "Effect": "Allow",
+              "Action": ["kms:Decrypt", "kms:Encrypt", "kms:GenerateDataKey", "kms:DescribeKey"],
+              "Resource": "{{ $lokiStorageKeyArn }}",
+              "Condition": {
+                "StringEquals": {
+                  "kms:ViaService": "s3.{{ $state.aws.region }}.amazonaws.com"
+                }
+              }
             }
           ]
         }
@@ -154,6 +228,7 @@ spec:
     kind: Release
     resourceRef:
       name: {{ $state.loki.name }}
+{{- end }}
 {{- end }}
 
 {{- end }}

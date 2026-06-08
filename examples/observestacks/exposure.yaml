@@ -51,4 +51,5 @@ spec:
       host: grafana.observe.example.com
       allowedDomains:
       - example.com
-      roleAttributePath: 'contains("urn:zitadel:iam:org:project:roles", "observe-admin") && "Admin" || "Viewer"'
+      roleAttributePath: '"urn:zitadel:iam:org:project:roles" && contains(keys("urn:zitadel:iam:org:project:roles"), ''observe-admin'') && ''GrafanaAdmin'' || ''Viewer'''
+      allowAssignGrafanaAdmin: true

@@ -22,7 +22,7 @@ spec:
     region: us-east-1
 ```
 
-Default storage is pvc-backed (`storage.type: pvc`) for both Loki and Tempo with auto-created `gp3` StorageClasses (`loki`, `tempo`).
+Default storage is pvc-backed (`storage.type: pvc`) for both Loki and Tempo with auto-created `gp3` StorageClasses (`loki`, `tempo`). When `storage.type: s3` is enabled, the stack creates a component bucket, lifecycle policy, default SSE-KMS bucket encryption with a dedicated KMS key, and the PodIdentity S3/KMS permissions required by the workload.
 
 You can set global StorageClass behavior and override per component:
 
@@ -57,13 +57,11 @@ spec:
   loki:
     storage:
       type: s3
-      s3:
-        retentionDays: 30
+      retentionDays: 30
   tempo:
     storage:
       type: s3
-      s3:
-        retentionDays: 14
+      retentionDays: 14
   k8sMonitoring:
     values:
       opencost:
@@ -71,6 +69,39 @@ spec:
   aws:
     region: us-west-2
     rolePrefix: prod-
+```
+
+### Easy HA Mode
+
+Enable HA safety defaults for observe workloads:
+
+```yaml
+spec:
+  ha:
+    enabled: true
+```
+
+When enabled:
+- Prometheus, Alertmanager, Grafana, and oauth2-proxy default to 2 replicas where they are managed by the XR
+- Grafana HA composes an embedded `PSQLCluster` named `{observe-name}-grafana-pg` and switches Grafana to Postgres before scaling replicas
+- Prometheus, Alertmanager, Loki, and oauth2-proxy get zone topology spread defaults where the chart or XR directly supports them
+- PodDisruptionBudgets are created for Prometheus, Alertmanager, Grafana, OpenCost, Loki, Tempo, and exposure bridge workloads
+- Loki and Tempo stay single-replica on PVC storage; they are only auto-scaled by HA mode when their storage type is already `s3`
+
+Grafana HA requires the `psql-stack` configuration on the control plane and a working `psql` StorageClass in the target cluster. For Zitadel-backed Grafana admin access, set `spec.exposure.grafana.roleAttributePath` to return `GrafanaAdmin` and enable `spec.exposure.grafana.allowAssignGrafanaAdmin`.
+
+Tune defaults globally or per component:
+
+```yaml
+spec:
+  ha:
+    enabled: true
+    replicas: 3
+    components:
+      grafana:
+        replicas: 2
+      loki:
+        enabled: false
 ```
 
 ### Dedicated NodePool
@@ -87,9 +118,10 @@ spec:
 ```
 
 When enabled:
-- A Karpenter NodePool (`<clusterName>-observe`) is created with broad spot + on-demand instance selection
+- A Karpenter NodePool (`<clusterName>-observe`) is created with cheap, flexible Spot selection: c/m/r/t instance categories, generation 4 or newer, Linux, and no architecture pin
 - Non-daemonset pods (Prometheus, Loki, Tempo, Grafana, OpenCost, VPA, Goldilocks) are scheduled to the NodePool via `nodeSelector` and `tolerations`
 - Daemonsets (alloy-metrics, alloy-logs) continue to run on **all** nodes, including the observe NodePool
+- Workloads that require x86 images should set `nodeSelector: {kubernetes.io/arch: amd64}` or equivalent affinity
 
 Custom NodePool settings:
 
@@ -101,6 +133,7 @@ spec:
     limits:
       nodes: 20
     requirements:
+    # Example override for x86-only workloads.
     - key: kubernetes.io/arch
       operator: In
       values: [amd64]
@@ -182,6 +215,7 @@ When enabled:
 3. **Usage** - deletion ordering: Observe deleted before PodIdentity
 4. **StorageClasses** - gp3 EBS classes for Prometheus, Loki, Tempo (when using PVC storage)
 5. **NodePool** *(opt-in)* - dedicated Karpenter NodePool for observe workloads
+6. **PodDisruptionBudgets** *(opt-in via HA mode)* - safe voluntary disruption boundaries for observe workloads
 
 ## Development
 

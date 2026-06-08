@@ -1,0 +1,57 @@
+# code: language=yaml
+#
+# HA safety: PodDisruptionBudgets for observe workloads.
+#
+# These are rendered as Kubernetes Objects so chart internals can evolve while
+# NodePool/Karpenter voluntary disruptions still respect observe availability.
+#
+
+{{- if and $state.ha.enabled $state.ha.pdb.enabled }}
+{{- $pdbs := list
+  (dict "resourceName" "pdb-prometheus" "pdbName" "observe-prometheus" "namespace" $state.kubePrometheusStack.namespace "enabled" $state.ha.prometheus.enabled "selector" (dict "app.kubernetes.io/name" "prometheus"))
+  (dict "resourceName" "pdb-alertmanager" "pdbName" "observe-alertmanager" "namespace" $state.kubePrometheusStack.namespace "enabled" $state.ha.alertmanager.enabled "selector" (dict "app.kubernetes.io/name" "alertmanager"))
+  (dict "resourceName" "pdb-grafana" "pdbName" "grafana" "namespace" $state.kubePrometheusStack.namespace "enabled" (and $state.ha.grafana.enabled $state.observed.grafanaPsql.exists) "selector" (dict "app.kubernetes.io/name" "grafana"))
+  (dict "resourceName" "pdb-opencost" "pdbName" "opencost" "namespace" $state.k8sMonitoring.namespace "enabled" $state.ha.opencost.enabled "selector" (dict "app.kubernetes.io/name" "opencost"))
+  (dict "resourceName" "pdb-loki" "pdbName" "loki" "namespace" $state.loki.namespace "enabled" $state.ha.loki.enabled "selector" (dict "app.kubernetes.io/name" "loki" "app.kubernetes.io/component" "single-binary"))
+  (dict "resourceName" "pdb-tempo" "pdbName" "tempo" "namespace" $state.tempo.namespace "enabled" $state.ha.tempo.enabled "selector" (dict "app.kubernetes.io/name" "tempo"))
+}}
+{{- if $state.exposure.enabled }}
+  {{- $pdbs = append $pdbs (dict "resourceName" "pdb-oauth2-proxy" "pdbName" (printf "%s-oauth2-proxy" $state.namespace) "namespace" $state.namespace "enabled" $state.ha.oauth2Proxy.enabled "selector" (dict "app.kubernetes.io/name" "oauth2-proxy" "app.kubernetes.io/instance" $state.name)) }}
+  {{- $pdbs = append $pdbs (dict "resourceName" "pdb-oauth2-proxy-redis" "pdbName" (printf "%s-oauth2-proxy-redis" $state.namespace) "namespace" $state.namespace "enabled" $state.ha.redis.enabled "selector" (dict "app.kubernetes.io/name" "oauth2-proxy-redis" "app.kubernetes.io/instance" $state.name)) }}
+{{- end }}
+{{- range $pdb := $pdbs }}
+{{- if $pdb.enabled }}
+---
+apiVersion: kubernetes.m.crossplane.io/v1alpha1
+kind: Object
+metadata:
+  name: {{ $state.name }}-{{ $pdb.resourceName }}
+  annotations:
+    {{ setResourceNameAnnotation $pdb.resourceName }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  managementPolicies: {{ $state.managementPolicies | toJson }}
+  forProvider:
+    manifest:
+      apiVersion: policy/v1
+      kind: PodDisruptionBudget
+      metadata:
+        name: {{ $pdb.pdbName }}
+        namespace: {{ $pdb.namespace }}
+        labels:
+          {{- range $k, $v := $state.labels }}
+          {{ $k }}: {{ $v | quote }}
+          {{- end }}
+      spec:
+        minAvailable: {{ $state.ha.pdb.minAvailable }}
+        selector:
+          matchLabels:
+            {{- range $k, $v := $pdb.selector }}
+            {{ $k }}: {{ $v | quote }}
+            {{- end }}
+  providerConfigRef:
+    name: {{ $state.kubernetes.providerConfigRef.name }}
+    kind: {{ $state.kubernetes.providerConfigRef.kind }}
+{{- end }}
+{{- end }}
+{{- end }}
