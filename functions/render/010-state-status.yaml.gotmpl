@@ -61,6 +61,13 @@
 {{- $tempoStorageKeyEntry := get $observed "tempo-storage-key" | default dict }}
 {{- $tempoStorageKeyAtProvider := ((($tempoStorageKeyEntry.resource | default dict).status | default dict).atProvider | default dict) }}
 {{- $grafanaPsqlExists := hasKey $observed "grafana-psql-cluster" }}
+{{- $kubePrometheusStackEntry := get $observed "kube-prometheus-stack" | default dict }}
+{{- $kubePrometheusStackResource := $kubePrometheusStackEntry.resource | default dict }}
+{{- $kubePrometheusStackValues := (((($kubePrometheusStackResource.spec | default dict).forProvider | default dict).values | default dict)) }}
+{{- $kubePrometheusStackGrafana := $kubePrometheusStackValues.grafana | default dict }}
+{{- $kubePrometheusStackGrafanaIni := get $kubePrometheusStackGrafana "grafana.ini" | default dict }}
+{{- $kubePrometheusStackGrafanaDatabase := $kubePrometheusStackGrafanaIni.database | default dict }}
+{{- $grafanaPsqlActivated := eq ($kubePrometheusStackGrafanaDatabase.type | default "") "postgres" }}
 
 {{- $state = set $state "observed" (merge $state.observed (dict
   "kubePrometheusStack" (dict "ready" (get $checkReady "kube-prometheus-stack"))
@@ -69,7 +76,7 @@
   "k8sMonitoring" (dict "ready" (get $checkReady "k8s-monitoring"))
   "grafanaOperator" (dict "ready" (get $checkReady "grafana-operator"))
   "grafanaInstance" (dict "ready" (get $checkReady "grafana-instance"))
-  "grafanaPsql" (dict "exists" $grafanaPsqlExists "ready" (get $checkReady "grafana-psql-cluster"))
+  "grafanaPsql" (dict "exists" $grafanaPsqlExists "ready" (get $checkReady "grafana-psql-cluster") "activated" $grafanaPsqlActivated)
   "datasourcePrometheus" (dict "ready" (get $checkReady "datasource-prometheus"))
   "datasourceLoki" (dict "ready" (get $checkReady "datasource-loki"))
   "datasourceTempo" (dict "ready" (get $checkReady "datasource-tempo"))

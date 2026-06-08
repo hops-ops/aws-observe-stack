@@ -93,7 +93,7 @@ spec:
       "resources" $grafanaResources
     }}
     {{- $grafanaDb := $state.grafana.database }}
-    {{- $grafanaDbConfigured := and $grafanaDb.enabled $state.observed.grafanaPsql.exists }}
+    {{- $grafanaDbConfigured := and $grafanaDb.enabled (or $state.observed.grafanaPsql.ready $state.observed.grafanaPsql.activated) }}
     {{- $operatorValues := dict "enabled" true "resources" $operatorResources }}
     {{- $ksmValues := dict "resources" $ksmResources }}
     {{- $nodeExporterValues := dict "enabled" false }}
@@ -201,7 +201,7 @@ spec:
            via extraSecretMounts and reference values via $__file{}
            so the secret never lives in pod env. */}}
     {{- $g := $state.exposure.grafana }}
-    {{- if $g.enabled }}
+    {{- if and $g.enabled (ne $g.host "") }}
       {{- $grafanaOidcSecret := printf "%s-grafana-oidc-client" $state.namespace }}
       {{- $grafanaOidcMountPath := "/etc/secrets/grafana-oidc" }}
       {{- $generic := dict

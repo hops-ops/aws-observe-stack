@@ -1661,10 +1661,10 @@ _items = [
     }
 
     # ==========================================================================
-    # Test: Grafana HA switches to Postgres when PSQLCluster exists
+    # Test: Grafana HA waits for PSQLCluster readiness before switching to Postgres
     # ==========================================================================
     metav1alpha1.CompositionTest {
-        metadata.name = "grafana-ha-uses-psql-existence-before-scaling"
+        metadata.name = "grafana-ha-waits-for-psql-readiness-before-scaling"
         spec = {
             compositionPath = "apis/observestacks/composition.yaml"
             xrdPath = "apis/observestacks/definition.yaml"
@@ -1694,6 +1694,78 @@ _items = [
                     }
                     status = {
                         conditions = [{type = "Ready", status = "False"}, {type = "Synced", status = "True"}]
+                    }
+                }
+            ]
+            assertResources = [
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "kube-prometheus-stack"
+                    spec.forProvider.values.grafana.replicas = 1
+                }
+            ]
+        }
+    }
+
+    # ==========================================================================
+    # Test: Grafana HA keeps Postgres when observed release already uses it
+    # ==========================================================================
+    metav1alpha1.CompositionTest {
+        metadata.name = "grafana-ha-keeps-activated-psql-during-readiness-flap"
+        spec = {
+            compositionPath = "apis/observestacks/composition.yaml"
+            xrdPath = "apis/observestacks/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = {
+                apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                kind = "ObserveStack"
+                metadata.name = "observe"
+                spec = {
+                    clusterName = "my-cluster"
+                    aws = {
+                        region = "us-east-1"
+                    }
+                    ha = {
+                        enabled = True
+                    }
+                }
+            }
+            observedResources = [
+                {
+                    apiVersion = "hops.ops.com.ai/v1alpha1"
+                    kind = "PSQLCluster"
+                    metadata = {
+                        name = "observe-grafana-pg"
+                        annotations = {"crossplane.io/composition-resource-name" = "grafana-psql-cluster"}
+                    }
+                    status = {
+                        conditions = [{type = "Ready", status = "False"}, {type = "Synced", status = "True"}]
+                    }
+                }
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata = {
+                        name = "kube-prometheus-stack"
+                        annotations = {"crossplane.io/composition-resource-name" = "kube-prometheus-stack"}
+                    }
+                    spec = {
+                        forProvider = {
+                            values = {
+                                grafana = {
+                                    "grafana.ini" = {
+                                        database = {
+                                            type = "postgres"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    status = {
+                        conditions = [{type = "Ready", status = "True"}, {type = "Synced", status = "True"}]
                     }
                 }
             ]

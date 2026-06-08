@@ -999,6 +999,9 @@ spec:
                       under spec.kubePrometheusStack.values.grafana — no AuthorizationPolicy.CUSTOM
                       gate, Grafana enforces auth itself.
                     type: object
+                    x-kubernetes-validations:
+                    - rule: "self.enabled != true || (has(self.host) && self.host != '')"
+                      message: exposure.grafana.host is required when exposure.grafana.enabled is true.
                     properties:
                       enabled:
                         type: boolean
