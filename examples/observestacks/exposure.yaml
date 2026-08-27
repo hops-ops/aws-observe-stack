@@ -28,6 +28,9 @@ spec:
     issuerURL: https://auth.example.com
     awsSecretsManagerPath: push/my-cluster/zitadel-credentials
     accessTokenProperty: access_token
+    secretStoreRef:
+      name: aws-secrets-manager
+      kind: ClusterSecretStore
     zitadelProjectId: "330000000000000001"
 
   exposure:

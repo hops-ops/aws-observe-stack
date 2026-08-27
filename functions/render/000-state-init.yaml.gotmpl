@@ -348,6 +348,11 @@
 {{- $authAwsSmPath := $auth.awsSecretsManagerPath | default "" }}
 {{- $authAccessTokenProperty := $auth.accessTokenProperty | default "access_token" }}
 {{- $authProjectId := $auth.zitadelProjectId | default "" }}
+{{- $authSecretStoreRef := $auth.secretStoreRef | default dict }}
+{{- $authSecretStoreRef = dict
+  "name" ($authSecretStoreRef.name | default "hops-aws-secrets-manager")
+  "kind" ($authSecretStoreRef.kind | default "ClusterSecretStore")
+}}
 
 {{- /* Derive zitadelDomain host from issuerURL when not explicitly set:
    trim scheme, then trim any path. */}}
@@ -500,6 +505,10 @@
     {{- $compSvcName = $comp.serviceName | default "grafana" }}
     {{- $compSvcPort = $comp.servicePort | default 80 }}
   {{- end }}
+  {{- $compSvcTargetPort := $compSvcPort }}
+  {{- if eq $compName "grafana" }}
+    {{- $compSvcTargetPort = "grafana" }}
+  {{- end }}
   {{- $defaultSel := get $defaultPodSelectors $compName | default dict }}
   {{- $compPodSelector := $comp.podSelector | default $defaultSel }}
   {{- $compAuthMode := get $defaultAuthMode $compName | default "ext_authz" }}
@@ -509,6 +518,7 @@
     "host" $compHost
     "serviceName" $compSvcName
     "servicePort" $compSvcPort
+    "serviceTargetPort" $compSvcTargetPort
     "podSelector" $compPodSelector
     "authMode" $compAuthMode
     "sisterServiceName" (printf "exposure-%s" $compName)
@@ -716,6 +726,7 @@
     "zitadelDomain" $authZitadelDomain
     "awsSecretsManagerPath" $authAwsSmPath
     "accessTokenProperty" $authAccessTokenProperty
+    "secretStoreRef" $authSecretStoreRef
     "zitadelProjectId" $authProjectId
   )
   "exposure" (dict

@@ -812,6 +812,22 @@ spec:
                     description: Property within the AWS SM JSON to extract for the PAT. Defaults to "access_token".
                     type: string
                     default: access_token
+                  secretStoreRef:
+                    description: Reference to the External Secrets store containing the Zitadel PAT. Defaults to the legacy ClusterSecretStore "hops-aws-secrets-manager" for backward compatibility; set this explicitly when SecretStack uses a different name or scope.
+                    type: object
+                    default: {}
+                    properties:
+                      name:
+                        description: Name of the SecretStore or ClusterSecretStore. Defaults to "hops-aws-secrets-manager" for backward compatibility.
+                        type: string
+                        default: hops-aws-secrets-manager
+                      kind:
+                        description: Kind of External Secrets store. Defaults to ClusterSecretStore.
+                        type: string
+                        default: ClusterSecretStore
+                        enum:
+                        - SecretStore
+                        - ClusterSecretStore
                   zitadelProjectId:
                     description: Zitadel project ID where ObserveStack creates the oauth2-proxy OIDC application. Operator-provided — AuthStack does not compose Zitadel Projects.
                     type: string

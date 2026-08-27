@@ -2612,6 +2612,10 @@ _items = [
                     auth = {
                         issuerURL = "https://auth.example.com"
                         awsSecretsManagerPath = "push/my-cluster/zitadel-credentials"
+                        secretStoreRef = {
+                            name = "aws-secrets-manager"
+                            kind = "ClusterSecretStore"
+                        }
                         zitadelProjectId = "330000000000000001"
                     }
                     exposure = {
@@ -2636,6 +2640,10 @@ _items = [
                         kind = "ExternalSecret"
                         metadata.name = "zitadel-credentials"
                         metadata.namespace = "monitoring"
+                        spec.secretStoreRef = {
+                            name = "aws-secrets-manager"
+                            kind = "ClusterSecretStore"
+                        }
                     }
                 }
                 {
@@ -2905,6 +2913,11 @@ _items = [
                             "app.kubernetes.io/name" = "grafana"
                             "app.kubernetes.io/instance" = "kube-prometheus-stack"
                         }
+                        spec.ports = [{
+                            name = "http"
+                            port = 80
+                            targetPort = "grafana"
+                        }]
                     }
                 }
                 # Single-rule HTTPRoute (no /oauth2/* detour — Grafana speaks OIDC itself)

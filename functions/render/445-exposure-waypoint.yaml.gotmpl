@@ -85,7 +85,7 @@ spec:
         ports:
         - name: http
           port: {{ $comp.servicePort }}
-          targetPort: {{ $comp.servicePort }}
+          targetPort: {{ $comp.serviceTargetPort }}
         selector:
           {{- range $k, $v := $comp.podSelector }}
           {{ $k }}: {{ $v | quote }}
