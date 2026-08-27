@@ -492,7 +492,6 @@
   {{- end }}
   {{- $compSvcName := $comp.serviceName | default "" }}
   {{- $compSvcPort := $comp.servicePort | default 0 }}
-  {{- $compSvcTargetPort := $compSvcPort }}
   {{- if eq $compName "prometheus" }}
     {{- $compSvcName = $comp.serviceName | default "kube-prometheus-stack-prometheus" }}
     {{- $compSvcPort = $comp.servicePort | default 9090 }}
@@ -505,6 +504,9 @@
   {{- else if eq $compName "grafana" }}
     {{- $compSvcName = $comp.serviceName | default "grafana" }}
     {{- $compSvcPort = $comp.servicePort | default 80 }}
+  {{- end }}
+  {{- $compSvcTargetPort := $compSvcPort }}
+  {{- if eq $compName "grafana" }}
     {{- $compSvcTargetPort = "grafana" }}
   {{- end }}
   {{- $defaultSel := get $defaultPodSelectors $compName | default dict }}
