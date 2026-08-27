@@ -348,6 +348,11 @@
 {{- $authAwsSmPath := $auth.awsSecretsManagerPath | default "" }}
 {{- $authAccessTokenProperty := $auth.accessTokenProperty | default "access_token" }}
 {{- $authProjectId := $auth.zitadelProjectId | default "" }}
+{{- $authSecretStoreRef := $auth.secretStoreRef | default dict }}
+{{- $authSecretStoreRef = dict
+  "name" ($authSecretStoreRef.name | default "hops-aws-secrets-manager")
+  "kind" ($authSecretStoreRef.kind | default "ClusterSecretStore")
+}}
 
 {{- /* Derive zitadelDomain host from issuerURL when not explicitly set:
    trim scheme, then trim any path. */}}
@@ -719,6 +724,7 @@
     "zitadelDomain" $authZitadelDomain
     "awsSecretsManagerPath" $authAwsSmPath
     "accessTokenProperty" $authAccessTokenProperty
+    "secretStoreRef" $authSecretStoreRef
     "zitadelProjectId" $authProjectId
   )
   "exposure" (dict

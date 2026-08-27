@@ -2612,6 +2612,10 @@ _items = [
                     auth = {
                         issuerURL = "https://auth.example.com"
                         awsSecretsManagerPath = "push/my-cluster/zitadel-credentials"
+                        secretStoreRef = {
+                            name = "aws-secrets-manager"
+                            kind = "ClusterSecretStore"
+                        }
                         zitadelProjectId = "330000000000000001"
                     }
                     exposure = {
@@ -2636,6 +2640,10 @@ _items = [
                         kind = "ExternalSecret"
                         metadata.name = "zitadel-credentials"
                         metadata.namespace = "monitoring"
+                        spec.secretStoreRef = {
+                            name = "aws-secrets-manager"
+                            kind = "ClusterSecretStore"
+                        }
                     }
                 }
                 {
