@@ -487,6 +487,7 @@
   {{- end }}
   {{- $compSvcName := $comp.serviceName | default "" }}
   {{- $compSvcPort := $comp.servicePort | default 0 }}
+  {{- $compSvcTargetPort := $compSvcPort }}
   {{- if eq $compName "prometheus" }}
     {{- $compSvcName = $comp.serviceName | default "kube-prometheus-stack-prometheus" }}
     {{- $compSvcPort = $comp.servicePort | default 9090 }}
@@ -499,6 +500,7 @@
   {{- else if eq $compName "grafana" }}
     {{- $compSvcName = $comp.serviceName | default "grafana" }}
     {{- $compSvcPort = $comp.servicePort | default 80 }}
+    {{- $compSvcTargetPort = "grafana" }}
   {{- end }}
   {{- $defaultSel := get $defaultPodSelectors $compName | default dict }}
   {{- $compPodSelector := $comp.podSelector | default $defaultSel }}
@@ -509,6 +511,7 @@
     "host" $compHost
     "serviceName" $compSvcName
     "servicePort" $compSvcPort
+    "serviceTargetPort" $compSvcTargetPort
     "podSelector" $compPodSelector
     "authMode" $compAuthMode
     "sisterServiceName" (printf "exposure-%s" $compName)

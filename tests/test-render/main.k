@@ -2905,6 +2905,11 @@ _items = [
                             "app.kubernetes.io/name" = "grafana"
                             "app.kubernetes.io/instance" = "kube-prometheus-stack"
                         }
+                        spec.ports = [{
+                            name = "http"
+                            port = 80
+                            targetPort = "grafana"
+                        }]
                     }
                 }
                 # Single-rule HTTPRoute (no /oauth2/* detour — Grafana speaks OIDC itself)
