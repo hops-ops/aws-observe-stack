@@ -264,6 +264,7 @@
   "class" ($grafanaPsqlStorage.class | default "psql")
 }}
 {{- $grafanaPsqlPostgres := $grafanaDatabaseEmbedded.postgresql | default dict }}
+# renovate: datasource=docker depName=library/postgres registryUrl=https://index.docker.io
 {{- if not $grafanaPsqlPostgres.version }}{{- $grafanaPsqlPostgres = set $grafanaPsqlPostgres "version" "17" }}{{- end }}
 {{- $grafanaPsqlAppSpec := $grafanaDatabaseEmbedded.app | default dict }}
 {{- $grafanaPsqlApp := dict
@@ -413,10 +414,12 @@
 {{- $exposureCertSecretNamespace := $exposureCert.secretNamespace | default "istio-ingress" }}
 
 {{- $exposureRedis := $exposure.redis | default dict }}
+# renovate: datasource=docker depName=library/redis registryUrl=https://index.docker.io
+{{- $exposureRedisImage := $exposureRedis.image | default "mirror.gcr.io/redis:7-alpine" }}
 {{- $exposureRedis = dict
   "size" ($exposureRedis.size | default "1Gi")
   "storageClassName" ($exposureRedis.storageClassName | default "")
-  "image" ($exposureRedis.image | default "mirror.gcr.io/redis:7-alpine")
+  "image" $exposureRedisImage
 }}
 
 {{- $exposureProxy := $exposure.oauth2Proxy | default dict }}
@@ -437,8 +440,10 @@
 {{- if hasKey $exposureProxy "replicas" }}
   {{- $exposureProxyReplicas = $exposureProxy.replicas }}
 {{- end }}
+# renovate: datasource=docker depName=oauth2-proxy/oauth2-proxy registryUrl=https://quay.io
+{{- $exposureProxyImage := $exposureProxy.image | default "quay.io/oauth2-proxy/oauth2-proxy:v7.7.1" }}
 {{- $exposureProxy = dict
-  "image" ($exposureProxy.image | default "quay.io/oauth2-proxy/oauth2-proxy:v7.7.1")
+  "image" $exposureProxyImage
   "replicas" $exposureProxyReplicas
   "additionalConfig" ($exposureProxy.additionalConfig | default list)
   "cookieDomain" $exposureProxyCookieDomain

@@ -23,6 +23,7 @@ spec:
     chart:
       name: tempo
       repository: https://grafana.github.io/helm-charts
+      # renovate: datasource=helm depName=tempo registryUrl=https://grafana.github.io/helm-charts
       version: 1.24.4
     namespace: {{ $tempo.namespace }}
     {{- if $tempo.overrideAllValues }}
