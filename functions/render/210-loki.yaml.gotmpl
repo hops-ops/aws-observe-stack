@@ -107,7 +107,7 @@ spec:
     # renovate: datasource=docker depName=prometheus/memcached-exporter registryUrl=https://quay.io
     {{- $memcachedExporterImageTag := "v0.15.4" }}
     # renovate: datasource=docker depName=kiwigrid/k8s-sidecar registryUrl=https://ghcr.io
-    {{- $sidecarImageTag := "1.30.9" }}
+    {{- $sidecarImageTag := "1.30.11" }}
     {{- $gatewayValues := dict
       "enabled" true
       "resources" $gatewayResources
