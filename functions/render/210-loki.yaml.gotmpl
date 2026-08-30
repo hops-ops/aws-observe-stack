@@ -21,6 +21,7 @@ spec:
     chart:
       name: loki
       repository: https://grafana.github.io/helm-charts
+      # renovate: datasource=helm depName=loki registryUrl=https://grafana.github.io/helm-charts
       version: 6.53.0
     namespace: {{ $loki.namespace }}
     {{- if $loki.overrideAllValues }}
@@ -99,21 +100,29 @@ spec:
     {{- if not $state.aws.loki.s3.enabled }}
     {{- $_ := set $singleBinary "persistence" (dict "enabled" true "storageClass" $state.aws.loki.pvc.storageClass.name "size" $state.aws.loki.pvc.size) }}
     {{- end }}
+    # renovate: datasource=docker depName=nginx/nginx-unprivileged registryUrl=https://quay.io
+    {{- $gatewayImageTag := "1.29-alpine" }}
+    # renovate: datasource=docker depName=library/memcached registryUrl=https://index.docker.io
+    {{- $memcachedImageTag := "1.6.39-alpine" }}
+    # renovate: datasource=docker depName=prometheus/memcached-exporter registryUrl=https://quay.io
+    {{- $memcachedExporterImageTag := "v0.15.4" }}
+    # renovate: datasource=docker depName=kiwigrid/k8s-sidecar registryUrl=https://ghcr.io
+    {{- $sidecarImageTag := "1.30.9" }}
     {{- $gatewayValues := dict
       "enabled" true
       "resources" $gatewayResources
-      "image" (dict "registry" "quay.io" "repository" "nginx/nginx-unprivileged" "tag" "1.29-alpine")
+      "image" (dict "registry" "quay.io" "repository" "nginx/nginx-unprivileged" "tag" $gatewayImageTag)
     }}
     {{- $resultsCache := dict "resources" $cacheResources }}
     {{- $chunksCache := dict "resources" $cacheResources }}
     {{- $memcachedValues := dict
-      "image" (dict "repository" "mirror.gcr.io/memcached" "tag" "1.6.39-alpine")
+      "image" (dict "repository" "mirror.gcr.io/memcached" "tag" $memcachedImageTag)
     }}
     {{- $memcachedExporterValues := dict
-      "image" (dict "repository" "quay.io/prometheus/memcached-exporter" "tag" "v0.15.4")
+      "image" (dict "repository" "quay.io/prometheus/memcached-exporter" "tag" $memcachedExporterImageTag)
     }}
     {{- $sidecarValues := dict
-      "image" (dict "registry" "ghcr.io" "repository" "kiwigrid/k8s-sidecar" "tag" "1.30.9")
+      "image" (dict "registry" "ghcr.io" "repository" "kiwigrid/k8s-sidecar" "tag" $sidecarImageTag)
     }}
     {{- if $state.nodePool.enabled }}
       {{- $_ := set $singleBinary "nodeSelector" $state.nodePool.nodeSelector }}

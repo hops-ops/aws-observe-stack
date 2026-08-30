@@ -578,6 +578,7 @@ spec:
                               version:
                                 description: Postgres major version. Defaults to 17.
                                 type: string
+                                # renovate: datasource=docker depName=library/postgres registryUrl=https://index.docker.io
                                 default: "17"
                               parameters:
                                 description: postgres.conf parameters.
@@ -910,6 +911,7 @@ spec:
                       image:
                         description: Redis container image. Defaults to "mirror.gcr.io/redis:7-alpine".
                         type: string
+                        # renovate: datasource=docker depName=library/redis registryUrl=https://index.docker.io
                         default: mirror.gcr.io/redis:7-alpine
                   oauth2Proxy:
                     description: oauth2-proxy bridge configuration.
@@ -918,6 +920,7 @@ spec:
                       image:
                         description: oauth2-proxy container image. Defaults to "quay.io/oauth2-proxy/oauth2-proxy:v7.7.1".
                         type: string
+                        # renovate: datasource=docker depName=oauth2-proxy/oauth2-proxy registryUrl=https://quay.io
                         default: quay.io/oauth2-proxy/oauth2-proxy:v7.7.1
                       replicas:
                         description: oauth2-proxy Deployment replicas. Defaults to 1.

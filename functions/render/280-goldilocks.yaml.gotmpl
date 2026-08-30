@@ -23,6 +23,7 @@ spec:
     chart:
       name: goldilocks
       repository: https://charts.fairwinds.com/stable
+      # renovate: datasource=helm depName=goldilocks registryUrl=https://charts.fairwinds.com/stable
       version: 10.3.0
     namespace: {{ $goldilocks.namespace }}
     {{- if $goldilocks.overrideAllValues }}

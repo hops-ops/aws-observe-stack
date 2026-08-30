@@ -2352,6 +2352,7 @@ _items = [
                         }
                         exporter = {
                             image = {
+                                # renovate: datasource=docker depName=kubecost1/opencost registryUrl=https://quay.io
                                 tag = "1.120.0"
                             }
                             extraEnv = {
@@ -2361,6 +2362,7 @@ _items = [
                         }
                         ui = {
                             image = {
+                                # renovate: datasource=docker depName=kubecost1/opencost registryUrl=https://quay.io
                                 tag = "1.120.0"
                             }
                         }
@@ -2508,6 +2510,7 @@ _items = [
                         }
                         exporter = {
                             image = {
+                                # renovate: datasource=docker depName=kubecost1/opencost registryUrl=https://quay.io
                                 tag = "1.120.0"
                             }
                             extraEnv = {
@@ -2517,6 +2520,7 @@ _items = [
                         }
                         ui = {
                             image = {
+                                # renovate: datasource=docker depName=kubecost1/opencost registryUrl=https://quay.io
                                 tag = "1.120.0"
                             }
                         }
@@ -2689,6 +2693,7 @@ _items = [
                         spec.template.spec.containers = [
                             {
                                 name = "redis"
+                                # renovate: datasource=docker depName=library/redis registryUrl=https://index.docker.io
                                 image = "mirror.gcr.io/redis:7-alpine"
                                 resources = {
                                     requests = {cpu = "15m", memory = "100Mi"}

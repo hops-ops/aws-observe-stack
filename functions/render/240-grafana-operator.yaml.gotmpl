@@ -19,6 +19,7 @@ spec:
     chart:
       name: grafana-operator
       repository: oci://ghcr.io/grafana/helm-charts
+      # renovate: datasource=docker depName=grafana/helm-charts/grafana-operator registryUrl=https://ghcr.io
       version: 5.21.4
     namespace: {{ $grafOp.namespace }}
     {{- if $grafOp.overrideAllValues }}
