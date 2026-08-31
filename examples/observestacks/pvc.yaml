@@ -11,6 +11,7 @@ spec:
   kubePrometheusStack:
     storage:
       retentionDays: 30
+      retentionSize: 8GB
       size: 10Gi
   loki:
     storage:

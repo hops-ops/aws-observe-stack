@@ -71,11 +71,20 @@ spec:
       "limits" (dict "memory" "1Gi")
     }}
     {{- /* NodePool scheduling for non-daemonset components */}}
+    {{- /* Alloy is the default collector and remote-writes into this Prometheus.
+         Select only explicitly opted-in monitors here to avoid scraping every
+         target twice and producing out-of-order samples. */}}
+    {{- $directScrapeSelector := dict
+      "matchLabels" (dict "hops.ops.com.ai/scrape-directly" "prometheus")
+    }}
     {{- $promSpec := dict
       "enableRemoteWriteReceiver" true
       "retention" (printf "%vd" $state.aws.prometheus.retentionDays)
+      "retentionSize" $state.aws.prometheus.retentionSize
       "serviceMonitorSelectorNilUsesHelmValues" false
+      "serviceMonitorSelector" $directScrapeSelector
       "podMonitorSelectorNilUsesHelmValues" false
+      "podMonitorSelector" $directScrapeSelector
       "ruleSelectorNilUsesHelmValues" false
       "resources" $promResources
       "storageSpec" (dict

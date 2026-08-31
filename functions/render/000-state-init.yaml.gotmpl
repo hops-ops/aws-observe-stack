@@ -185,6 +185,7 @@
 {{- $prometheusStorage := $kubePrometheusStack.storage | default dict }}
 {{- $prometheusPVCSize := $prometheusStorage.size | default "10Gi" }}
 {{- $prometheusRetentionDays := $prometheusStorage.retentionDays | default $defaultRetentionDays }}
+{{- $prometheusRetentionSize := $prometheusStorage.retentionSize | default "8GB" }}
 {{- $prometheusStorageClassInput := $prometheusStorage.storageClass | default dict }}
 {{- $prometheusStorageClassCreate := $storageClassDefaults.create }}
 {{- if hasKey $prometheusStorageClassInput "create" }}
@@ -453,16 +454,16 @@
 {{- /* Waypoint name — composed by 445-* and referenced from sister Services + ext_authz provider naming. */}}
 {{- $exposureWaypointName := printf "%s-waypoint" $namespace }}
 
-{{- /* Chart-default pod selectors (kube-prometheus-stack v77.x + opencost chart conventions).
-       Operators override per cluster via spec.exposure.<comp>.podSelector when on a different chart version. */}}
+{{- /* Selectors for the names emitted by this stack's kube-prometheus-stack
+       fullname overrides, plus the opencost and Grafana chart conventions. */}}
 {{- $defaultPodSelectors := dict
   "prometheus" (dict
     "app.kubernetes.io/name" "prometheus"
-    "prometheus" "kube-prometheus-stack-prometheus"
+    "prometheus" $kubePrometheusStackFullname
   )
   "alertmanager" (dict
     "app.kubernetes.io/name" "alertmanager"
-    "alertmanager" "kube-prometheus-stack-alertmanager"
+    "alertmanager" $kubePrometheusStackFullname
   )
   "opencost" (dict
     "app.kubernetes.io/name" "opencost"
@@ -498,10 +499,10 @@
   {{- $compSvcName := $comp.serviceName | default "" }}
   {{- $compSvcPort := $comp.servicePort | default 0 }}
   {{- if eq $compName "prometheus" }}
-    {{- $compSvcName = $comp.serviceName | default "kube-prometheus-stack-prometheus" }}
+    {{- $compSvcName = $comp.serviceName | default (printf "%s-prometheus" $kubePrometheusStackFullname) }}
     {{- $compSvcPort = $comp.servicePort | default 9090 }}
   {{- else if eq $compName "alertmanager" }}
-    {{- $compSvcName = $comp.serviceName | default "kube-prometheus-stack-alertmanager" }}
+    {{- $compSvcName = $comp.serviceName | default (printf "%s-alertmanager" $kubePrometheusStackFullname) }}
     {{- $compSvcPort = $comp.servicePort | default 9093 }}
   {{- else if eq $compName "opencost" }}
     {{- $compSvcName = $comp.serviceName | default "opencost" }}
@@ -600,6 +601,7 @@
     )
     "prometheus" (dict
       "retentionDays" $prometheusRetentionDays
+      "retentionSize" $prometheusRetentionSize
       "pvc" (dict
         "size" $prometheusPVCSize
         "storageClass" $prometheusStorageClass

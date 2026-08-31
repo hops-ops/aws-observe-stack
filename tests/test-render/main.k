@@ -2196,8 +2196,15 @@ _items = [
                     spec.forProvider.values.prometheus.prometheusSpec = {
                         enableRemoteWriteReceiver = True
                         retention = "30d"
+                        retentionSize = "8GB"
                         serviceMonitorSelectorNilUsesHelmValues = False
+                        serviceMonitorSelector.matchLabels = {
+                            "hops.ops.com.ai/scrape-directly" = "prometheus"
+                        }
                         podMonitorSelectorNilUsesHelmValues = False
+                        podMonitorSelector.matchLabels = {
+                            "hops.ops.com.ai/scrape-directly" = "prometheus"
+                        }
                         ruleSelectorNilUsesHelmValues = False
                     }
                 }
@@ -2632,6 +2639,10 @@ _items = [
                             enabled = True
                             host = "prometheus.observe.example.com"
                         }
+                        alertmanager = {
+                            enabled = True
+                            host = "alertmanager.observe.example.com"
+                        }
                     }
                 }
             }
@@ -2674,7 +2685,10 @@ _items = [
                             managementPolicies = ["Observe", "Create", "Update", "LateInitialize"]
                             forProvider.projectId = "330000000000000001"
                             forProvider.appType = "OIDC_APP_TYPE_WEB"
-                            forProvider.redirectUris = ["https://prometheus.observe.example.com/oauth2/callback"]
+                            forProvider.redirectUris = [
+                                "https://prometheus.observe.example.com/oauth2/callback"
+                                "https://alertmanager.observe.example.com/oauth2/callback"
+                            ]
                             writeConnectionSecretToRef.name = "monitoring-oauth2-proxy-oidc-client"
                             providerConfigRef.name = "zitadel-observe-stack"
                         }
@@ -2758,7 +2772,7 @@ _items = [
                         }
                         spec.selector = {
                             "app.kubernetes.io/name" = "prometheus"
-                            prometheus = "kube-prometheus-stack-prometheus"
+                            prometheus = "observe"
                         }
                     }
                 }
@@ -2802,6 +2816,21 @@ _items = [
                                     }]
                                 }
                             ]
+                        }
+                    }
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-exposure-sister-svc-alertmanager"
+                    spec.forProvider.manifest = {
+                        apiVersion = "v1"
+                        kind = "Service"
+                        metadata.name = "exposure-alertmanager"
+                        metadata.namespace = "monitoring"
+                        spec.selector = {
+                            "app.kubernetes.io/name" = "alertmanager"
+                            alertmanager = "observe"
                         }
                     }
                 }
