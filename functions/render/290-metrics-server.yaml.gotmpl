@@ -22,7 +22,7 @@ spec:
       name: metrics-server
       repository: https://kubernetes-sigs.github.io/metrics-server/
       # renovate: datasource=helm depName=metrics-server registryUrl=https://kubernetes-sigs.github.io/metrics-server/
-      version: 3.12.2
+      version: 3.14.0
     namespace: {{ $ms.namespace }}
     {{- if $ms.overrideAllValues }}
     values:
