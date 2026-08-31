@@ -292,6 +292,10 @@ spec:
                         description: Retention period in days for metric data.
                         type: integer
                         default: 30
+                      retentionSize:
+                        description: Maximum on-disk size retained by Prometheus. Keep this below the PVC size so WAL replay and compaction have free space.
+                        type: string
+                        default: 8GB
                       size:
                         description: Requested PVC size for Prometheus.
                         type: string
@@ -956,15 +960,15 @@ spec:
                         description: Hostname for the HTTPRoute (e.g., "prometheus.observe.ops.com.ai").
                         type: string
                       serviceName:
-                        description: Upstream service name (kube-prometheus-stack-prometheus). Defaults to "kube-prometheus-stack-prometheus". Kept for backward compatibility; the composition routes through a sister Service named "exposure-prometheus" that mirrors the same pods via podSelector.
+                        description: Upstream service name. Defaults to "observe-prometheus", matching the stack's fullname override. Kept for backward compatibility; the composition routes through a sister Service named "exposure-prometheus" that mirrors the same pods via podSelector.
                         type: string
-                        default: kube-prometheus-stack-prometheus
+                        default: observe-prometheus
                       servicePort:
                         description: Upstream service port. Defaults to 9090.
                         type: integer
                         default: 9090
                       podSelector:
-                        description: Selector for the upstream component's pods. The composition emits a sister Service (exposure-prometheus) with this selector, labeled istio.io/use-waypoint=<observe-ns>-waypoint, so the Waypoint intercepts traffic and the AuthorizationPolicy.CUSTOM fires. Defaults match stock kube-prometheus-stack v77.x.
+                        description: Selector for the upstream component's pods. The composition emits a sister Service (exposure-prometheus) with this selector, labeled istio.io/use-waypoint=<observe-ns>-waypoint, so the Waypoint intercepts traffic and the AuthorizationPolicy.CUSTOM fires. Defaults match the fullname override rendered by this stack.
                         type: object
                         additionalProperties:
                           type: string
@@ -980,7 +984,7 @@ spec:
                         type: string
                       serviceName:
                         type: string
-                        default: kube-prometheus-stack-alertmanager
+                        default: observe-alertmanager
                       servicePort:
                         type: integer
                         default: 9093

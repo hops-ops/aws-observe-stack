@@ -54,6 +54,12 @@ metadata:
 spec:
   clusterName: production-cluster
   namespace: monitoring
+  kubePrometheusStack:
+    storage:
+      size: 10Gi
+      retentionDays: 30
+      # Leaves capacity for WAL replay and compaction.
+      retentionSize: 8GB
   loki:
     storage:
       type: s3
@@ -70,6 +76,10 @@ spec:
     region: us-west-2
     rolePrefix: prod-
 ```
+
+Alloy is the default metrics collector and remote-writes to Prometheus. To have
+Prometheus scrape an additional `ServiceMonitor` or `PodMonitor` directly,
+label it with `hops.ops.com.ai/scrape-directly: prometheus`.
 
 ### Easy HA Mode
 
