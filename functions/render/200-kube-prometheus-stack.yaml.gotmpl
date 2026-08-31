@@ -25,7 +25,7 @@ spec:
       name: kube-prometheus-stack
       repository: https://prometheus-community.github.io/helm-charts
       # renovate: datasource=helm depName=kube-prometheus-stack registryUrl=https://prometheus-community.github.io/helm-charts
-      version: 82.2.0
+      version: 82.18.0
     namespace: {{ $kps.namespace }}
     {{- if $kps.overrideAllValues }}
     values:
