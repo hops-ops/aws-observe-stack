@@ -166,7 +166,13 @@ spec:
       {{- $_ := set $opencostValues "opencost" $existingOpencost }}
     {{- end }}
     {{- if $state.cloudCosts.enabled }}
+      {{- /* Cloud integration mounts /var/configs. Disable the parent chart's
+           GKE compatibility mount at the same path to avoid a duplicate. */}}
+      {{- $_ := set $opencostValues "extraVolumes" (list) }}
       {{- $existingOpencost := $opencostValues.opencost | default dict }}
+      {{- $existingExporter := $existingOpencost.exporter | default dict }}
+      {{- $_ := set $existingExporter "extraVolumeMounts" (list) }}
+      {{- $_ := set $existingOpencost "exporter" $existingExporter }}
       {{- $_ := set $existingOpencost "cloudCost" (dict "enabled" true) }}
       {{- $_ := set $existingOpencost "cloudIntegrationSecret" $state.cloudCosts.secretName }}
       {{- $_ := set $opencostValues "opencost" $existingOpencost }}

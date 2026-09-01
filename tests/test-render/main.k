@@ -2339,38 +2339,42 @@ _items = [
                     apiVersion = "helm.m.crossplane.io/v1beta1"
                     kind = "Release"
                     metadata.name = "k8s-monitoring"
-                    spec.forProvider.values.clusterMetrics.opencost.opencost = {
-                        cloudCost = {
-                            enabled = True
-                        }
-                        cloudIntegrationSecret = "opencost-cloud-integration"
-                        customPricing = {
-                            enabled = True
-                            provider = "aws"
-                            costModel = {
-                                athenaBucketName = "s3://my-account-cur/athena-results"
-                                athenaRegion = "us-east-2"
-                                athenaDatabase = "my_account_cur"
-                                athenaTable = "my_account_cur"
-                                athenaWorkgroup = "my-account-cur-workgroup"
-                                athenaProjectID = "123456789012"
-                                projectID = "123456789012"
+                    spec.forProvider.values.clusterMetrics.opencost = {
+                        extraVolumes = []
+                        opencost = {
+                            cloudCost = {
+                                enabled = True
                             }
-                        }
-                        exporter = {
-                            image = {
-                                # renovate: datasource=docker depName=kubecost1/opencost registryUrl=https://quay.io
-                                tag = "1.120.0"
+                            cloudIntegrationSecret = "opencost-cloud-integration"
+                            customPricing = {
+                                enabled = True
+                                provider = "aws"
+                                costModel = {
+                                    athenaBucketName = "s3://my-account-cur/athena-results"
+                                    athenaRegion = "us-east-2"
+                                    athenaDatabase = "my_account_cur"
+                                    athenaTable = "my_account_cur"
+                                    athenaWorkgroup = "my-account-cur-workgroup"
+                                    athenaProjectID = "123456789012"
+                                    projectID = "123456789012"
+                                }
                             }
-                            extraEnv = {
-                                CLOUD_COST_CONFIG_PATH = "/var/configs/cloud-integration/cloud-integration.json"
-                                PLUGIN_CONFIG_DIR = "/var/configs"
+                            exporter = {
+                                image = {
+                                    # renovate: datasource=docker depName=kubecost1/opencost registryUrl=https://quay.io
+                                    tag = "1.120.0"
+                                }
+                                extraEnv = {
+                                    CLOUD_COST_CONFIG_PATH = "/var/configs/cloud-integration/cloud-integration.json"
+                                    PLUGIN_CONFIG_DIR = "/var/configs"
+                                }
+                                extraVolumeMounts = []
                             }
-                        }
-                        ui = {
-                            image = {
-                                # renovate: datasource=docker depName=kubecost1/opencost registryUrl=https://quay.io
-                                tag = "1.120.0"
+                            ui = {
+                                image = {
+                                    # renovate: datasource=docker depName=kubecost1/opencost registryUrl=https://quay.io
+                                    tag = "1.120.0"
+                                }
                             }
                         }
                     }
