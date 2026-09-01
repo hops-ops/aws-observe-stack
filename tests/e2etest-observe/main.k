@@ -76,7 +76,7 @@ _items = [
                         name = "aws-auto-eks-cluster"
                     }
                     spec = {
-                        package = "ghcr.io/hops-ops/aws-auto-eks-cluster:v0.11.0"
+                        package = "ghcr.io/hops-ops/aws-auto-eks-cluster:v2.2.1"
                     }
                 }
             ]
