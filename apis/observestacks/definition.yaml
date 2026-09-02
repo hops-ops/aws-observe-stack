@@ -925,7 +925,7 @@ spec:
                         description: oauth2-proxy container image. Defaults to "quay.io/oauth2-proxy/oauth2-proxy:v7.7.1".
                         type: string
                         # renovate: datasource=docker depName=oauth2-proxy/oauth2-proxy registryUrl=https://quay.io
-                        default: quay.io/oauth2-proxy/oauth2-proxy:v7.7.1
+                        default: quay.io/oauth2-proxy/oauth2-proxy:v7.15.4
                       replicas:
                         description: oauth2-proxy Deployment replicas. Defaults to 1.
                         type: integer
