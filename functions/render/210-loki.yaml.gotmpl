@@ -101,7 +101,7 @@ spec:
     {{- $_ := set $singleBinary "persistence" (dict "enabled" true "storageClass" $state.aws.loki.pvc.storageClass.name "size" $state.aws.loki.pvc.size) }}
     {{- end }}
     # renovate: datasource=docker depName=nginx/nginx-unprivileged registryUrl=https://quay.io
-    {{- $gatewayImageTag := "1.29-alpine" }}
+    {{- $gatewayImageTag := "1.31-alpine" }}
     # renovate: datasource=docker depName=library/memcached registryUrl=https://index.docker.io
     {{- $memcachedImageTag := "1.6.45-alpine" }}
     # renovate: datasource=docker depName=prometheus/memcached-exporter registryUrl=https://quay.io
