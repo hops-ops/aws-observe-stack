@@ -266,7 +266,7 @@
 }}
 {{- $grafanaPsqlPostgres := $grafanaDatabaseEmbedded.postgresql | default dict }}
 # renovate: datasource=docker depName=library/postgres registryUrl=https://index.docker.io
-{{- if not $grafanaPsqlPostgres.version }}{{- $grafanaPsqlPostgres = set $grafanaPsqlPostgres "version" "17" }}{{- end }}
+{{- if not $grafanaPsqlPostgres.version }}{{- $grafanaPsqlPostgres = set $grafanaPsqlPostgres "version" "18" }}{{- end }}
 {{- $grafanaPsqlAppSpec := $grafanaDatabaseEmbedded.app | default dict }}
 {{- $grafanaPsqlApp := dict
   "role" ($grafanaPsqlAppSpec.role | default "grafana")
