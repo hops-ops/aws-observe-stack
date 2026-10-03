@@ -416,7 +416,7 @@
 
 {{- $exposureRedis := $exposure.redis | default dict }}
 # renovate: datasource=docker depName=library/redis registryUrl=https://index.docker.io
-{{- $exposureRedisImage := $exposureRedis.image | default "mirror.gcr.io/redis:7-alpine" }}
+{{- $exposureRedisImage := $exposureRedis.image | default "mirror.gcr.io/redis:8-alpine" }}
 {{- $exposureRedis = dict
   "size" ($exposureRedis.size | default "1Gi")
   "storageClassName" ($exposureRedis.storageClassName | default "")
