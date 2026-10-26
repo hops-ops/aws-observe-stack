@@ -583,7 +583,7 @@ spec:
                                 description: Postgres major version. Defaults to 17.
                                 type: string
                                 # renovate: datasource=docker depName=library/postgres registryUrl=https://index.docker.io
-                                default: "17"
+                                default: "18"
                               parameters:
                                 description: postgres.conf parameters.
                                 type: object
