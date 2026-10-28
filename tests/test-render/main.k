@@ -2712,7 +2712,7 @@ _items = [
                             {
                                 name = "redis"
                                 # renovate: datasource=docker depName=library/redis registryUrl=https://index.docker.io
-                                image = "mirror.gcr.io/redis:7-alpine"
+                                image = "mirror.gcr.io/redis:8-alpine"
                                 resources = {
                                     requests = {cpu = "15m", memory = "100Mi"}
                                     limits = {cpu = "100m", memory = "256Mi"}

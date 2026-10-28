@@ -916,7 +916,7 @@ spec:
                         description: Redis container image. Defaults to "mirror.gcr.io/redis:7-alpine".
                         type: string
                         # renovate: datasource=docker depName=library/redis registryUrl=https://index.docker.io
-                        default: mirror.gcr.io/redis:7-alpine
+                        default: mirror.gcr.io/redis:8-alpine
                   oauth2Proxy:
                     description: oauth2-proxy bridge configuration.
                     type: object
