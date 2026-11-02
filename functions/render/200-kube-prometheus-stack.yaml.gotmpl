@@ -87,6 +87,7 @@ spec:
       "podMonitorSelector" $directScrapeSelector
       "ruleSelectorNilUsesHelmValues" false
       "resources" $promResources
+      "persistentVolumeClaimRetentionPolicy" (dict "whenDeleted" "Delete" "whenScaled" "Retain")
       "storageSpec" (dict
         "volumeClaimTemplate" (dict
           "spec" (dict
