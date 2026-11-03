@@ -34,6 +34,9 @@ spec:
         name: {{ printf "exposure-%s" $comp.name }}
         namespace: {{ $state.namespace }}
         labels: {{ $state.labels | toJson }}
+        {{- with $x.routeAnnotations }}
+        annotations: {{ . | toJson }}
+        {{- end }}
       spec:
         parentRefs:
         {{- range $sn := $x.gatewayRef.sectionNames }}

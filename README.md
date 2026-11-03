@@ -81,6 +81,38 @@ Alloy is the default metrics collector and remote-writes to Prometheus. To have
 Prometheus scrape an additional `ServiceMonitor` or `PodMonitor` directly,
 label it with `hops.ops.com.ai/scrape-directly: prometheus`.
 
+### Routing and independent component upgrades
+
+Use `spec.exposure.gatewayRef` to select a public or private Gateway listener.
+`spec.exposure.routeAnnotations` adds metadata to all enabled dashboard
+HTTPRoutes, including provider-specific DNS controls:
+
+```yaml
+spec:
+  exposure:
+    routeAnnotations:
+      external-dns.alpha.kubernetes.io/cloudflare-proxied: "false"
+```
+
+These annotations apply to the HTTPRoutes, preserving the Crossplane Object
+wrappers and the existing Grafana OIDC / waypoint authorization behavior.
+The gateway, certificate and namespace attachment permissions remain platform
+configuration. DNS-only records alone do not make an endpoint private.
+
+Pin individual component charts with `spec.chartVersions` when adopting an API
+improvement independently of workload upgrades. Omitted components retain the
+packaged defaults; Helm values and workload image overrides remain separate.
+
+```yaml
+spec:
+  chartVersions:
+    kubePrometheusStack: "82.18.0"
+    loki: "6.55.0"
+```
+
+Supported keys: `kubePrometheusStack`, `loki`, `tempo`, `k8sMonitoring`,
+`grafanaOperator`, `vpa`, and `goldilocks`.
+
 ### Easy HA Mode
 
 Enable HA safety defaults for observe workloads:

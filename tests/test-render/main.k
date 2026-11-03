@@ -3051,6 +3051,168 @@ _items = [
             ]
         }
     }
+    metav1alpha1.CompositionTest {
+        metadata.name = "exposure-route-annotations-reach-all-components"
+        spec = {
+            compositionPath = "apis/observestacks/composition.yaml"
+            xrdPath = "apis/observestacks/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = {
+                apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                kind = "ObserveStack"
+                metadata.name = "observe"
+                spec = {
+                    clusterName = "my-cluster"
+                    auth = {
+                        issuerURL = "https://auth.example.com"
+                        awsSecretsManagerPath = "push/my-cluster/zitadel-credentials"
+                        zitadelProjectId = "330000000000000001"
+                    }
+                    exposure = {
+                        enabled = True
+                        domain = "observe.example.com"
+                        gatewayRef = {name = "private", namespace = "istio-ingress", sectionNames = ["https"]}
+                        routeAnnotations = {
+                            "external-dns.alpha.kubernetes.io/cloudflare-proxied" = "false"
+                            "example.com/team" = "platform"
+                        }
+                        oauth2Proxy.cookieSecretRef.name = "observe-cookie"
+                        prometheus = {enabled = True, host = "prometheus.observe.example.com"}
+                        alertmanager = {enabled = True, host = "alertmanager.observe.example.com"}
+                        opencost = {enabled = True, host = "opencost.observe.example.com"}
+                        grafana = {enabled = True, host = "grafana.observe.example.com"}
+                    }
+                }
+            }
+            assertResources = [
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-exposure-httproute-prometheus"
+                    spec.forProvider.manifest = {
+                        kind = "HTTPRoute"
+                        metadata.annotations = {
+                            "external-dns.alpha.kubernetes.io/cloudflare-proxied" = "false"
+                            "example.com/team" = "platform"
+                        }
+                        spec.parentRefs = [{name = "private", namespace = "istio-ingress", sectionName = "https"}]
+                    }
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-exposure-httproute-alertmanager"
+                    spec.forProvider.manifest = {
+                        kind = "HTTPRoute"
+                        metadata.annotations = {
+                            "external-dns.alpha.kubernetes.io/cloudflare-proxied" = "false"
+                            "example.com/team" = "platform"
+                        }
+                        spec.parentRefs = [{name = "private", namespace = "istio-ingress", sectionName = "https"}]
+                    }
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-exposure-httproute-opencost"
+                    spec.forProvider.manifest = {
+                        kind = "HTTPRoute"
+                        metadata.annotations = {
+                            "external-dns.alpha.kubernetes.io/cloudflare-proxied" = "false"
+                            "example.com/team" = "platform"
+                        }
+                        spec.parentRefs = [{name = "private", namespace = "istio-ingress", sectionName = "https"}]
+                    }
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "observe-exposure-httproute-grafana"
+                    spec.forProvider.manifest = {
+                        kind = "HTTPRoute"
+                        metadata.annotations = {
+                            "external-dns.alpha.kubernetes.io/cloudflare-proxied" = "false"
+                            "example.com/team" = "platform"
+                        }
+                        spec.parentRefs = [{name = "private", namespace = "istio-ingress", sectionName = "https"}]
+                    }
+                }
+            ]
+        }
+    }
+
+    metav1alpha1.CompositionTest {
+        metadata.name = "component-chart-versions-can-be-pinned-independently"
+        spec = {
+            compositionPath = "apis/observestacks/composition.yaml"
+            xrdPath = "apis/observestacks/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = {
+                apiVersion = "aws.hops.ops.com.ai/v1alpha1"
+                kind = "ObserveStack"
+                metadata.name = "observe"
+                spec = {
+                    clusterName = "my-cluster"
+                    chartVersions = {
+                        kubePrometheusStack = "82.18.0"
+                        loki = "6.55.0"
+                        tempo = "1.24.5"
+                        k8sMonitoring = "3.8.12"
+                        grafanaOperator = "5.25.1"
+                        vpa = "4.12.5"
+                        goldilocks = "10.6.0"
+                    }
+                }
+            }
+            assertResources = [
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "kube-prometheus-stack"
+                    spec.forProvider.chart.version = "82.18.0"
+                }
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "loki"
+                    spec.forProvider.chart.version = "6.55.0"
+                }
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "tempo"
+                    spec.forProvider.chart.version = "1.24.5"
+                }
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "k8s-monitoring"
+                    spec.forProvider.chart.version = "3.8.12"
+                }
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "grafana-operator"
+                    spec.forProvider.chart.version = "5.25.1"
+                }
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "vpa"
+                    spec.forProvider.chart.version = "4.12.5"
+                }
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "goldilocks"
+                    spec.forProvider.chart.version = "10.6.0"
+                }
+            ]
+        }
+    }
+
 ]
 
 items = _items
