@@ -552,6 +552,7 @@
 # Initialize $state
 # ==============================================================================
 {{- $state := dict
+  "chartVersions" ($spec.chartVersions | default dict)
   "name" $name
   "clusterName" $clusterName
   "namespace" $namespace
@@ -737,6 +738,7 @@
     "zitadelProjectId" $authProjectId
   )
   "exposure" (dict
+    "routeAnnotations" ($exposure.routeAnnotations | default dict)
     "enabled" $exposureEnabled
     "domain" $exposureDomain
     "gatewayRef" $exposureGatewayRef

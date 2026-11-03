@@ -24,8 +24,12 @@ spec:
     chart:
       name: vpa
       repository: https://charts.fairwinds.com/stable
+      {{- if hasKey $state.chartVersions "vpa" }}
+      version: {{ index $state.chartVersions "vpa" | quote }}
+      {{- else }}
       # renovate: datasource=helm depName=vpa registryUrl=https://charts.fairwinds.com/stable
       version: 5.1.0
+      {{- end }}
     namespace: {{ $vpa.namespace }}
     {{- if $vpa.overrideAllValues }}
     values:

@@ -21,8 +21,12 @@ spec:
     chart:
       name: loki
       repository: https://grafana.github.io/helm-charts
+      {{- if hasKey $state.chartVersions "loki" }}
+      version: {{ index $state.chartVersions "loki" | quote }}
+      {{- else }}
       # renovate: datasource=helm depName=loki registryUrl=https://grafana.github.io/helm-charts
       version: 7.5.0
+      {{- end }}
     namespace: {{ $loki.namespace }}
     {{- if $loki.overrideAllValues }}
     values:
