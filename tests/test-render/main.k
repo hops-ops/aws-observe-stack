@@ -3158,9 +3158,9 @@ _items = [
                     chartVersions = {
                         kubePrometheusStack = "82.18.0"
                         loki = "6.55.0"
-                        tempo = "1.24.4"
+                        tempo = "1.24.5"
                         k8sMonitoring = "3.8.12"
-                        grafanaOperator = "5.25.0"
+                        grafanaOperator = "5.25.1"
                         vpa = "4.12.5"
                         goldilocks = "10.6.0"
                     }
@@ -3183,7 +3183,7 @@ _items = [
                     apiVersion = "helm.m.crossplane.io/v1beta1"
                     kind = "Release"
                     metadata.name = "tempo"
-                    spec.forProvider.chart.version = "1.24.4"
+                    spec.forProvider.chart.version = "1.24.5"
                 }
                 {
                     apiVersion = "helm.m.crossplane.io/v1beta1"
@@ -3195,7 +3195,7 @@ _items = [
                     apiVersion = "helm.m.crossplane.io/v1beta1"
                     kind = "Release"
                     metadata.name = "grafana-operator"
-                    spec.forProvider.chart.version = "5.25.0"
+                    spec.forProvider.chart.version = "5.25.1"
                 }
                 {
                     apiVersion = "helm.m.crossplane.io/v1beta1"
