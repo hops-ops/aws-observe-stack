@@ -29,7 +29,13 @@ jobs:
         [
           { "example": "examples/observestacks/minimal.yaml" },
           { "example": "examples/observestacks/pvc.yaml" },
-          { "example": "examples/observestacks/s3.yaml" }
+          { "example": "examples/observestacks/s3.yaml" },
+          { "example": "examples/observestacks/s3.yaml", "observed_resources": "examples/test/mocks/observed-resources/s3/steps/1" },
+          { "example": "examples/observestacks/cloud-costs.yaml" },
+          { "example": "examples/observestacks/nodepool.yaml" },
+          { "example": "examples/observestacks/spot-feed.yaml" },
+          { "example": "examples/observestacks/metrics-server.yaml" },
+          { "example": "examples/observestacks/exposure.yaml" }
         ]
       api_path: apis/observestacks
       error_on_missing_schemas: true

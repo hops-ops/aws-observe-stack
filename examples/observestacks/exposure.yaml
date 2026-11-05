@@ -49,6 +49,9 @@ spec:
     opencost:
       enabled: true
       host: opencost.observe.example.com
+    goldilocks:
+      enabled: true
+      host: goldilocks.observe.example.com
     grafana:
       enabled: true
       host: grafana.observe.example.com

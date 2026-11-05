@@ -1,7 +1,7 @@
 # code: language=yaml
 #
 # HTTPRoute per enabled component. Shape depends on authMode:
-#   - ext_authz (prometheus/alertmanager/opencost): two rules
+#   - ext_authz (prometheus/alertmanager/opencost/goldilocks): two rules
 #       1. /oauth2/* -> oauth2-proxy (sign-in flow, callback)
 #       2. /         -> sister Service (gated by waypoint ext_authz)
 #   - app_level  (grafana): single rule
@@ -15,7 +15,7 @@
 {{- $proxySvc := printf "%s-oauth2-proxy" $state.namespace }}
 {{- if $x.enabled }}
 {{- range $comp := $x.components }}
-{{- if and $comp.enabled (ne $comp.host "") }}
+{{- if and $comp.enabled (ne $comp.host "") (or (ne $comp.name "goldilocks") $state.observed.exposure.goldilocksPolicyExists) }}
 ---
 apiVersion: kubernetes.m.crossplane.io/v1alpha1
 kind: Object

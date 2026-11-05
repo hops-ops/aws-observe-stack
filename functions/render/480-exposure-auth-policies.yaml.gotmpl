@@ -51,3 +51,29 @@ spec:
 {{- end }}
 {{- end }}
 {{- end }}
+
+{{- /* Keep this dependency until the protected Goldilocks route is removed. */}}
+{{- range $comp := $state.exposure.components }}
+{{- if and (eq $comp.name "goldilocks") $comp.enabled (ne $comp.host "") (get $checkReady "exposure-httproute-goldilocks") (get $checkReady "exposure-authpolicy-goldilocks") }}
+---
+apiVersion: protection.crossplane.io/v1beta1
+kind: Usage
+metadata:
+  name: {{ $state.name }}-delete-goldilocks-route-before-exposure-authpolicy-goldilocks
+  annotations:
+    {{ setResourceNameAnnotation "usage-goldilocks-route-exposure-authpolicy-goldilocks" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  replayDeletion: true
+  of:
+    apiVersion: kubernetes.m.crossplane.io/v1alpha1
+    kind: Object
+    resourceRef:
+      name: {{ $state.name }}-exposure-authpolicy-goldilocks
+  by:
+    apiVersion: kubernetes.m.crossplane.io/v1alpha1
+    kind: Object
+    resourceRef:
+      name: {{ $state.name }}-exposure-httproute-goldilocks
+{{- end }}
+{{- end }}

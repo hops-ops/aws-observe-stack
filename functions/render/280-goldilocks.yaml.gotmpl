@@ -54,3 +54,29 @@ spec:
   providerConfigRef:
     name: {{ $state.helm.providerConfigRef.name }}
     kind: {{ $state.helm.providerConfigRef.kind }}
+
+{{- /* Keep this dependency until the protected Goldilocks route is removed. */}}
+{{- range $comp := $state.exposure.components }}
+{{- if and (eq $comp.name "goldilocks") $comp.enabled (ne $comp.host "") (get $checkReady "exposure-httproute-goldilocks") (get $checkReady "goldilocks") }}
+---
+apiVersion: protection.crossplane.io/v1beta1
+kind: Usage
+metadata:
+  name: {{ $state.name }}-delete-goldilocks-route-before-goldilocks
+  annotations:
+    {{ setResourceNameAnnotation "usage-goldilocks-route-goldilocks" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  replayDeletion: true
+  of:
+    apiVersion: helm.m.crossplane.io/v1beta1
+    kind: Release
+    resourceRef:
+      name: {{ $state.goldilocks.name }}
+  by:
+    apiVersion: kubernetes.m.crossplane.io/v1alpha1
+    kind: Object
+    resourceRef:
+      name: {{ $state.name }}-exposure-httproute-goldilocks
+{{- end }}
+{{- end }}
