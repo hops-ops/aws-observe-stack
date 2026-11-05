@@ -196,9 +196,8 @@ spec:
     kind: {{ $state.kubernetes.providerConfigRef.kind }}
 {{- end }}
 
-{{- /* Keep this dependency until the protected Goldilocks route is removed. */}}
-{{- range $comp := $state.exposure.components }}
-{{- if and (eq $comp.name "goldilocks") $comp.enabled (ne $comp.host "") (get $checkReady "exposure-httproute-goldilocks") (get $checkReady "exposure-oauth2-proxy-deploy") }}
+{{- /* Retain ordering even when exposure is disabled, until the observed route is gone. */}}
+{{- if and (get $checkReady "exposure-httproute-goldilocks") (get $checkReady "exposure-oauth2-proxy-deploy") }}
 ---
 apiVersion: protection.crossplane.io/v1beta1
 kind: Usage
@@ -219,5 +218,4 @@ spec:
     kind: Object
     resourceRef:
       name: {{ $state.name }}-exposure-httproute-goldilocks
-{{- end }}
 {{- end }}

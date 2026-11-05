@@ -110,13 +110,15 @@ Gateway's network placement determines whether a VPN is required.
 The route uses the dashboard's named `http` port through a waypoint-enabled
 sister Service. Its CUSTOM authorization policy is observed in the target
 cluster before the route is created; a transient Ready failure does not remove
-an existing route. Ready-gated Usages keep the authorization policy, dashboard,
-backend Service, waypoint and OAuth deployment until the route is deleted.
+an existing route. Ready-gated Usages remain during exposure disablement and
+keep the authorization policy, dashboard, backend Service, waypoint and OAuth
+deployment until the route is deleted.
 Existing component identities and OAuth signing/session Secrets are retained;
 the shared OIDC client gains the exact callback/logout URLs for this host.
 `status.exposure.goldilocks.ready` includes observed route/backend/policy,
-Goldilocks, waypoint, OAuth bridge and OIDC readiness. Set `servicePort` or
-`podSelector` when the chart's dashboard pod labels differ from the defaults.
+Goldilocks, waypoint, OAuth bridge and OIDC readiness. `servicePort` configures
+the sister Service port; use `podSelector` if dashboard pod labels differ from
+the chart defaults.
 
 ### Routing and independent component upgrades
 
