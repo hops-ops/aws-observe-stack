@@ -103,9 +103,12 @@ spec:
 ```
 
 The shared exposure prerequisites (OIDC project/provider, cookie Secret and
-Istio extension provider) still apply. The selected Gateway, namespace admission
-and certificate must cover this hostname. DNS-only controls proxying; the
-Gateway's network placement determines whether a VPN is required.
+Istio extension provider) still apply. Set `spec.auth.issuerURL`,
+`spec.auth.awsSecretsManagerPath`, `spec.auth.zitadelProjectId`, and
+`spec.exposure.oauth2Proxy.cookieSecretRef.name` when exposure is enabled.
+The selected Gateway, namespace admission and certificate must cover this
+hostname. DNS-only controls proxying; the Gateway's network placement determines
+whether a VPN is required.
 
 The route uses the dashboard's named `http` port through a waypoint-enabled
 sister Service. Its CUSTOM authorization policy is observed in the target
