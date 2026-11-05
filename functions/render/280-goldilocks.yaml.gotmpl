@@ -27,7 +27,7 @@ spec:
       version: {{ index $state.chartVersions "goldilocks" | quote }}
       {{- else }}
       # renovate: datasource=helm depName=goldilocks registryUrl=https://charts.fairwinds.com/stable
-      version: 11.2.0
+      version: 11.2.1
       {{- end }}
     namespace: {{ $goldilocks.namespace }}
     {{- if $goldilocks.overrideAllValues }}
