@@ -24,7 +24,9 @@ status:
       enabled: {{ $comp.enabled }}
       {{- if and $comp.enabled (ne $comp.host "") }}
       url: {{ printf "https://%s/" $comp.host | quote }}
-      {{- if eq $comp.authMode "app_level" }}
+      {{- if eq $comp.name "goldilocks" }}
+      ready: {{ $state.observed.exposure.goldilocksReady }}
+      {{- else if eq $comp.authMode "app_level" }}
       ready: {{ $state.observed.exposure.grafanaReady }}
       oidcClientReady: {{ $state.observed.exposure.grafanaOidcClientReady }}
       {{- else }}

@@ -81,6 +81,48 @@ Alloy is the default metrics collector and remote-writes to Prometheus. To have
 Prometheus scrape an additional `ServiceMonitor` or `PodMonitor` directly,
 label it with `hops.ops.com.ai/scrape-directly: prometheus`.
 
+### Goldilocks dashboard
+
+Goldilocks is installed with a cluster-only dashboard. Opt into a browser route
+with the shared OAuth2 proxy and existing observability permissions:
+
+```yaml
+spec:
+  exposure:
+    enabled: true
+    domain: ops.example.com
+    gatewayRef:
+      name: private
+      namespace: istio-ingress
+      sectionNames: [https-monitoring]
+    routeAnnotations:
+      external-dns.alpha.kubernetes.io/cloudflare-proxied: "false"
+    goldilocks:
+      enabled: true
+      host: goldilocks.ops.example.com
+```
+
+The shared exposure prerequisites (OIDC project/provider, cookie Secret and
+Istio extension provider) still apply. Set `spec.auth.issuerURL`,
+`spec.auth.awsSecretsManagerPath`, `spec.auth.zitadelProjectId`, and
+`spec.exposure.oauth2Proxy.cookieSecretRef.name` when exposure is enabled.
+The selected Gateway, namespace admission and certificate must cover this
+hostname. DNS-only controls proxying; the Gateway's network placement determines
+whether a VPN is required.
+
+The route uses the dashboard's named `http` port through a waypoint-enabled
+sister Service. Its CUSTOM authorization policy is observed in the target
+cluster before the route is created; a transient Ready failure does not remove
+an existing route. Ready-gated Usages remain during exposure disablement and
+keep the authorization policy, dashboard, backend Service, waypoint and OAuth
+deployment until the route is deleted.
+Existing component identities and OAuth signing/session Secrets are retained;
+the shared OIDC client gains the exact callback/logout URLs for this host.
+`status.exposure.goldilocks.ready` includes observed route/backend/policy,
+Goldilocks, waypoint, OAuth bridge and OIDC readiness. `servicePort` configures
+the sister Service port; use `podSelector` if dashboard pod labels differ from
+the chart defaults.
+
 ### Routing and independent component upgrades
 
 Use `spec.exposure.gatewayRef` to select a public or private Gateway listener.

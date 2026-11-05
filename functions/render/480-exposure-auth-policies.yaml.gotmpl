@@ -51,3 +51,27 @@ spec:
 {{- end }}
 {{- end }}
 {{- end }}
+
+{{- /* Retain ordering even when exposure is disabled, until the observed route is gone. */}}
+{{- if and (get $checkReady "exposure-httproute-goldilocks") (get $checkReady "exposure-authpolicy-goldilocks") }}
+---
+apiVersion: protection.crossplane.io/v1beta1
+kind: Usage
+metadata:
+  name: {{ $state.name }}-delete-goldilocks-route-before-exposure-authpolicy-goldilocks
+  annotations:
+    {{ setResourceNameAnnotation "usage-goldilocks-route-exposure-authpolicy-goldilocks" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  replayDeletion: true
+  of:
+    apiVersion: kubernetes.m.crossplane.io/v1alpha1
+    kind: Object
+    resourceRef:
+      name: {{ $state.name }}-exposure-authpolicy-goldilocks
+  by:
+    apiVersion: kubernetes.m.crossplane.io/v1alpha1
+    kind: Object
+    resourceRef:
+      name: {{ $state.name }}-exposure-httproute-goldilocks
+{{- end }}

@@ -1043,6 +1043,30 @@ spec:
                         additionalProperties:
                           type: string
                         x-kubernetes-preserve-unknown-fields: true
+                  goldilocks:
+                    description: Goldilocks dashboard exposure through the shared OAuth2 proxy and waypoint. Disabled by default; select a private Gateway for VPN-only access.
+                    type: object
+                    x-kubernetes-validations:
+                    - rule: "self.enabled != true || (has(self.host) && self.host != '')"
+                      message: exposure.goldilocks.host is required when exposure.goldilocks.enabled is true.
+                    properties:
+                      enabled:
+                        type: boolean
+                        default: false
+                      host:
+                        type: string
+                      servicePort:
+                        description: Sister Service port; the dashboard's named http container port is the target.
+                        type: integer
+                        default: 80
+                        minimum: 1
+                        maximum: 65535
+                      podSelector:
+                        description: Dashboard pod selector override; defaults to the Goldilocks chart's name, release instance and dashboard component labels.
+                        type: object
+                        additionalProperties:
+                          type: string
+                        x-kubernetes-preserve-unknown-fields: true
                   grafana:
                     description: |
                       Public exposure for Grafana with app-level OIDC (Grafana speaks OIDC
@@ -1169,6 +1193,16 @@ spec:
                       url:
                         type: string
                       ready:
+                        type: boolean
+                  goldilocks:
+                    type: object
+                    properties:
+                      enabled:
+                        type: boolean
+                      url:
+                        type: string
+                      ready:
+                        description: True when the dashboard, protected route, waypoint, authorization policy, OAuth bridge and OIDC client are observed Ready.
                         type: boolean
                   grafana:
                     type: object

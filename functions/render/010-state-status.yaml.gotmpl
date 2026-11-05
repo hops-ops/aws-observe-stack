@@ -25,6 +25,7 @@
   "exposure-redis-svc" "exposure-redis-sts" "exposure-oauth2-proxy-svc" "exposure-oauth2-proxy-deploy" "exposure-waypoint" "exposure-certificate"
   "exposure-sister-svc-prometheus" "exposure-sister-svc-alertmanager" "exposure-sister-svc-opencost" "exposure-sister-svc-grafana"
   "exposure-httproute-prometheus" "exposure-httproute-alertmanager" "exposure-httproute-opencost" "exposure-httproute-grafana"
+  "exposure-sister-svc-goldilocks" "exposure-httproute-goldilocks" "exposure-authpolicy-goldilocks"
   "exposure-authpolicy-prometheus" "exposure-authpolicy-alertmanager" "exposure-authpolicy-opencost"
 }}
   {{- $entry := get $observed $key | default dict }}
@@ -69,6 +70,14 @@
 {{- $kubePrometheusStackGrafanaDatabase := $kubePrometheusStackGrafanaIni.database | default dict }}
 {{- $grafanaPsqlActivated := eq ($kubePrometheusStackGrafanaDatabase.type | default "") "postgres" }}
 
+{{- /* A protected Goldilocks route is created only after the actual AuthorizationPolicy
+       has been observed in the target cluster. Gate on its UID, not Ready: a
+       transient status failure must not delete an existing route or its DNS. */}}
+{{- $goldilocksPolicyEntry := get $observed "exposure-authpolicy-goldilocks" | default dict }}
+{{- $goldilocksPolicyResource := $goldilocksPolicyEntry.resource | default dict }}
+{{- $goldilocksPolicyManifest := ((($goldilocksPolicyResource.status | default dict).atProvider | default dict).manifest | default dict) }}
+{{- $goldilocksPolicyExists := ne (($goldilocksPolicyManifest.metadata | default dict).uid | default "") "" }}
+
 {{- $state = set $state "observed" (merge $state.observed (dict
   "kubePrometheusStack" (dict "ready" (get $checkReady "kube-prometheus-stack"))
   "loki" (dict "ready" (get $checkReady "loki"))
@@ -95,6 +104,16 @@
     "redisReady" (get $checkReady "exposure-redis-sts")
     "oidcClientReady" $exposureOidcReady
     "waypointReady" (get $checkReady "exposure-waypoint")
+    "goldilocksPolicyExists" $goldilocksPolicyExists
+    "goldilocksReady" (and
+      (get $checkReady "goldilocks")
+      (get $checkReady "exposure-sister-svc-goldilocks")
+      (get $checkReady "exposure-httproute-goldilocks")
+      (get $checkReady "exposure-authpolicy-goldilocks")
+      (get $checkReady "exposure-waypoint")
+      $exposureOauth2Ready
+      $exposureOidcReady
+    )
     "grafanaOidcClientReady" (get $checkReady "exposure-grafana-oidc-app")
     "grafanaReady" (and
       (get $checkReady "kube-prometheus-stack")

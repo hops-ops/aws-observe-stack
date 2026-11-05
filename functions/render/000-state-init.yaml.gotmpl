@@ -468,6 +468,11 @@
   "opencost" (dict
     "app.kubernetes.io/name" "opencost"
   )
+  "goldilocks" (dict
+    "app.kubernetes.io/name" "goldilocks"
+    "app.kubernetes.io/instance" ($goldilocks.name | default "goldilocks")
+    "app.kubernetes.io/component" "dashboard"
+  )
   "grafana" (dict
     "app.kubernetes.io/name" "grafana"
     "app.kubernetes.io/instance" "kube-prometheus-stack"
@@ -486,7 +491,7 @@
 }}
 
 {{- $exposureComponents := list }}
-{{- range $compName := list "prometheus" "alertmanager" "opencost" "grafana" }}
+{{- range $compName := list "prometheus" "alertmanager" "opencost" "grafana" "goldilocks" }}
   {{- $comp := get $exposure $compName | default dict }}
   {{- $compEnabled := false }}
   {{- if hasKey $comp "enabled" }}
@@ -495,6 +500,16 @@
   {{- $compHost := $comp.host | default "" }}
   {{- if and $exposureEnabled $compEnabled (eq $compHost "") }}
     {{- fail (printf "spec.exposure.%s.host is required when spec.exposure.%s.enabled is true" $compName $compName) }}
+  {{- end }}
+  {{- if and $exposureEnabled $compEnabled (eq $compName "goldilocks") }}
+    {{- if ne ($goldilocks.namespace | default $namespace) $namespace }}
+      {{- fail "Goldilocks exposure requires the dashboard and Observe namespace to match" }}
+    {{- end }}
+    {{- $goldilocksValues := $goldilocks.overrideAllValues | default ($goldilocks.values | default dict) }}
+    {{- $goldilocksDashboard := $goldilocksValues.dashboard | default dict }}
+    {{- if and (hasKey $goldilocksDashboard "enabled") (not $goldilocksDashboard.enabled) }}
+      {{- fail "Goldilocks exposure requires goldilocks dashboard.enabled=true" }}
+    {{- end }}
   {{- end }}
   {{- $compSvcName := $comp.serviceName | default "" }}
   {{- $compSvcPort := $comp.servicePort | default 0 }}
@@ -507,6 +522,9 @@
   {{- else if eq $compName "opencost" }}
     {{- $compSvcName = $comp.serviceName | default "opencost" }}
     {{- $compSvcPort = $comp.servicePort | default 9090 }}
+  {{- else if eq $compName "goldilocks" }}
+    {{- $compSvcName = printf "%s-dashboard" ($goldilocks.name | default "goldilocks") }}
+    {{- $compSvcPort = $comp.servicePort | default 80 }}
   {{- else if eq $compName "grafana" }}
     {{- $compSvcName = $comp.serviceName | default "grafana" }}
     {{- $compSvcPort = $comp.servicePort | default 80 }}
@@ -514,6 +532,8 @@
   {{- $compSvcTargetPort := $compSvcPort }}
   {{- if eq $compName "grafana" }}
     {{- $compSvcTargetPort = "grafana" }}
+  {{- else if eq $compName "goldilocks" }}
+    {{- $compSvcTargetPort = "http" }}
   {{- end }}
   {{- $defaultSel := get $defaultPodSelectors $compName | default dict }}
   {{- $compPodSelector := $comp.podSelector | default $defaultSel }}
