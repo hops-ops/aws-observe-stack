@@ -25,7 +25,7 @@ spec:
       version: {{ index $state.chartVersions "loki" | quote }}
       {{- else }}
       # renovate: datasource=helm depName=loki registryUrl=https://grafana.github.io/helm-charts
-      version: 7.5.0
+      version: 7.6.0
       {{- end }}
     namespace: {{ $loki.namespace }}
     {{- if $loki.overrideAllValues }}
