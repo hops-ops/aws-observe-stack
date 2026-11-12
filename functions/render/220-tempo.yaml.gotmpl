@@ -91,6 +91,7 @@ spec:
     {{- if not $state.aws.tempo.s3.enabled }}
     {{- $_ := set $defaults "persistence" (dict
       "enabled" true
+      "enableStatefulSetAutoDeletePVC" true
       "storageClass" $state.aws.tempo.pvc.storageClass.name
       "storageClassName" $state.aws.tempo.pvc.storageClass.name
       "size" $state.aws.tempo.pvc.size
