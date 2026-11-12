@@ -204,7 +204,9 @@ spec:
 When enabled:
 - A Karpenter NodePool (`<clusterName>-observe`) is created with cheap, flexible Spot selection: c/m/r/t instance categories, generation 4 or newer, Linux, and no architecture pin
 - Non-daemonset pods (Prometheus, Loki, Tempo, Grafana, OpenCost, VPA, Goldilocks) are scheduled to the NodePool via `nodeSelector` and `tolerations`
-- Daemonsets (alloy-metrics, alloy-logs) continue to run on **all** nodes, including the observe NodePool
+- Alloy metrics (StatefulSet) and singleton collectors are scheduled to the observe NodePool.
+- Node-local Alloy logs and the default receiver (DaemonSets) continue to run on **all** nodes, including the observe NodePool.
+- When `k8sMonitoring.values.alloy-receiver.controller.type` is `deployment` or `statefulset`, the receiver uses the observe NodePool selector and workload toleration. With `nodePool.enabled: false`, it receives no custom tolerations, so it respects disruption and pressure taints. Explicit receiver `controller.nodeSelector` and `controller.tolerations` overrides (including `[]`) take precedence; `overrideAllValues` bypasses these defaults.
 - Workloads that require x86 images should set `nodeSelector: {kubernetes.io/arch: amd64}` or equivalent affinity
 
 Custom NodePool settings:

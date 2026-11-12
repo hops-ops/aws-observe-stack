@@ -102,8 +102,8 @@ spec:
         )
       )
     }}
-    {{- /* DaemonSets (alloy-logs, alloy-receiver) tolerate ALL taints so they run on
-         every node, including dedicated NodePools (crossplane, observe, etc.) */}}
+    {{- /* Node-local DaemonSets tolerate all taints to cover dedicated NodePools.
+         A centralized receiver must instead respect disruption and pressure taints. */}}
     {{- $tolerateAll := list (dict "operator" "Exists") }}
     {{- /* For alloy-* the chart wraps an Alloy CR (spec.alloy.resources). The key
          is `alloy.resources`, not bare `resources`. alloy-operator is the operator
@@ -113,9 +113,23 @@ spec:
       "controller" (dict "tolerations" $tolerateAll)
       "alloy" (dict "resources" $alloyLogsResources)
     }}
+    {{- /* The chart defaults to daemonset. Read the user's controller choice
+         before computing defaults; the final merge still honors explicit values. */}}
+    {{- $receiverOverrides := dig "alloy-receiver" "controller" (dict) ($k8sMon.values | default dict) | default dict }}
+    {{- $receiverType := $receiverOverrides.type | default "daemonset" }}
+    {{- $receiverController := dict "tolerations" $tolerateAll }}
+    {{- if ne $receiverType "daemonset" }}
+      {{- $receiverController = dict "tolerations" (list) }}
+      {{- if $state.nodePool.enabled }}
+        {{- $_ := set $receiverController "tolerations" $state.nodePool.tolerations }}
+        {{- if not (hasKey $receiverOverrides "nodeSelector") }}
+          {{- $_ := set $receiverController "nodeSelector" $state.nodePool.nodeSelector }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
     {{- $alloyReceiver := dict
       "enabled" true
-      "controller" (dict "tolerations" $tolerateAll)
+      "controller" $receiverController
       "alloy" (dict "resources" $alloyReceiverResources)
     }}
     {{- /* alloy-metrics (StatefulSet), alloy-singleton, and alloy-operator
